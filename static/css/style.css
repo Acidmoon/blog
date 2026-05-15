@@ -791,8 +791,23 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
+.editor-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+.editor-toolbar-select {
+  width: auto !important;
+  max-width: 190px;
+  padding: 5px 28px 5px 10px !important;
+  border-radius: 8px !important;
+  font-size: 0.82rem !important;
+  background: var(--bg-card);
+}
+.editor-toolbar-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .editor-toolbar-ai {
-  margin-left: auto;
   padding: 5px 12px !important;
   border-color: var(--accent-primary) !important;
   color: var(--accent-primary) !important;

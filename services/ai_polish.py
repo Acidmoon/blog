@@ -1,4 +1,6 @@
 import json
+import os
+import re
 import urllib.error
 import urllib.request
 
@@ -25,6 +27,115 @@ POLISH_SYSTEM_PROMPT = """你是中文博客的轻量编辑，只做“口述稿
 - 保留 Markdown 语法、链接、代码块、列表的大意。
 """
 
+_PROVIDER_ID_RE = re.compile(r'^[a-zA-Z0-9_.:-]{1,64}$')
+
+
+def _csv(value: str) -> list[str]:
+    return [item.strip() for item in (value or '').split(',') if item.strip()]
+
+
+def _profile(
+    profile_id: str,
+    label: str,
+    api_base: str,
+    api_key_env: str,
+    models: list[str],
+    default_model: str | None = None,
+) -> dict:
+    models = [m for m in models if m]
+    if default_model and default_model not in models:
+        models.insert(0, default_model)
+    return {
+        'id': profile_id,
+        'label': label,
+        'api_base': (api_base or '').rstrip('/'),
+        'api_key_env': api_key_env,
+        'models': models,
+        'default_model': default_model or (models[0] if models else ''),
+        'configured': bool(os.environ.get(api_key_env)),
+    }
+
+
+def get_polish_profiles() -> list[dict]:
+    """Return the server-side whitelist of AI polish providers and models."""
+    raw = os.environ.get('AI_POLISH_PROVIDERS_JSON', '').strip()
+    if raw:
+        try:
+            loaded = json.loads(raw)
+            profiles = []
+            for item in loaded if isinstance(loaded, list) else []:
+                profile_id = str(item.get('id') or '').strip()
+                label = str(item.get('label') or profile_id).strip()
+                api_base = str(item.get('api_base') or '').strip()
+                api_key_env = str(item.get('api_key_env') or '').strip()
+                models = item.get('models') or []
+                if isinstance(models, str):
+                    models = _csv(models)
+                default_model = str(item.get('default_model') or (models[0] if models else '')).strip()
+                if profile_id and _PROVIDER_ID_RE.match(profile_id) and api_base and api_key_env and models:
+                    profiles.append(_profile(profile_id, label, api_base, api_key_env, list(models), default_model))
+            if profiles:
+                return profiles
+        except (TypeError, json.JSONDecodeError):
+            pass
+
+    default_profiles = [
+        _profile(
+            'waterhill',
+            '水浇岭 / GPT',
+            config.AI_POLISH_API_BASE,
+            'AI_POLISH_API_KEY',
+            _csv(os.environ.get('AI_POLISH_MODELS', 'gpt-5.5,gpt-5.4,gpt-4.1')),
+            config.AI_POLISH_MODEL,
+        ),
+        _profile(
+            'xiaomi-mimo',
+            'Xiaomi MiMo Token Plan CN',
+            os.environ.get('AI_POLISH_XIAOMI_API_BASE', 'https://token-plan-cn.xiaomimimo.com/v1'),
+            'AI_POLISH_XIAOMI_API_KEY',
+            _csv(os.environ.get('AI_POLISH_XIAOMI_MODELS', 'mimo-v2.5-pro')),
+            os.environ.get('AI_POLISH_XIAOMI_MODEL', 'mimo-v2.5-pro'),
+        ),
+    ]
+    return [p for p in default_profiles if p['api_base'] and p['models']]
+
+
+def get_public_polish_profiles() -> list[dict]:
+    """Profiles safe to expose to the admin page. Never include keys or env names."""
+    return [
+        {
+            'id': profile['id'],
+            'label': profile['label'],
+            'models': profile['models'],
+            'default_model': profile['default_model'],
+            'configured': profile['configured'],
+        }
+        for profile in get_polish_profiles()
+    ]
+
+
+def _resolve_profile(provider_id: str | None, model: str | None) -> tuple[dict, str, str]:
+    profiles = get_polish_profiles()
+    if not profiles:
+        raise RuntimeError('AI 润色供应商未配置')
+
+    provider_id = (provider_id or profiles[0]['id']).strip()
+    if not _PROVIDER_ID_RE.match(provider_id):
+        raise ValueError('AI 供应商无效')
+
+    profile = next((p for p in profiles if p['id'] == provider_id), None)
+    if not profile:
+        raise ValueError('AI 供应商不在允许列表中')
+
+    requested_model = (model or profile['default_model'] or '').strip()
+    if requested_model not in profile['models']:
+        raise ValueError('AI 模型不在当前供应商允许列表中')
+
+    api_key = os.environ.get(profile['api_key_env'], '').strip()
+    if not api_key:
+        raise RuntimeError(f"{profile['label']} 的 API Key 未配置")
+    return profile, requested_model, api_key
+
 
 def _build_user_prompt(title: str, tags: str, content: str) -> str:
     return f"""标题：{title or '未填写'}
@@ -37,15 +148,14 @@ def _build_user_prompt(title: str, tags: str, content: str) -> str:
 """
 
 
-def polish_content(title: str, tags: str, content: str) -> str:
+def polish_content(title: str, tags: str, content: str, provider_id: str | None = None, model: str | None = None) -> str:
     content = (content or '').strip()
     if not content:
         raise ValueError('正文不能为空')
-    if not config.AI_POLISH_API_KEY:
-        raise RuntimeError('AI_POLISH_API_KEY 未配置')
 
+    profile, selected_model, api_key = _resolve_profile(provider_id, model)
     payload = {
-        'model': config.AI_POLISH_MODEL,
+        'model': selected_model,
         'messages': [
             {'role': 'system', 'content': POLISH_SYSTEM_PROMPT},
             {'role': 'user', 'content': _build_user_prompt(title, tags, content)},
@@ -56,11 +166,11 @@ def polish_content(title: str, tags: str, content: str) -> str:
     }
     data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
     req = urllib.request.Request(
-        f"{config.AI_POLISH_API_BASE}/chat/completions",
+        f"{profile['api_base']}/chat/completions",
         data=data,
         method='POST',
         headers={
-            'Authorization': f"Bearer {config.AI_POLISH_API_KEY}",
+            'Authorization': f"Bearer {api_key}",
             'Content-Type': 'application/json',
             'User-Agent': 'Waterhill-Blog/1.0',
         },

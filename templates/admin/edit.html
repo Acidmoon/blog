@@ -25,6 +25,15 @@
           <button type="button" onclick="insertMd('> ', '')" title="引用">❝</button>
           <button type="button" onclick="insertMd('- ', '')" title="列表">•</button>
           <button type="button" onclick="uploadImage()" title="上传图片">📤</button>
+          <span class="editor-toolbar-spacer"></span>
+          <select id="aiPolishProvider" class="editor-toolbar-select" onchange="syncPolishModels()" title="选择 AI 供应商">
+            {% for provider in ai_polish_profiles %}
+              <option value="{{ provider.id }}" {% if not provider.configured %}disabled{% endif %}>
+                {{ provider.label }}{% if not provider.configured %}（未配置）{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <select id="aiPolishModel" class="editor-toolbar-select" title="选择 AI 模型"></select>
           <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="轻微润色口述稿，不改风格">✨ AI润色</button>
           <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
         </div>
@@ -41,6 +50,34 @@
 {% endblock %}
 {% block scripts %}
 <script>
+const AI_POLISH_PROFILES = {{ ai_polish_profiles|tojson }};
+
+function syncPolishModels() {
+  const providerSelect = document.getElementById('aiPolishProvider');
+  const modelSelect = document.getElementById('aiPolishModel');
+  const btn = document.getElementById('aiPolishBtn');
+  const provider = AI_POLISH_PROFILES.find(p => p.id === providerSelect.value) || AI_POLISH_PROFILES.find(p => p.configured) || AI_POLISH_PROFILES[0];
+  modelSelect.innerHTML = '';
+  if (!provider) {
+    btn.disabled = true;
+    modelSelect.disabled = true;
+    return;
+  }
+  if (providerSelect.value !== provider.id) providerSelect.value = provider.id;
+  (provider.models || []).forEach(model => {
+    const option = document.createElement('option');
+    option.value = model;
+    option.textContent = model;
+    if (model === provider.default_model) option.selected = true;
+    modelSelect.appendChild(option);
+  });
+  const usable = Boolean(provider.configured && provider.models && provider.models.length);
+  modelSelect.disabled = !usable;
+  btn.disabled = !usable;
+}
+
+document.addEventListener('DOMContentLoaded', syncPolishModels);
+
 function insertMd(before, after) {
   const ta = document.getElementById('content');
   const start = ta.selectionStart;
@@ -58,6 +95,8 @@ function uploadImage() {
 async function polishContent() {
   const btn = document.getElementById('aiPolishBtn');
   const status = document.getElementById('aiPolishStatus');
+  const provider = document.getElementById('aiPolishProvider').value;
+  const model = document.getElementById('aiPolishModel').value;
   const title = document.getElementById('title').value;
   const tags = document.getElementById('tags').value;
   const ta = document.getElementById('content');
@@ -74,7 +113,7 @@ async function polishContent() {
     const resp = await fetch('/admin/api/ai/polish', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({title, tags, content: original})
+      body: JSON.stringify({title, tags, content: original, provider, model})
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || '润色失败');
@@ -88,6 +127,7 @@ async function polishContent() {
   } finally {
     btn.disabled = false;
     btn.textContent = '✨ AI润色';
+    syncPolishModels();
   }
 }
 function handleUpload(input) {

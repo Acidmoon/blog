@@ -9,7 +9,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 import config
 from models import get_db
 from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
-from services.ai_polish import polish_content
+from services.ai_polish import get_public_polish_profiles, polish_content
 from services.articles import (
     delete_article_file,
     get_article_meta,
@@ -87,6 +87,14 @@ def module_page(module_id):
     return render_template(admin_module.template, **build_admin_module_context(admin_module))
 
 
+def _edit_template(article=None):
+    return render_template(
+        'admin/edit.html',
+        article=article,
+        ai_polish_profiles=get_public_polish_profiles(),
+    )
+
+
 @bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_article():
@@ -96,7 +104,7 @@ def new_article():
         content = request.form.get('content', '').strip()
         if not title or not content:
             flash('标题和内容不能为空', 'error')
-            return render_template('admin/edit.html', article=None)
+            return _edit_template(article=None)
         slug = slugify(title)
         now = datetime.now().isoformat()
         conn = get_db()
@@ -117,7 +125,7 @@ def new_article():
         write_article_file(slug, content)
         flash('文章已发布', 'success')
         return redirect(url_for('public.article', slug=slug))
-    return render_template('admin/edit.html', article=None)
+    return _edit_template(article=None)
 
 
 @bp.route('/edit/<slug>', methods=['GET', 'POST'])
@@ -142,7 +150,7 @@ def edit_article(slug):
         flash('文章已更新', 'success')
         return redirect(url_for('public.article', slug=slug))
     article['content'] = read_article_file(slug) or ''
-    return render_template('admin/edit.html', article=article)
+    return _edit_template(article=article)
 
 
 @bp.route('/delete/<slug>', methods=['POST'])
@@ -180,10 +188,12 @@ def ai_polish():
     title = (data.get('title') or '').strip()
     tags = (data.get('tags') or '').strip()
     content = (data.get('content') or '').strip()
+    provider_id = (data.get('provider') or '').strip()
+    model = (data.get('model') or '').strip()
     if not content:
         return jsonify({'error': '正文不能为空'}), 400
     try:
-        polished = polish_content(title, tags, content)
+        polished = polish_content(title, tags, content, provider_id=provider_id, model=model)
     except ValueError as exc:
         return jsonify({'error': str(exc)}), 400
     except Exception as exc:
