@@ -89,12 +89,20 @@ def get_polish_profiles() -> list[dict]:
             config.AI_POLISH_MODEL,
         ),
         _profile(
-            'xiaomi-mimo',
-            'Xiaomi MiMo Token Plan CN',
-            os.environ.get('AI_POLISH_XIAOMI_API_BASE', 'https://token-plan-cn.xiaomimimo.com/v1'),
-            'AI_POLISH_XIAOMI_API_KEY',
-            _csv(os.environ.get('AI_POLISH_XIAOMI_MODELS', 'mimo-v2.5-pro')),
-            os.environ.get('AI_POLISH_XIAOMI_MODEL', 'mimo-v2.5-pro'),
+            'waterhill-mimo',
+            'waterhill.cyou / MiMo',
+            os.environ.get('AI_POLISH_MIMO_API_BASE', 'https://www.waterhill.cyou/v1'),
+            'AI_POLISH_MIMO_API_KEY',
+            _csv(os.environ.get('AI_POLISH_MIMO_MODELS', 'mimo-v2.5-pro')),
+            os.environ.get('AI_POLISH_MIMO_MODEL', 'mimo-v2.5-pro'),
+        ),
+        _profile(
+            'deepseek',
+            'DeepSeek',
+            os.environ.get('AI_POLISH_DEEPSEEK_API_BASE', 'https://api.deepseek.com/v1'),
+            'AI_POLISH_DEEPSEEK_API_KEY',
+            _csv(os.environ.get('AI_POLISH_DEEPSEEK_MODELS', 'deepseek-v4-flash,deepseek-v4-pro')),
+            os.environ.get('AI_POLISH_DEEPSEEK_MODEL', 'deepseek-v4-flash'),
         ),
     ]
     return [p for p in default_profiles if p['api_base'] and p['models']]

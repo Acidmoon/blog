@@ -13,10 +13,14 @@ services:
       - AI_POLISH_API_KEY=${AI_POLISH_API_KEY:-}
       - AI_POLISH_MODEL=gpt-5.5
       - AI_POLISH_MODELS=gpt-5.5,gpt-5.4,gpt-4.1
-      - AI_POLISH_XIAOMI_API_BASE=https://token-plan-cn.xiaomimimo.com/v1
-      - AI_POLISH_XIAOMI_API_KEY=${AI_POLISH_XIAOMI_API_KEY:-}
-      - AI_POLISH_XIAOMI_MODEL=mimo-v2.5-pro
-      - AI_POLISH_XIAOMI_MODELS=mimo-v2.5-pro
+      - AI_POLISH_MIMO_API_BASE=https://www.waterhill.cyou/v1
+      - AI_POLISH_MIMO_API_KEY=${AI_POLISH_MIMO_API_KEY:-}
+      - AI_POLISH_MIMO_MODEL=mimo-v2.5-pro
+      - AI_POLISH_MIMO_MODELS=mimo-v2.5-pro
+      - AI_POLISH_DEEPSEEK_API_BASE=https://api.deepseek.com/v1
+      - AI_POLISH_DEEPSEEK_API_KEY=${AI_POLISH_DEEPSEEK_API_KEY:-}
+      - AI_POLISH_DEEPSEEK_MODEL=deepseek-v4-flash
+      - AI_POLISH_DEEPSEEK_MODELS=deepseek-v4-flash,deepseek-v4-pro
     volumes:
       - /root/blog/data/articles:/app/articles
       - /root/blog/data/images:/app/static/images
