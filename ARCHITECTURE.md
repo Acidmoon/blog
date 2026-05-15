@@ -9,6 +9,8 @@
 ├── app.py                 # create_app / 初始化配置 / 注册 Blueprint
 ├── config.py              # 路径、站点配置、环境变量、目录初始化
 ├── models.py              # SQLite 连接与表初始化
+├── module_loader.py       # 自定义模块发现、manifest 解析、Blueprint/section 注册
+├── modules/               # 可插拔模块目录，每个子目录可提供 manifest.py
 ├── routes/                # 页面和接口入口
 │   ├── public.py          # 首页、文章详情、搜索、静态资源路由
 │   └── admin.py           # 登录、文章 CRUD、上传、一言配置
@@ -31,31 +33,53 @@
 4. 路径、环境变量、站点标题等只放在 `config.py`。
 5. 现有 URL 暂时保持不变：`/`、`/search`、`/article/<slug>`、`/admin/*`。
 
-## 首页模块渲染约定
+## 注册制模块约定
 
-首页不再在 `templates/index.html` 里写死「一言 → 标签 → 文章 → 分页」的固定槽位，而是由 `services/home_modules.py` 统一注册可渲染 section：
+`app.py` 启动时会先调用 `module_loader.load_modules(app)`，自动扫描 `modules/*/manifest.py`。每个模块通过 `MODULE` 声明自己的元信息、Blueprint 和首页 section：
 
-```text
-SECTION_REGISTRY
-  daily_quote   -> templates/home_sections/daily_quote.html
-  tag_filter    -> templates/home_sections/tag_filter.html
-  article_list  -> templates/home_sections/article_list.html
-  pagination    -> templates/home_sections/pagination.html
+```python
+from module_loader import HomeSectionDefinition
+
+MODULE = {
+    "id": "example",
+    "name": "示例模块",
+    "blueprints": [bp],
+    "home_sections": [
+        HomeSectionDefinition(
+            id="example_section",
+            name="示例首页块",
+            template="home_sections/example.html",
+            default_order=50,
+            build_context=lambda layout, base_context: {"extra": "value"},
+        )
+    ],
+}
 ```
 
-`home_layout.json` 的 `section_order` 控制首页模块从上到下的顺序；后台 `/admin/layout` 可编辑这个顺序。`index.html` 只负责遍历 `home_sections` 并 include 对应模板，这样新增模块时不需要再给首页硬塞一个固定位置。
-
-## 后续自定义模块建议
-
-后续如果要加“自定义模块”，建议新增：
+模块目录建议：
 
 ```text
 modules/
   example/
-    manifest.py      # 模块元信息、后台入口、前台 section 声明
-    routes.py        # 模块自己的 Blueprint
-    service.py       # 模块业务逻辑
-    templates/       # 模块模板
+    __init__.py
+    manifest.py      # 模块元信息、Blueprint、前台 section 声明
+    routes.py        # 模块自己的 Blueprint，可选
+    service.py       # 模块业务逻辑，可选
 ```
 
-然后在 `app.py` 或专门的 `module_loader.py` 中统一发现和注册模块，并把前台入口汇总进 `home_modules.SECTION_REGISTRY`，避免每次加功能都修改核心路由或首页骨架。
+`module_loader.REGISTRY` 会保存已加载模块和首页 section。`services/home_modules.py` 从这个 registry 读取 section，负责排序、上下文构建和传给首页模板。
+
+## 首页模块渲染约定
+
+首页不再在 `templates/index.html` 里写死「一言 → 标签 → 文章 → 分页」的固定槽位。内置首页模块现在也是普通注册模块：`modules/core_home/manifest.py` 注册这些 section：
+
+```text
+daily_quote   -> templates/home_sections/daily_quote.html
+tag_filter    -> templates/home_sections/tag_filter.html
+article_list  -> templates/home_sections/article_list.html
+pagination    -> templates/home_sections/pagination.html
+```
+
+`home_layout.json` 的 `section_order` 控制首页模块从上到下的顺序；后台 `/admin/layout` 可编辑这个顺序。`index.html` 只负责遍历 `home_sections` 并 include 对应模板，这样新增模块时不需要再给首页硬塞一个固定位置。
+
+后续如果要加“自定义模块”，优先新增 `modules/<name>/manifest.py`，而不是修改 `app.py` 或 `templates/index.html`。

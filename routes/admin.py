@@ -17,7 +17,7 @@ from services.articles import (
     write_article_file,
 )
 from services.home_layout import load_home_layout, save_home_layout
-from services.home_modules import section_order_from_text, section_order_to_text, normalize_section_order, SECTION_REGISTRY
+from services.home_modules import section_order_from_text, section_order_to_text, normalize_section_order, section_registry
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -157,8 +157,9 @@ def layout():
     quotes_text = "\n".join(layout_config.get("quotes", []))
     section_order = normalize_section_order(layout_config.get("section_order"))
     section_order_text = section_order_to_text(section_order)
+    registry = section_registry()
     section_help = [
-        {"id": section_id, "name": SECTION_REGISTRY[section_id].name}
+        {"id": section_id, "name": registry[section_id].name}
         for section_id in section_order
     ]
     return render_template(

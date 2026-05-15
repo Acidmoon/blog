@@ -2,6 +2,7 @@ from flask import Flask
 
 import config
 from models import init_db
+from module_loader import load_modules
 from routes import register_blueprints
 
 
@@ -12,6 +13,7 @@ def create_app():
 
     config.ensure_directories()
     init_db()
+    load_modules(app)
     register_blueprints(app)
 
     return app

@@ -1,74 +1,38 @@
-"""Lightweight homepage module/section composition.
-
-This keeps homepage blocks out of a fixed template order. Each block declares an
-id, template, default order and the context it needs. The persisted layout config
-can reorder or hide blocks without changing routes/public.py or index.html.
-"""
+"""Homepage section composition backed by the module registry."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 import config
-from services.home_layout import get_daily_quote
+from module_loader import REGISTRY, HomeSectionDefinition
 
 
-@dataclass(frozen=True)
-class HomeSectionDefinition:
-    id: str
-    name: str
-    template: str
-    default_order: int
-
-
-SECTION_REGISTRY: dict[str, HomeSectionDefinition] = {
-    "daily_quote": HomeSectionDefinition(
-        id="daily_quote",
-        name="每日一言",
-        template="home_sections/daily_quote.html",
-        default_order=10,
-    ),
-    "tag_filter": HomeSectionDefinition(
-        id="tag_filter",
-        name="标签筛选",
-        template="home_sections/tag_filter.html",
-        default_order=20,
-    ),
-    "article_list": HomeSectionDefinition(
-        id="article_list",
-        name="文章列表",
-        template="home_sections/article_list.html",
-        default_order=30,
-    ),
-    "pagination": HomeSectionDefinition(
-        id="pagination",
-        name="分页",
-        template="home_sections/pagination.html",
-        default_order=40,
-    ),
-}
+def section_registry() -> dict[str, HomeSectionDefinition]:
+    """Return homepage sections contributed by loaded modules."""
+    return REGISTRY.home_sections
 
 
 def default_section_order() -> list[str]:
     return [
         section.id
-        for section in sorted(SECTION_REGISTRY.values(), key=lambda item: item.default_order)
+        for section in sorted(section_registry().values(), key=lambda item: item.default_order)
     ]
 
 
 def normalize_section_order(raw_order: Any) -> list[str]:
     """Return a safe, deduplicated section order.
 
-    Unknown ids are ignored. Missing known sections are appended by default so a
-    partial config remains forward-compatible when new modules are added.
+    Unknown ids are ignored. Missing registered sections are appended by default
+    so layout config remains forward-compatible when modules are added.
     """
+    registry = section_registry()
     if not isinstance(raw_order, list):
         raw_order = []
 
     normalized: list[str] = []
     for section_id in raw_order:
-        if section_id in SECTION_REGISTRY and section_id not in normalized:
+        if section_id in registry and section_id not in normalized:
             normalized.append(section_id)
 
     for section_id in default_section_order():
@@ -99,14 +63,9 @@ def build_home_sections(
     current_tag: str,
     all_tags: list[str],
 ) -> list[dict[str, Any]]:
-    """Build ordered homepage sections for index.html.
-
-    The index template only iterates these sections. Adding a future custom
-    module means registering a new section definition and template rather than
-    hard-coding another slot into index.html.
-    """
+    """Build ordered homepage sections for index.html."""
     total_pages = max(1, (total + config.ARTICLES_PER_PAGE - 1) // config.ARTICLES_PER_PAGE)
-    common_context = {
+    base_context = {
         "articles": articles,
         "page": page,
         "total": total,
@@ -114,16 +73,19 @@ def build_home_sections(
         "total_pages": total_pages,
         "current_tag": current_tag,
         "all_tags": all_tags,
-        "daily_quote": get_daily_quote(layout.get("quotes", [])),
     }
 
     sections: list[dict[str, Any]] = []
+    registry = section_registry()
     for section_id in normalize_section_order(layout.get("section_order")):
-        definition = SECTION_REGISTRY[section_id]
+        definition = registry[section_id]
+        context = dict(base_context)
+        if definition.build_context:
+            context.update(definition.build_context(layout, base_context))
         sections.append({
             "id": definition.id,
             "name": definition.name,
             "template": definition.template,
-            "context": common_context,
+            "context": context,
         })
     return sections
