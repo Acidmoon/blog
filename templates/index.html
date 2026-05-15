@@ -17,71 +17,20 @@
   </svg>
 </section>
 
-<main class="container">
-
-  <!-- Daily Quote -->
-  {% if daily_quote %}
-  <div class="quote-line serif">
-    <span class="quote-line-mark">"</span>
-    {{ daily_quote }}
-  </div>
-  {% endif %}
-
-  <!-- Tag Filter -->
-  {% if all_tags %}
-  <div class="tag-filter-section">
-    <div class="tag-filter-label">标签</div>
-    <div class="tag-filter">
-      <a href="/" class="tag {% if not current_tag %}active{% endif %}">全部</a>
-      {% for tag in all_tags %}
-      <a href="/?tag={{ tag }}" class="tag {% if current_tag == tag %}active{% endif %}">{{ tag }}</a>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Article List -->
-  <div class="article-list">
-    {% for article in articles %}
-    <article class="article-card" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
-      <h2 class="article-title serif">
-        <a href="/article/{{ article.slug }}">{{ article.title }}</a>
-      </h2>
-      <div class="article-meta">
-        <time>{{ article.created_at[:10] }}</time>
-        {% if article.tags %}
-        <span class="article-tags">
-          {% for t in article.tags.split(',') if t.strip() %}
-          <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
-          {% endfor %}
-        </span>
-        {% endif %}
-      </div>
-    </article>
-    {% else %}
-    <div class="empty-state">
-      <div class="empty-state-icon">🏔️</div>
-      <p>还没有文章，等水浇岭来浇灌吧</p>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Pagination -->
-  {% if total_pages > 1 %}
-  <nav class="pagination" role="navigation" aria-label="分页">
-    {% if page > 1 %}
-    <a href="?page={{ page-1 }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="page-link" aria-label="上一页">
-      ← 上一页
-    </a>
-    {% endif %}
-    <span class="page-info" aria-current="page">{{ page }} / {{ total_pages }}</span>
-    {% if page < total_pages %}
-    <a href="?page={{ page+1 }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="page-link" aria-label="下一页">
-      下一页 →
-    </a>
-    {% endif %}
-  </nav>
-  {% endif %}
-
+<main class="container home-sections">
+  {% for section in home_sections %}
+    {% with section_id=section.id,
+            section_name=section.name,
+            articles=section.context.articles,
+            page=section.context.page,
+            total=section.context.total,
+            per_page=section.context.per_page,
+            total_pages=section.context.total_pages,
+            current_tag=section.context.current_tag,
+            all_tags=section.context.all_tags,
+            daily_quote=section.context.daily_quote %}
+      {% include section.template %}
+    {% endwith %}
+  {% endfor %}
 </main>
 {% endblock %}

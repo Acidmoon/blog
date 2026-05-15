@@ -17,6 +17,7 @@ from services.articles import (
     write_article_file,
 )
 from services.home_layout import load_home_layout, save_home_layout
+from services.home_modules import section_order_from_text, section_order_to_text, normalize_section_order, SECTION_REGISTRY
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -145,9 +146,24 @@ def layout():
     if request.method == 'POST':
         quotes_raw = request.form.get("quotes", "").strip()
         quotes = [q.strip() for q in quotes_raw.splitlines() if q.strip()]
+        section_order_raw = request.form.get("section_order", "")
+
         layout_config["quotes"] = quotes or ["书山有路勤为径，学海无涯苦作舟。"]
+        layout_config["section_order"] = section_order_from_text(section_order_raw)
         save_home_layout(layout_config)
-        flash('每日一言已更新', 'success')
+        flash('首页布局已更新', 'success')
         return redirect(url_for('admin.layout'))
+
     quotes_text = "\n".join(layout_config.get("quotes", []))
-    return render_template('admin/layout.html', quotes_text=quotes_text)
+    section_order = normalize_section_order(layout_config.get("section_order"))
+    section_order_text = section_order_to_text(section_order)
+    section_help = [
+        {"id": section_id, "name": SECTION_REGISTRY[section_id].name}
+        for section_id in section_order
+    ]
+    return render_template(
+        'admin/layout.html',
+        quotes_text=quotes_text,
+        section_order_text=section_order_text,
+        section_help=section_help,
+    )

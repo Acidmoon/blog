@@ -32,5 +32,11 @@
     "日光之下并无新事。 — 《圣经》",
     "身在无间，心在桃源。 — 《天官赐福》",
     "如果不去遍历幽谷，你永远不知道自己能做到多少。 — 高迪"
+  ],
+  "section_order": [
+    "daily_quote",
+    "tag_filter",
+    "article_list",
+    "pagination"
   ]
 }

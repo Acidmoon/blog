@@ -4,7 +4,8 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fro
 
 import config
 from services.articles import get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
-from services.home_layout import get_daily_quote, load_home_layout
+from services.home_layout import load_home_layout
+from services.home_modules import build_home_sections
 from services.search import search_articles
 
 bp = Blueprint('public', __name__)
@@ -44,17 +45,18 @@ def index():
     tag = request.args.get('tag', '').strip()
     articles, total = list_published_articles(page=page, tag=tag)
     layout = load_home_layout()
-    quote = get_daily_quote(layout.get("quotes", []))
-
-    return render_template('index.html',
+    all_tags = list_all_tags()
+    home_sections = build_home_sections(
+        layout,
         articles=articles,
         page=page,
         total=total,
-        per_page=config.ARTICLES_PER_PAGE,
-        total_pages=max(1, (total + config.ARTICLES_PER_PAGE - 1) // config.ARTICLES_PER_PAGE),
         current_tag=tag,
-        all_tags=list_all_tags(),
-        daily_quote=quote,
+        all_tags=all_tags,
+    )
+
+    return render_template('index.html',
+        home_sections=home_sections,
     )
 
 

@@ -1,0 +1,24 @@
+<div class="article-list" data-home-section="article_list">
+  {% for article in articles %}
+  <article class="article-card" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
+    <h2 class="article-title serif">
+      <a href="/article/{{ article.slug }}">{{ article.title }}</a>
+    </h2>
+    <div class="article-meta">
+      <time>{{ article.created_at[:10] }}</time>
+      {% if article.tags %}
+      <span class="article-tags">
+        {% for t in article.tags.split(',') if t.strip() %}
+        <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
+        {% endfor %}
+      </span>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">🏔️</div>
+    <p>还没有文章，等水浇岭来浇灌吧</p>
+  </div>
+  {% endfor %}
+</div>
