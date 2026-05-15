@@ -9,6 +9,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 import config
 from models import get_db
 from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
+from services.ai_polish import polish_content
 from services.articles import (
     delete_article_file,
     get_article_meta,
@@ -170,6 +171,24 @@ def upload():
     filename = f"{uuid.uuid4().hex}.{ext}"
     file.save(os.path.join(config.UPLOAD_DIR, filename))
     return jsonify({'url': url_for('static', filename=f'images/{filename}')})
+
+
+@bp.route('/api/ai/polish', methods=['POST'])
+@login_required
+def ai_polish():
+    data = request.get_json(silent=True) or {}
+    title = (data.get('title') or '').strip()
+    tags = (data.get('tags') or '').strip()
+    content = (data.get('content') or '').strip()
+    if not content:
+        return jsonify({'error': '正文不能为空'}), 400
+    try:
+        polished = polish_content(title, tags, content)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 502
+    return jsonify({'content': polished})
 
 
 @bp.route('/layout', methods=['GET', 'POST'])

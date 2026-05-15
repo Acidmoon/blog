@@ -790,6 +790,24 @@ img { max-width: 100%; height: auto; display: block; }
   margin-top: 24px;
 }
 
+
+.editor-toolbar-ai {
+  margin-left: auto;
+  padding: 5px 12px !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+  min-width: auto !important;
+}
+.editor-toolbar-ai:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.editor-hint {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
 /* ── Buttons ────────────────────────────────────────── */
 .btn {
   display: inline-flex;

@@ -18,6 +18,11 @@ SITE_SUBTITLE = '写点有意思的东西'
 ARTICLES_PER_PAGE = 10
 ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-05-15')
 
+AI_POLISH_API_BASE = os.environ.get('AI_POLISH_API_BASE', 'https://www.waterhill.cyou/v1').rstrip('/')
+AI_POLISH_API_KEY = os.environ.get('AI_POLISH_API_KEY', '')
+AI_POLISH_MODEL = os.environ.get('AI_POLISH_MODEL', 'gpt-5.5')
+AI_POLISH_TIMEOUT = float(os.environ.get('AI_POLISH_TIMEOUT', '60'))
+
 
 def ensure_directories():
     Path(ARTICLES_DIR).mkdir(parents=True, exist_ok=True)

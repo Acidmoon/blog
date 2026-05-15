@@ -25,9 +25,11 @@
           <button type="button" onclick="insertMd('> ', '')" title="引用">❝</button>
           <button type="button" onclick="insertMd('- ', '')" title="列表">•</button>
           <button type="button" onclick="uploadImage()" title="上传图片">📤</button>
+          <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="轻微润色口述稿，不改风格">✨ AI润色</button>
           <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
         </div>
         <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
+        <p id="aiPolishStatus" class="editor-hint">AI润色只会轻修语病、重复和口语表达，不会自动发布。</p>
       </div>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">{% if article %}💾 保存修改{% else %}🚀 发布{% endif %}</button>
@@ -52,6 +54,41 @@ function insertMd(before, after) {
 }
 function uploadImage() {
   document.getElementById('imageInput').click();
+}
+async function polishContent() {
+  const btn = document.getElementById('aiPolishBtn');
+  const status = document.getElementById('aiPolishStatus');
+  const title = document.getElementById('title').value;
+  const tags = document.getElementById('tags').value;
+  const ta = document.getElementById('content');
+  const original = ta.value.trim();
+  if (!original) {
+    alert('先写一点内容再润色');
+    return;
+  }
+  const previous = ta.value;
+  btn.disabled = true;
+  btn.textContent = '润色中…';
+  status.textContent = '正在轻微润色：只修语病、重复和口语表达，不会改风格。';
+  try {
+    const resp = await fetch('/admin/api/ai/polish', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title, tags, content: original})
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || '润色失败');
+    ta.value = data.content || previous;
+    ta.focus();
+    status.textContent = '已完成。建议你再快速看一遍，确认没有改偏。';
+  } catch (e) {
+    ta.value = previous;
+    status.textContent = '润色失败：' + e.message;
+    alert('AI润色失败: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ AI润色';
+  }
 }
 function handleUpload(input) {
   const file = input.files[0];
