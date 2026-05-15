@@ -17,7 +17,13 @@ from services.articles import (
     write_article_file,
 )
 from services.home_layout import load_home_layout, save_home_layout
-from services.home_modules import section_order_from_text, section_order_to_text, normalize_section_order, section_registry
+from services.home_modules import (
+    normalize_section_order,
+    normalize_section_visibility,
+    section_order_from_text,
+    section_order_to_text,
+    section_registry,
+)
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -147,9 +153,14 @@ def layout():
         quotes_raw = request.form.get("quotes", "").strip()
         quotes = [q.strip() for q in quotes_raw.splitlines() if q.strip()]
         section_order_raw = request.form.get("section_order", "")
+        registry = section_registry()
 
         layout_config["quotes"] = quotes or ["书山有路勤为径，学海无涯苦作舟。"]
         layout_config["section_order"] = section_order_from_text(section_order_raw)
+        layout_config["section_visibility"] = {
+            section_id: request.form.get(f"section_enabled_{section_id}") == "on"
+            for section_id in registry
+        }
         save_home_layout(layout_config)
         flash('首页布局已更新', 'success')
         return redirect(url_for('admin.layout'))
@@ -158,9 +169,19 @@ def layout():
     section_order = normalize_section_order(layout_config.get("section_order"))
     section_order_text = section_order_to_text(section_order)
     registry = section_registry()
+    section_visibility = normalize_section_visibility(layout_config.get("section_visibility"))
     section_help = [
-        {"id": section_id, "name": registry[section_id].name}
-        for section_id in section_order
+        {
+            "id": section_id,
+            "name": definition.name,
+            "template": definition.template,
+            "enabled": section_visibility.get(section_id, True),
+            "in_order": section_id in section_order,
+        }
+        for section_id, definition in sorted(
+            registry.items(),
+            key=lambda item: (item[1].default_order, item[0]),
+        )
     ]
     return render_template(
         'admin/layout.html',

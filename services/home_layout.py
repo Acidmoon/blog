@@ -55,8 +55,8 @@ def load_home_layout():
         try:
             return json.loads(config.HOME_LAYOUT_PATH.read_text(encoding="utf-8"))
         except Exception:
-            return {"quotes": FALLBACK_QUOTES}
-    return {"quotes": FALLBACK_QUOTES}
+            return {"quotes": FALLBACK_QUOTES, "section_order": []}
+    return {"quotes": FALLBACK_QUOTES, "section_order": []}
 
 
 def save_home_layout(data):

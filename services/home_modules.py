@@ -20,6 +20,26 @@ def default_section_order() -> list[str]:
     ]
 
 
+def normalize_section_visibility(raw_visibility: Any) -> dict[str, bool]:
+    """Return per-section visibility for every registered homepage section.
+
+    Missing values default to True so newly installed modules appear on the
+    homepage automatically until the admin explicitly hides them.
+    """
+    registry = section_registry()
+    if not isinstance(raw_visibility, dict):
+        raw_visibility = {}
+
+    return {
+        section_id: bool(raw_visibility.get(section_id, True))
+        for section_id in registry
+    }
+
+
+def is_section_enabled(layout: dict[str, Any], section_id: str) -> bool:
+    return normalize_section_visibility(layout.get("section_visibility")).get(section_id, True)
+
+
 def normalize_section_order(raw_order: Any) -> list[str]:
     """Return a safe, deduplicated section order.
 
@@ -78,6 +98,8 @@ def build_home_sections(
     sections: list[dict[str, Any]] = []
     registry = section_registry()
     for section_id in normalize_section_order(layout.get("section_order")):
+        if not is_section_enabled(layout, section_id):
+            continue
         definition = registry[section_id]
         context = dict(base_context)
         if definition.build_context:

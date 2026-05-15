@@ -16,9 +16,17 @@
       </p>
       <div class="layout-module-list">
         {% for item in section_help %}
-        <code>{{ item.id }}</code><span>{{ item.name }}</span>
+        <code>{{ item.id }}</code>
+        <span>
+          <label class="layout-module-toggle">
+            <input type="checkbox" name="section_enabled_{{ item.id }}" {% if item.enabled %}checked{% endif %}>
+            {{ item.name }}
+          </label>
+          <small>{{ item.template }}</small>
+        </span>
         {% endfor %}
       </div>
+      <p class="layout-section-desc">取消勾选会隐藏模块；调整下方 ID 顺序会改变渲染位置。未知 ID 会自动忽略，新注册模块会自动出现在列表里。</p>
       <textarea name="section_order" rows="6" class="layout-textarea layout-textarea-mono">{{ section_order_text }}</textarea>
     </section>
 
@@ -39,8 +47,11 @@
 .layout-section { margin: 32px 0; }
 .layout-section-title { font-size: 1.2rem; margin-bottom: 8px; color: var(--text-primary); }
 .layout-section-desc { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px; }
-.layout-module-list { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 8px 12px; margin: 0 0 14px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-secondary); font-size: 0.9rem; }
-.layout-module-list code { color: var(--accent-primary); font-family: "JetBrains Mono", monospace; }
+.layout-module-list { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 10px 12px; margin: 0 0 14px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-secondary); font-size: 0.9rem; }
+.layout-module-list code { color: var(--accent-primary); font-family: "JetBrains Mono", monospace; align-self: start; }
+.layout-module-list small { display: block; margin-top: 2px; color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: 0.75rem; }
+.layout-module-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); cursor: pointer; }
+.layout-module-toggle input { accent-color: var(--accent-primary); }
 .layout-textarea { width: 100%; min-height: 220px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; line-height: 1.6; resize: vertical; font-family: "Noto Serif SC", serif; }
 .layout-textarea-mono { min-height: 120px; font-family: "JetBrains Mono", monospace; }
 .layout-textarea:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }

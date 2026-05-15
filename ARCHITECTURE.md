@@ -80,6 +80,6 @@ article_list  -> templates/home_sections/article_list.html
 pagination    -> templates/home_sections/pagination.html
 ```
 
-`home_layout.json` 的 `section_order` 控制首页模块从上到下的顺序；后台 `/admin/layout` 可编辑这个顺序。`index.html` 只负责遍历 `home_sections` 并 include 对应模板，这样新增模块时不需要再给首页硬塞一个固定位置。
+`home_layout.json` 的 `section_order` 控制首页模块从上到下的顺序，`section_visibility` 控制每个模块是否显示；后台 `/admin/layout` 可编辑顺序并勾选启用/隐藏模块。`index.html` 只负责遍历 `home_sections` 并 include 对应模板，这样新增模块时不需要再给首页硬塞一个固定位置。
 
 后续如果要加“自定义模块”，优先新增 `modules/<name>/manifest.py`，而不是修改 `app.py` 或 `templates/index.html`。

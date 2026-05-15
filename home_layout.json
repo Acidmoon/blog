@@ -38,5 +38,11 @@
     "tag_filter",
     "article_list",
     "pagination"
-  ]
+  ],
+  "section_visibility": {
+    "daily_quote": true,
+    "tag_filter": true,
+    "article_list": true,
+    "pagination": true
+  }
 }
