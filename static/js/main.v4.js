@@ -224,6 +224,48 @@ function initCardClick() {
   });
 }
 
+/* ── Water Ripple Click Effect ─────────────────────── */
+function initWaterRipple() {
+  const container = document.createElement('div');
+  container.className = 'water-ripple-container';
+  document.body.appendChild(container);
+
+  document.addEventListener('click', function(e) {
+    const ripple = document.createElement('div');
+    ripple.className = 'water-ripple';
+    const size = 24 + Math.random() * 20;
+    ripple.style.width = size + 'px';
+    ripple.style.height = size + 'px';
+    ripple.style.left = e.clientX - size / 2 + 'px';
+    ripple.style.top = e.clientY - size / 2 + 'px';
+
+    // ring
+    const ring = ripple.cloneNode();
+    ring.classList.add('water-ripple--ring');
+    ring.style.width = (size * 2.5) + 'px';
+    ring.style.height = (size * 2.5) + 'px';
+    ring.style.left = e.clientX - size * 1.25 + 'px';
+    ring.style.top = e.clientY - size * 1.25 + 'px';
+    container.appendChild(ring);
+    ring.addEventListener('animationend', () => ring.remove());
+
+    // glow
+    const glow = ripple.cloneNode();
+    glow.classList.add('water-ripple--glow');
+    glow.style.width = (size * 3) + 'px';
+    glow.style.height = (size * 3) + 'px';
+    glow.style.left = e.clientX - size * 1.5 + 'px';
+    glow.style.top = e.clientY - size * 1.5 + 'px';
+    container.appendChild(glow);
+    glow.addEventListener('animationend', () => glow.remove());
+
+    // splash dot
+    ripple.classList.add('water-ripple--splash');
+    container.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  });
+}
+
 /* ── Initialize ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
@@ -235,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCopyButtons();
   initArticleImages();
   initSearch();
+  initWaterRipple();
 });
 
 })();
