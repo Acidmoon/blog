@@ -226,43 +226,52 @@ function initCardClick() {
 
 /* ── Water Ripple Click Effect ─────────────────────── */
 function initWaterRipple() {
-  const container = document.createElement('div');
+  var container = document.createElement('div');
   container.className = 'water-ripple-container';
   document.body.appendChild(container);
 
   document.addEventListener('click', function(e) {
-    const ripple = document.createElement('div');
-    ripple.className = 'water-ripple';
-    const size = 24 + Math.random() * 20;
-    ripple.style.width = size + 'px';
-    ripple.style.height = size + 'px';
-    ripple.style.left = e.clientX - size / 2 + 'px';
-    ripple.style.top = e.clientY - size / 2 + 'px';
+    // 跳过可交互元素 — 不干扰链接、按钮、输入框等
+    var skipSelectors = 'a, button, input, textarea, select, .nav-links, .theme-toggle, .copy-btn';
+    if (e.target.closest(skipSelectors)) return;
 
-    // ring
-    const ring = ripple.cloneNode();
-    ring.classList.add('water-ripple--ring');
-    ring.style.width = (size * 2.5) + 'px';
-    ring.style.height = (size * 2.5) + 'px';
-    ring.style.left = e.clientX - size * 1.25 + 'px';
-    ring.style.top = e.clientY - size * 1.25 + 'px';
+    var x = e.clientX;
+    var y = e.clientY;
+
+    // 内圈 ring ── 较细较亮
+    var ring = document.createElement('div');
+    ring.className = 'water-ripple water-ripple--ring';
+    ring.style.left = x + 'px';
+    ring.style.top  = y + 'px';
     container.appendChild(ring);
-    ring.addEventListener('animationend', () => ring.remove());
+    ring.addEventListener('animationend', function() { ring.remove(); });
 
-    // glow
-    const glow = ripple.cloneNode();
-    glow.classList.add('water-ripple--glow');
-    glow.style.width = (size * 3) + 'px';
-    glow.style.height = (size * 3) + 'px';
-    glow.style.left = e.clientX - size * 1.5 + 'px';
-    glow.style.top = e.clientY - size * 1.5 + 'px';
+    // 外圈 ring ── 稍延迟，更大更淡
+    var ring2 = document.createElement('div');
+    ring2.className = 'water-ripple water-ripple--ring';
+    ring2.style.left = x + 'px';
+    ring2.style.top  = y + 'px';
+    ring2.style.animationDelay = '0.12s';
+    ring2.style.borderWidth = '1px';
+    ring2.style.opacity = '0.4';
+    container.appendChild(ring2);
+    ring2.addEventListener('animationend', function() { ring2.remove(); });
+
+    // 柔光 glow
+    var glow = document.createElement('div');
+    glow.className = 'water-ripple water-ripple--glow';
+    glow.style.left = x + 'px';
+    glow.style.top  = y + 'px';
     container.appendChild(glow);
-    glow.addEventListener('animationend', () => glow.remove());
+    glow.addEventListener('animationend', function() { glow.remove(); });
 
-    // splash dot
-    ripple.classList.add('water-ripple--splash');
-    container.appendChild(ripple);
-    ripple.addEventListener('animationend', () => ripple.remove());
+    // 中央水花溅起点
+    var splash = document.createElement('div');
+    splash.className = 'water-ripple water-ripple--splash';
+    splash.style.left = x + 'px';
+    splash.style.top  = y + 'px';
+    container.appendChild(splash);
+    splash.addEventListener('animationend', function() { splash.remove(); });
   });
 }
 
