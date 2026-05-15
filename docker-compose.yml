@@ -8,7 +8,7 @@ services:
       - "127.0.0.1:8082:8082"
     environment:
       - BLOG_SECRET_KEY=${BLOG_SECRET_KEY:-change-me}
-      - BLOG_ADMIN_PASSWORD=11235813213455&$Dzy
+      - ADMIN_PASSWORD=112358...$Dzy
     volumes:
       - /root/blog/data/articles:/app/articles
       - /root/blog/data/images:/app/static/images
