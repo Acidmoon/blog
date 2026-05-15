@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ module.label }} · {{ config.SITE_TITLE }}{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-header">
+    <h2 class="serif">{{ module.icon }} {{ module.label }}</h2>
+    <a href="/admin/modules" class="btn btn-secondary">← 返回模块</a>
+  </div>
+  <p class="layout-section-desc">{{ module.description or '这个模块暂未提供独立后台表单。' }}</p>
+</main>
+{% endblock %}

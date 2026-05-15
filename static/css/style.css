@@ -155,14 +155,24 @@ img { max-width: 100%; height: auto; display: block; }
   max-width: 860px;
   margin: 0 auto;
   padding: 0 24px;
+  gap: 16px;
 }
 .nav-brand {
+  flex-shrink: 0;
   font-weight: 600;
   font-size: 1.1rem;
   color: var(--text-primary) !important;
   letter-spacing: 0.02em;
   position: relative;
 }
+.nav-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
 .nav-brand::after {
   content: '';
   position: absolute;
@@ -320,7 +330,10 @@ img { max-width: 100%; height: auto; display: block; }
   border-radius: 14px;
   border-left: 3px solid var(--accent-primary);
   transition: all 0.3s ease;
-  cursor: default;
+  cursor: pointer;
+}
+.article-card .article-title a {
+  cursor: pointer;
 }
 .article-card::before {
   content: '';
@@ -328,6 +341,7 @@ img { max-width: 100%; height: auto; display: block; }
   inset: 0;
   border-radius: 14px;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.3s;
   background: linear-gradient(135deg,
     var(--accent-primary) 0%,
@@ -468,7 +482,7 @@ img { max-width: 100%; height: auto; display: block; }
   transition: width 0.1s linear;
 }
 .article-full {
-  padding: 40px 0 60px;
+  padding: 80px 0 60px;
 }
 .article-header {
   margin-bottom: 40px;
@@ -501,8 +515,10 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Article Body (markdown rendered) ──────────────── */
 .article-body {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "STSong",
+               "Songti SC", Georgia, "Times New Roman", serif;
   line-height: 1.9;
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
 }
 .article-body h1,
@@ -715,7 +731,7 @@ img { max-width: 100%; height: auto; display: block; }
 .admin-page {
   max-width: 860px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 80px 24px 40px;
 }
 .admin-header {
   display: flex;
@@ -924,6 +940,7 @@ img { max-width: 100%; height: auto; display: block; }
   align-items: center;
   justify-content: center;
   min-height: 70vh;
+  padding-top: 80px;
 }
 .login-card {
   background: var(--bg-card);
@@ -949,7 +966,7 @@ img { max-width: 100%; height: auto; display: block; }
   .article-card { padding: 18px 20px; }
   .article-title { font-size: 1.05rem; }
   .article-title-lg { font-size: 1.5rem; }
-  .article-full { padding: 24px 0 40px; }
+  .article-full { padding: 64px 0 40px; }
   .article-body { font-size: 0.98rem; line-height: 1.8; }
   .nav-inner { padding: 0 16px; }
   .nav-links a { padding: 6px 10px; }
@@ -960,4 +977,297 @@ img { max-width: 100%; height: auto; display: block; }
   .page-link { padding: 6px 14px; font-size: 0.85rem; }
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .site-footer { padding: 40px 0 28px; }
+}
+
+/* ═══ Water Ripple Click Effect ═══════════════════════════
+ *  雨滴入水·涟漪扩散
+ *  Inspired by: raindrops hitting still water
+ * ════════════════════════════════════════════════════════ */
+
+.water-ripple-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.water-ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.water-ripple--ring {
+  border: 1.5px solid var(--accent-primary);
+  opacity: 0.6;
+  animation: rippleExpand 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.water-ripple--glow {
+  background: radial-gradient(circle, rgba(139, 167, 196, 0.25) 0%, transparent 70%);
+  animation: rippleGlow 0.9s ease-out forwards;
+  animation-delay: 0.05s;
+}
+
+.water-ripple--splash {
+  width: 6px;
+  height: 6px;
+  background: var(--accent-primary);
+  opacity: 0.8;
+  animation: rippleSplash 0.5s ease-out forwards;
+}
+
+@keyframes rippleExpand {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.6;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes rippleGlow {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.5;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    width: 120px;
+    height: 120px;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes rippleSplash {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* Dark mode tweaks */
+[data-theme="dark"] .water-ripple--ring {
+  border-color: var(--accent-secondary);
+  opacity: 0.5;
+}
+[data-theme="dark"] .water-ripple--glow {
+  background: radial-gradient(circle, rgba(201, 168, 76, 0.2) 0%, transparent 70%);
+}
+[data-theme="dark"] .water-ripple--splash {
+  background: var(--accent-secondary);
+}
+
+/* ── Daily Quote Line ──────────────────────────────── */
+.quote-line {
+  margin: 28px 0 20px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding-left: 18px;
+  border-left: 3px solid var(--accent-secondary);
+  opacity: 0.85;
+}
+.quote-line-mark {
+  color: var(--accent-secondary);
+  font-size: 1.1rem;
+  opacity: 0.5;
+  margin-right: 2px;
+}
+
+/* ══ Search — 搜索组件 ═══════════════════════════════ */
+
+/* ── Search Bar (Navbar) ─────────────────────────── */
+.search-form {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 0 4px 0 12px;
+  transition: all 0.25s;
+}
+.search-form:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--tag-bg);
+  background: var(--bg-card);
+}
+.search-icon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: color 0.2s;
+}
+.search-form:focus-within .search-icon {
+  color: var(--accent-primary);
+}
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  min-width: 0;
+}
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+.search-submit {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent-primary);
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+.search-submit:hover,
+.search-form:focus-within .search-submit {
+  opacity: 1;
+}
+
+/* ── Search Results Page ─────────────────────────── */
+.search-header {
+  margin-bottom: 36px;
+  text-align: center;
+}
+.search-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.search-query {
+  color: var(--accent-primary);
+  letter-spacing: 0.02em;
+}
+.search-result-snippet mark,
+.search-result-title mark {
+  background: var(--accent-secondary);
+  color: var(--bg-base);
+  padding: 0.08em 0.22em;
+  border-radius: 3px;
+  font-weight: 500;
+}
+[data-theme="dark"] .search-result-snippet mark,
+[data-theme="dark"] .search-result-title mark {
+  color: #0c1117;
+}
+.search-stats {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.search-stats strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.search-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  transition: all 0.25s;
+}
+.search-result-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--glow-accent);
+  transform: translateY(-1px);
+}
+.search-result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.search-result-title a {
+  color: var(--text-primary);
+  transition: color 0.2s;
+}
+.search-result-title a:hover {
+  color: var(--accent-primary);
+}
+.search-result-meta {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.search-result-snippet {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  word-break: break-all;
+}
+.empty-state-hint {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-top: 12px;
+}
+.empty-state-hint a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+/* ── Responsive: collapse search on small screens ── */
+@media (max-width: 640px) {
+  .hero { padding: 80px 0 32px; }
+  .hero-title { font-size: 1.6rem; }
+  .hero-subtitle { font-size: 0.88rem; }
+  .nav-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+  .nav-brand { font-size: 1rem; }
+  .nav-center {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  .nav-links {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .nav-links a { font-size: 0.78rem; padding: 4px 8px; }
+  .article-card { padding: 16px 16px; }
+  .article-title { font-size: 1rem; }
+  .article-list { gap: 12px; }
+  .search-header { margin-bottom: 24px; }
+  .search-title { font-size: 1.2rem; }
+  .search-result-card { padding: 16px 18px; }
 }

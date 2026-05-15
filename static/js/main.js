@@ -55,25 +55,12 @@ function initNavbarScroll() {
 
 /* ── Article Card Staggered Reveal ────────────────── */
 function initCardReveal() {
-  const cards = document.querySelectorAll('.article-card:not(:first-child)');
-  cards.forEach((card, i) => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          card.style.animationPlayState = 'running';
-          observer.unobserve(card);
-        }
-      });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-    // Ensure cards that should animate are paused initially
-    if (!card.classList.contains('no-animate')) {
-      card.style.animationPlayState = 'paused';
-      observer.observe(card);
-    }
+  // 简单淡入：不再用 JS 暂停动画，直接让 CSS animation 自然播放
+  // 所有卡片一律立即可见，不依赖 IntersectionObserver
+  document.querySelectorAll('.article-card').forEach(card => {
+    card.style.opacity = '1';
+    card.classList.add('no-animate');
   });
-  // First card always visible
-  const first = document.querySelector('.article-card:first-child');
-  if (first) first.style.opacity = '1';
 }
 
 /* ── Theme Toggle ─────────────────────────────────── */
@@ -187,6 +174,107 @@ function initArticleImages() {
   });
 }
 
+/* ── Search: Keyboard shortcut + focus behavior ── */
+function initSearch() {
+  const input = document.querySelector('.search-input');
+  if (!input) return;
+
+  // Ctrl+K / Cmd+K to focus search
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+    // Escape to blur
+    if (e.key === 'Escape' && document.activeElement === input) {
+      input.blur();
+    }
+  });
+
+  // Show placeholder hint on the input
+  input.setAttribute('title', 'Ctrl+K 快捷搜索');
+  const form = input.closest('.search-form');
+  if (form) {
+    form.setAttribute('title', 'Ctrl+K 快捷搜索');
+  }
+}
+
+/* ── Article Card Click: 整个卡片可点击 ── */
+function initCardClick() {
+  document.querySelectorAll('.article-card').forEach(card => {
+    // 找到标题链接
+    var titleLink = card.querySelector('.article-title a');
+    if (!titleLink) return;
+
+    card.style.cursor = 'pointer';
+
+    // 标题链接：原生行为（不做任何拦截）
+    // 标签链接：也放行
+    // 不需要给链接加 stopPropagation，而是给卡片加判断
+
+    card.addEventListener('click', function(e) {
+      // 如果点到了链接，让浏览器自己处理
+      if (e.target.tagName === 'A' || e.target.closest('a')) {
+        return;
+      }
+      // 点的是卡片空白区域 → 跳转到文章
+      window.location = titleLink.getAttribute('href');
+    });
+  });
+}
+
+/* ── Water Ripple Click Effect ─────────────────────── */
+function initWaterRipple() {
+  var container = document.createElement('div');
+  container.className = 'water-ripple-container';
+  document.body.appendChild(container);
+
+  document.addEventListener('click', function(e) {
+    // 跳过可交互元素 — 不干扰链接、按钮、输入框等
+    var skipSelectors = 'a, button, input, textarea, select, .nav-links, .theme-toggle, .copy-btn';
+    if (e.target.closest(skipSelectors)) return;
+
+    var x = e.clientX;
+    var y = e.clientY;
+
+    // 内圈 ring ── 较细较亮
+    var ring = document.createElement('div');
+    ring.className = 'water-ripple water-ripple--ring';
+    ring.style.left = x + 'px';
+    ring.style.top  = y + 'px';
+    container.appendChild(ring);
+    ring.addEventListener('animationend', function() { ring.remove(); });
+
+    // 外圈 ring ── 稍延迟，更大更淡
+    var ring2 = document.createElement('div');
+    ring2.className = 'water-ripple water-ripple--ring';
+    ring2.style.left = x + 'px';
+    ring2.style.top  = y + 'px';
+    ring2.style.animationDelay = '0.12s';
+    ring2.style.borderWidth = '1px';
+    ring2.style.opacity = '0.4';
+    container.appendChild(ring2);
+    ring2.addEventListener('animationend', function() { ring2.remove(); });
+
+    // 柔光 glow
+    var glow = document.createElement('div');
+    glow.className = 'water-ripple water-ripple--glow';
+    glow.style.left = x + 'px';
+    glow.style.top  = y + 'px';
+    container.appendChild(glow);
+    glow.addEventListener('animationend', function() { glow.remove(); });
+
+    // 中央水花溅起点
+    var splash = document.createElement('div');
+    splash.className = 'water-ripple water-ripple--splash';
+    splash.style.left = x + 'px';
+    splash.style.top  = y + 'px';
+    container.appendChild(splash);
+    splash.addEventListener('animationend', function() { splash.remove(); });
+  });
+}
+
 /* ── Initialize ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
@@ -194,8 +282,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavbarScroll();
   initReadingProgress();
   initCardReveal();
+  initCardClick();
   initCopyButtons();
   initArticleImages();
+  initSearch();
+  initWaterRipple();
 });
 
 })();

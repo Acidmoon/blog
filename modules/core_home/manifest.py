@@ -1,4 +1,4 @@
-from module_loader import HomeSectionDefinition
+from module_loader import AdminModuleDefinition, HomeSectionDefinition
 from services.home_layout import get_daily_quote
 
 
@@ -9,6 +9,16 @@ def build_daily_quote_context(layout, base_context):
 MODULE = {
     "id": "core_home",
     "name": "核心首页模块",
+    "admin_modules": [
+        AdminModuleDefinition(
+            id="daily_quote",
+            label="一言",
+            url="/admin/modules/daily_quote",
+            description="管理每日一言与首页模块顺序",
+            icon="📜",
+            order=20,
+        ),
+    ],
     "home_sections": [
         HomeSectionDefinition(
             id="daily_quote",

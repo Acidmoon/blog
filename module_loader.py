@@ -24,6 +24,20 @@ class HomeSectionDefinition:
     build_context: BuildContext | None = None
 
 
+@dataclass(frozen=True)
+class AdminModuleDefinition:
+    """An admin entry/page contributed by a module."""
+
+    id: str
+    label: str
+    url: str
+    description: str = ""
+    icon: str = "🧩"
+    order: int = 100
+    template: str | None = None
+    build_context: Callable[[], dict[str, Any]] | None = None
+
+
 @dataclass
 class ModuleDefinition:
     """Normalized module manifest."""
@@ -33,6 +47,7 @@ class ModuleDefinition:
     enabled: bool = True
     blueprints: list[Any] = field(default_factory=list)
     home_sections: list[HomeSectionDefinition] = field(default_factory=list)
+    admin_modules: list[AdminModuleDefinition] = field(default_factory=list)
 
 
 @dataclass
@@ -41,6 +56,7 @@ class ModuleRegistry:
 
     modules: dict[str, ModuleDefinition] = field(default_factory=dict)
     home_sections: dict[str, HomeSectionDefinition] = field(default_factory=dict)
+    admin_modules: dict[str, AdminModuleDefinition] = field(default_factory=dict)
 
     def register_module(self, module: ModuleDefinition) -> None:
         if not module.enabled:
@@ -48,6 +64,8 @@ class ModuleRegistry:
         self.modules[module.id] = module
         for section in module.home_sections:
             self.home_sections[section.id] = section
+        for admin_module in module.admin_modules:
+            self.admin_modules[admin_module.id] = admin_module
 
 
 REGISTRY = ModuleRegistry()
@@ -67,6 +85,24 @@ def _coerce_home_section(raw: Any) -> HomeSectionDefinition:
     )
 
 
+def _coerce_admin_module(raw: Any) -> AdminModuleDefinition:
+    if isinstance(raw, AdminModuleDefinition):
+        return raw
+    if not isinstance(raw, dict):
+        raise TypeError(f"admin module must be dict or AdminModuleDefinition, got {type(raw)!r}")
+    module_id = str(raw["id"])
+    return AdminModuleDefinition(
+        id=module_id,
+        label=str(raw.get("label") or raw.get("name") or module_id),
+        url=str(raw.get("url") or f"/admin/modules/{module_id}"),
+        description=str(raw.get("description") or ""),
+        icon=str(raw.get("icon") or "🧩"),
+        order=int(raw.get("order", 100) or 100),
+        template=raw.get("template"),
+        build_context=raw.get("build_context"),
+    )
+
+
 def _coerce_module(raw: Any, import_name: str) -> ModuleDefinition:
     if isinstance(raw, ModuleDefinition):
         return raw
@@ -79,6 +115,7 @@ def _coerce_module(raw: Any, import_name: str) -> ModuleDefinition:
         enabled=bool(raw.get("enabled", True)),
         blueprints=list(raw.get("blueprints", [])),
         home_sections=[_coerce_home_section(item) for item in raw.get("home_sections", [])],
+        admin_modules=[_coerce_admin_module(item) for item in raw.get("admin_modules", [])],
     )
 
 
@@ -109,6 +146,7 @@ def load_modules(app: Flask, package_name: str = "modules") -> ModuleRegistry:
     """Discover modules, register their blueprints, and populate REGISTRY."""
     REGISTRY.modules.clear()
     REGISTRY.home_sections.clear()
+    REGISTRY.admin_modules.clear()
 
     for module in discover_modules(package_name):
         REGISTRY.register_module(module)

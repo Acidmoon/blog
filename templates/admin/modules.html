@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}模块管理 · {{ config.SITE_TITLE }}{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-header">
+    <h2 class="serif">模块管理</h2>
+    <a href="/admin" class="btn btn-secondary">← 返回文章</a>
+  </div>
+
+  <div class="module-admin-grid">
+    {% for item in admin_nav %}
+      {% if item.url.startswith('/admin/modules/') or item.url == '/admin/layout' %}
+      <a class="module-admin-card" href="{{ item.url }}">
+        <span class="module-admin-icon">🧩</span>
+        <span class="module-admin-title">{{ item.label }}</span>
+        <span class="module-admin-url">{{ item.url }}</span>
+      </a>
+      {% endif %}
+    {% else %}
+      <p class="empty-cell">暂无可管理模块。</p>
+    {% endfor %}
+  </div>
+</main>
+
+<style>
+.module-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 24px; }
+.module-admin-card { display: flex; flex-direction: column; gap: 6px; padding: 18px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--bg-card); text-decoration: none; box-shadow: var(--shadow-sm); transition: transform .2s ease, box-shadow .2s ease; }
+.module-admin-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.module-admin-icon { font-size: 1.4rem; }
+.module-admin-title { color: var(--text-primary); font-weight: 600; }
+.module-admin-url { color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: .78rem; }
+</style>
+{% endblock %}

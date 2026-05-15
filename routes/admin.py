@@ -8,6 +8,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 
 import config
 from models import get_db
+from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
 from services.articles import (
     delete_article_file,
     get_article_meta,
@@ -26,6 +27,11 @@ from services.home_modules import (
 )
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+
+@bp.context_processor
+def inject_admin_nav():
+    return {'admin_nav': build_admin_nav()}
 
 
 def login_required(f):
@@ -57,6 +63,27 @@ def logout():
 @login_required
 def dashboard():
     return render_template('admin/dashboard.html', articles=list_admin_articles())
+
+
+@bp.route('/modules')
+@login_required
+def module_index():
+    return render_template('admin/modules.html')
+
+
+@bp.route('/modules/<module_id>')
+@login_required
+def module_page(module_id):
+    admin_module = get_admin_module(module_id)
+    if not admin_module:
+        abort(404)
+    if admin_module.url != request.path:
+        return redirect(admin_module.url)
+    if module_id == 'daily_quote':
+        return layout()
+    if not admin_module.template:
+        return render_template('admin/module_placeholder.html', module=admin_module)
+    return render_template(admin_module.template, **build_admin_module_context(admin_module))
 
 
 @bp.route('/new', methods=['GET', 'POST'])
