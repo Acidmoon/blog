@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}登录 · {{ config.SITE_TITLE }}{% endblock %}
+{% block content %}
+<div class="login-page">
+  <div class="login-card">
+    <h2 class="serif">管理员登录</h2>
+    <form method="post">
+      <div class="form-group">
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" required autofocus placeholder="输入管理密码">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">登录</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

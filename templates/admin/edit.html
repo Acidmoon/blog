@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{% if article %}编辑文章{% else %}写新文章{% endif %} · {{ config.SITE_TITLE }}{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-form editor-page">
+    <h2 class="serif">{% if article %}✏️ 编辑文章{% else %}📝 写新文章{% endif %}</h2>
+    <form method="post">
+      <div class="form-group">
+        <label for="title">标题</label>
+        <input type="text" id="title" name="title" value="{{ article.title if article else '' }}" placeholder="输入文章标题" required>
+      </div>
+      <div class="form-group">
+        <label for="tags">标签（逗号分隔）</label>
+        <input type="text" id="tags" name="tags" value="{{ article.tags if article else '' }}" placeholder="技术,生活,笔记">
+      </div>
+      <div class="form-group">
+        <label for="content">内容（Markdown）</label>
+        <div class="editor-toolbar">
+          <button type="button" onclick="insertMd('**', '**')" title="粗体"><b>B</b></button>
+          <button type="button" onclick="insertMd('*', '*')" title="斜体"><i>I</i></button>
+          <button type="button" onclick="insertMd('```\n', '\n```')" title="代码块">&lt;/&gt;</button>
+          <button type="button" onclick="insertMd('[', '](url)')" title="链接">🔗</button>
+          <button type="button" onclick="insertMd('![', '](url)')" title="图片">🖼</button>
+          <button type="button" onclick="insertMd('# ', '')" title="标题">H</button>
+          <button type="button" onclick="insertMd('> ', '')" title="引用">❝</button>
+          <button type="button" onclick="insertMd('- ', '')" title="列表">•</button>
+          <button type="button" onclick="uploadImage()" title="上传图片">📤</button>
+          <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
+        </div>
+        <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{% if article %}💾 保存修改{% else %}🚀 发布{% endif %}</button>
+        <a href="/admin" class="btn btn-secondary">取消</a>
+      </div>
+    </form>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+function insertMd(before, after) {
+  const ta = document.getElementById('content');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const text = ta.value;
+  const selected = text.substring(start, end);
+  ta.value = text.substring(0, start) + before + selected + after + text.substring(end);
+  ta.focus();
+  const pos = start + before.length + selected.length + after.length;
+  ta.selectionStart = ta.selectionEnd = pos;
+}
+function uploadImage() {
+  document.getElementById('imageInput').click();
+}
+function handleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  fetch('/admin/upload', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.url) {
+        const ta = document.getElementById('content');
+        const md = '![' + file.name + '](' + data.url + ')';
+        const pos = ta.selectionStart;
+        ta.value = ta.value.substring(0, pos) + md + ta.value.substring(ta.selectionEnd);
+        ta.focus();
+        const newPos = pos + md.length;
+        ta.selectionStart = ta.selectionEnd = newPos;
+      }
+    })
+    .catch(e => alert('上传失败: ' + e.message));
+  input.value = '';
+}
+</script>
+{% endblock %}

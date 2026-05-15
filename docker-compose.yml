@@ -1,0 +1,20 @@
+version: '3'
+services:
+  blog:
+    build: .
+    container_name: waterhill-blog
+    restart: always
+    ports:
+      - "127.0.0.1:8082:8082"
+    environment:
+      - BLOG_SECRET_KEY=${BLOG_SECRET_KEY:-change-me}
+      - BLOG_ADMIN_PASSWORD=11235813213455&$Dzy
+    volumes:
+      - /root/blog/data/articles:/app/articles
+      - /root/blog/data/images:/app/static/images
+      - /root/blog/data:/app/data
+      - /root/blog/templates:/app/templates
+      - /root/blog/static/css:/app/static/css
+      - /root/blog/static/js:/app/static/js
+      - /root/blog/home_layout.json:/app/home_layout.json
+      - /root/blog/config.py:/app/config.py

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ config.SITE_TITLE }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ config.SITE_SUBTITLE }}{% endblock %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.v10.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏔️</text></svg>">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Reading Progress Bar -->
+  <div id="readingProgress" class="reading-progress"></div>
+
+  <!-- Navigation -->
+  <nav class="navbar" role="navigation" aria-label="主导航">
+    <div class="nav-inner">
+      <a href="/" class="nav-brand serif">{{ config.SITE_TITLE }}</a>
+      <div class="nav-center">
+        <form class="search-form" action="/search" method="GET" role="search">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input class="search-input" type="text" name="q" placeholder="搜索文章…" value="{{ query if query is defined else '' }}" aria-label="搜索文章">
+          <button class="search-submit" type="submit">搜索</button>
+        </form>
+      </div>
+      <div class="nav-links">
+        <a href="/">首页</a>
+        {% if session.logged_in %}
+        <a href="/admin">文章</a>
+        <a href="/admin/layout">一言</a>
+        <a href="/admin/logout">退出</a>
+        {% endif %}
+        <button class="theme-toggle" id="themeToggle" title="切换主题" aria-label="切换主题">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="container" style="padding-top: 80px;">
+    {% for category, msg in messages %}
+    <div class="flash {{ category }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- Main Content -->
+  {% block content %}{% endblock %}
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <svg class="footer-wave" viewBox="0 0 1440 32" preserveAspectRatio="none">
+      <path d="M0,16 C360,32 720,0 1080,16 C1260,24 1350,16 1440,12 L1440,0 L0,0 Z"/>
+      <path d="M0,24 C240,8 480,32 720,20 C960,8 1200,24 1440,16 L1440,32 L0,32 Z" opacity="0.4"/>
+    </svg>
+    <div class="footer-inner">
+      <div class="footer-brand serif">{{ config.SITE_TITLE }}</div>
+      <p class="footer-powered">
+        &copy; {{ now().year if now is defined else '2026' }} ·
+        Powered by Flask
+      </p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.v4.js') }}?v=2"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

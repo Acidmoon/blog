@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}每日一言 · {{ config.SITE_TITLE }}{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-header">
+    <h2 class="serif">每日一言设置</h2>
+    <a href="/admin" class="btn btn-secondary">← 返回管理</a>
+  </div>
+
+  <form method="post" class="layout-form">
+
+    <section class="layout-section">
+      <h3 class="layout-section-title">📜 每日一言</h3>
+      <p class="layout-section-desc">每行一句，每天按顺序轮换展示。</p>
+      <textarea name="quotes" rows="12" class="layout-textarea">{{ quotes_text }}</textarea>
+    </section>
+
+    <div class="layout-actions">
+      <button type="submit" class="btn btn-primary">💾 保存</button>
+    </div>
+  </form>
+</main>
+
+<style>
+.layout-form { max-width: 660px; margin-bottom: 60px; }
+.layout-section { margin: 32px 0; }
+.layout-section-title { font-size: 1.2rem; margin-bottom: 8px; color: var(--text-primary); }
+.layout-section-desc { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px; }
+.layout-textarea { width: 100%; min-height: 220px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; line-height: 1.6; resize: vertical; font-family: "Noto Serif SC", serif; }
+.layout-textarea:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }
+.layout-actions { margin-top: 32px; display: flex; gap: 12px; }
+</style>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ config.SITE_TITLE }} · {{ config.SITE_SUBTITLE }}{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="mist-container"></div>
+  <div class="container hero-inner">
+    <div class="hero-label">水浇岭</div>
+    <h1 class="hero-title serif">{{ config.SITE_TITLE }}</h1>
+    <p class="hero-subtitle">{{ config.SITE_SUBTITLE }}</p>
+  </div>
+  <svg class="hero-wave" viewBox="0 0 1440 48" preserveAspectRatio="none">
+    <path d="M0,24 C240,48 480,0 720,24 C960,48 1200,0 1440,24 L1440,48 L0,48 Z"/>
+    <path d="M0,36 C360,12 720,48 1080,24 C1260,12 1350,36 1440,30 L1440,48 L0,48 Z" opacity="0.3"/>
+  </svg>
+</section>
+
+<main class="container">
+
+  <!-- Daily Quote -->
+  {% if daily_quote %}
+  <div class="quote-line serif">
+    <span class="quote-line-mark">"</span>
+    {{ daily_quote }}
+  </div>
+  {% endif %}
+
+  <!-- Tag Filter -->
+  {% if all_tags %}
+  <div class="tag-filter-section">
+    <div class="tag-filter-label">标签</div>
+    <div class="tag-filter">
+      <a href="/" class="tag {% if not current_tag %}active{% endif %}">全部</a>
+      {% for tag in all_tags %}
+      <a href="/?tag={{ tag }}" class="tag {% if current_tag == tag %}active{% endif %}">{{ tag }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Article List -->
+  <div class="article-list">
+    {% for article in articles %}
+    <article class="article-card" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
+      <h2 class="article-title serif">
+        <a href="/article/{{ article.slug }}">{{ article.title }}</a>
+      </h2>
+      <div class="article-meta">
+        <time>{{ article.created_at[:10] }}</time>
+        {% if article.tags %}
+        <span class="article-tags">
+          {% for t in article.tags.split(',') if t.strip() %}
+          <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
+          {% endfor %}
+        </span>
+        {% endif %}
+      </div>
+    </article>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🏔️</div>
+      <p>还没有文章，等水浇岭来浇灌吧</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if total_pages > 1 %}
+  <nav class="pagination" role="navigation" aria-label="分页">
+    {% if page > 1 %}
+    <a href="?page={{ page-1 }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="page-link" aria-label="上一页">
+      ← 上一页
+    </a>
+    {% endif %}
+    <span class="page-info" aria-current="page">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="?page={{ page+1 }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="page-link" aria-label="下一页">
+      下一页 →
+    </a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+</main>
+{% endblock %}

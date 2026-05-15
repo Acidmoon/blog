@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+data/blog.db
+data/articles/
+data/images/
+data/quote_cache.json

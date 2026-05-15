@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}搜索「{{ query }}」 · {{ config.SITE_TITLE }}{% endblock %}
+{% block description %}搜索「{{ query }}」的结果{% endblock %}
+
+{% block content %}
+
+<main class="container" style="padding-top: 100px;">
+
+  <!-- Search Header -->
+  <div class="search-header">
+    <h1 class="search-title serif">
+      搜索<span class="search-query">「{{ query }}」</span>
+    </h1>
+    <p class="search-stats">
+      共找到 <strong>{{ total }}</strong> 篇相关文章
+    </p>
+  </div>
+
+  <!-- Search Results -->
+  <div class="search-results">
+    {% for article, snippet, title_html in articles %}
+    <article class="search-result-card">
+      <h2 class="search-result-title serif">
+        <a href="/article/{{ article.slug }}">{{ title_html|safe }}</a>
+      </h2>
+      <div class="search-result-meta">
+        <time>{{ article.created_at[:10] }}</time>
+        {% if article.tags %}
+        <span class="article-tags">
+          {% for t in article.tags.split(',') if t.strip() %}
+          <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
+          {% endfor %}
+        </span>
+        {% endif %}
+      </div>
+      {% if snippet %}
+      <p class="search-result-snippet">{{ snippet|safe }}</p>
+      {% endif %}
+    </article>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🔍</div>
+      <p>没有找到与「{{ query }}」相关的文章</p>
+      <p class="empty-state-hint">试试其他关键词，或返回<a href="/">首页</a>浏览全部文章</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if total_pages > 1 %}
+  <nav class="pagination" role="navigation" aria-label="分页">
+    {% if page > 1 %}
+    <a href="/search?q={{ query }}&page={{ page-1 }}" class="page-link" aria-label="上一页">
+      ← 上一页
+    </a>
+    {% endif %}
+    <span class="page-info" aria-current="page">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/search?q={{ query }}&page={{ page+1 }}" class="page-link" aria-label="下一页">
+      下一页 →
+    </a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+</main>
+{% endblock %}
