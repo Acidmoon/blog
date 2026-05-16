@@ -7,7 +7,14 @@ import urllib.request
 import config
 
 
-POLISH_SYSTEM_PROMPT = """你是中文博客的轻量编辑，只做“口述稿润色”，不是代写，也不是换风格。
+POLISH_MODES = [
+    {
+        'id': 'light',
+        'label': '轻润色',
+        'description': '只修语病、重复和口语表达，尽量保留原风格。',
+        'temperature': 0.25,
+        'top_p': 0.85,
+        'system_prompt': """你是中文博客的轻量编辑，只做“口述稿润色”，不是代写，也不是换风格。
 
 编辑目标：
 - 保留作者原意、判断、语气和表达顺序。
@@ -25,9 +32,67 @@ POLISH_SYSTEM_PROMPT = """你是中文博客的轻量编辑，只做“口述稿
 输出要求：
 - 只输出润色后的正文，不要解释，不要前后寒暄。
 - 保留 Markdown 语法、链接、代码块、列表的大意。
-"""
+""",
+        'user_instruction': '请轻微润色下面这篇博客草稿。记住：只修语气词、语病、重复和标点，让口述更顺一点，不要改风格，不要大改。',
+    },
+    {
+        'id': 'khazix_rewrite',
+        'label': '卡兹克式公众号改写',
+        'description': '保留事实与观点，重组节奏，增强主观判断、口语感和阅读张力。',
+        'temperature': 0.45,
+        'top_p': 0.9,
+        'system_prompt': """你是中文公众号长文编辑，目标是把草稿改成“卡兹克式公众号文章”的表达：像一个有见识的普通人在认真聊一件打动他的事。
 
+风格目标：
+- 开头像真实的人在说话：从具体问题、具体场景、个人判断或反常识观察切入。
+- 语言口语化、短段落、有停顿感；允许适度主观、直接、带一点情绪。
+- 多用具体判断，少用抽象套话；让读者感觉作者真的在想这件事。
+- 可以重排段落、调整节奏、补足过渡，但不要改变作者立场。
+
+严格边界：
+- 不编造原文没有的事实、数据、案例、亲身经历或引用。
+- 不要标题党，不要营销腔，不要鸡汤升华，不要“家人们”“爆款秘籍”这类廉价表达。
+- 不要使用“首先/其次/最后”“综上所述”“值得注意的是”“不难发现”等 AI 腔套话。
+- 不要强行加密集小标题；除非原文确实很长且层次需要。
+
+输出要求：
+- 只输出改写后的正文，不要解释，不要前后寒暄。
+- 保留 Markdown 语法、链接、代码块、列表的大意。
+""",
+        'user_instruction': '请把下面这篇博客草稿改写成卡兹克式公众号文章。可以重组节奏、增强表达和主观判断，但不要添加原文没有的新事实、案例或结论。',
+    },
+    {
+        'id': 'khazix_expand',
+        'label': '卡兹克式长文扩写',
+        'description': '在不编事实的前提下，把素材扩成更完整的公众号长文。',
+        'temperature': 0.55,
+        'top_p': 0.92,
+        'system_prompt': """你是中文公众号长文写作编辑，目标是把素材扩写成“卡兹克式公众号长文”：有个人判断、有问题意识、有阅读节奏，像一个有见识的普通人在认真聊一件打动他的事。
+
+写作方法：
+- 先判断素材最打动人的矛盾、问题或观点，再围绕它展开。
+- 可以扩展解释原文已有观点，补足逻辑链和过渡，让文章更完整。
+- 语言要口语、短段落、有人味；适度使用反问、停顿和直接判断。
+- 尽量从具体场景或具体判断开头，不要上来宏大叙事。
+
+严格边界：
+- 不编造事实、数据、案例、亲身经历、引用、来源或人物。
+- 如果原文信息不足，只能扩展分析和表达，不能假装掌握更多事实。
+- 不要营销腔、鸡汤腔、AI 腔，不要“首先/其次/最后”“综上所述”“值得注意的是”等模板话。
+- 不要为了变长而灌水；宁可短一点，也要真实、具体、顺。
+
+输出要求：
+- 只输出扩写后的正文，不要解释，不要前后寒暄。
+- 保留 Markdown 语法、链接、代码块、列表的大意。
+""",
+        'user_instruction': '请把下面这份博客素材扩写成一篇更完整的卡兹克式公众号长文。可以扩展原文已有观点和逻辑，但不要添加原文没有的新事实、案例或结论。',
+    },
+]
+
+POLISH_MODES_BY_ID = {mode['id']: mode for mode in POLISH_MODES}
+DEFAULT_POLISH_MODE = 'light'
 _PROVIDER_ID_RE = re.compile(r'^[a-zA-Z0-9_.:-]{1,64}$')
+_MODE_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
 
 
 def _csv(value: str) -> list[str]:
@@ -122,6 +187,29 @@ def get_public_polish_profiles() -> list[dict]:
     ]
 
 
+def get_public_polish_modes() -> list[dict]:
+    """Writing modes safe to expose to the admin page. Prompt text stays server-side."""
+    return [
+        {
+            'id': mode['id'],
+            'label': mode['label'],
+            'description': mode['description'],
+            'default': mode['id'] == DEFAULT_POLISH_MODE,
+        }
+        for mode in POLISH_MODES
+    ]
+
+
+def _resolve_mode(mode_id: str | None) -> dict:
+    mode_id = (mode_id or DEFAULT_POLISH_MODE).strip()
+    if not _MODE_ID_RE.match(mode_id):
+        raise ValueError('AI 风格模式无效')
+    mode = POLISH_MODES_BY_ID.get(mode_id)
+    if not mode:
+        raise ValueError('AI 风格模式不在允许列表中')
+    return mode
+
+
 def _resolve_profile(provider_id: str | None, model: str | None) -> tuple[dict, str, str]:
     profiles = get_polish_profiles()
     if not profiles:
@@ -145,31 +233,40 @@ def _resolve_profile(provider_id: str | None, model: str | None) -> tuple[dict, 
     return profile, requested_model, api_key
 
 
-def _build_user_prompt(title: str, tags: str, content: str) -> str:
+def _build_user_prompt(title: str, tags: str, content: str, mode: dict) -> str:
     return f"""标题：{title or '未填写'}
 标签：{tags or '未填写'}
+风格模式：{mode['label']}
 
-请轻微润色下面这篇博客草稿。记住：只修语气词、语病、重复和标点，让口述更顺一点，不要改风格，不要大改。
+{mode['user_instruction']}
 
 草稿正文：
 {content}
 """
 
 
-def polish_content(title: str, tags: str, content: str, provider_id: str | None = None, model: str | None = None) -> str:
+def polish_content(
+    title: str,
+    tags: str,
+    content: str,
+    provider_id: str | None = None,
+    model: str | None = None,
+    mode_id: str | None = None,
+) -> str:
     content = (content or '').strip()
     if not content:
         raise ValueError('正文不能为空')
 
+    mode = _resolve_mode(mode_id)
     profile, selected_model, api_key = _resolve_profile(provider_id, model)
     payload = {
         'model': selected_model,
         'messages': [
-            {'role': 'system', 'content': POLISH_SYSTEM_PROMPT},
-            {'role': 'user', 'content': _build_user_prompt(title, tags, content)},
+            {'role': 'system', 'content': mode['system_prompt']},
+            {'role': 'user', 'content': _build_user_prompt(title, tags, content, mode)},
         ],
-        'temperature': 0.25,
-        'top_p': 0.85,
+        'temperature': mode['temperature'],
+        'top_p': mode['top_p'],
         'max_tokens': 4096,
     }
     data = json.dumps(payload, ensure_ascii=False).encode('utf-8')

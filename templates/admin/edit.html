@@ -34,7 +34,12 @@
             {% endfor %}
           </select>
           <select id="aiPolishModel" class="editor-toolbar-select" title="选择 AI 模型"></select>
-          <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="轻微润色口述稿，不改风格">✨ AI润色</button>
+          <select id="aiPolishMode" class="editor-toolbar-select editor-toolbar-mode" onchange="syncPolishModeHint()" title="选择润色风格">
+            {% for mode in ai_polish_modes %}
+              <option value="{{ mode.id }}" data-description="{{ mode.description }}" {% if mode.default %}selected{% endif %}>{{ mode.label }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="按所选风格处理正文">✨ AI润色</button>
           <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
         </div>
         <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
@@ -51,6 +56,7 @@
 {% block scripts %}
 <script>
 const AI_POLISH_PROFILES = {{ ai_polish_profiles|tojson }};
+const AI_POLISH_MODES = {{ ai_polish_modes|tojson }};
 
 function syncPolishModels() {
   const providerSelect = document.getElementById('aiPolishProvider');
@@ -76,7 +82,21 @@ function syncPolishModels() {
   btn.disabled = !usable;
 }
 
-document.addEventListener('DOMContentLoaded', syncPolishModels);
+function getSelectedPolishMode() {
+  const modeSelect = document.getElementById('aiPolishMode');
+  return AI_POLISH_MODES.find(m => m.id === modeSelect.value) || AI_POLISH_MODES.find(m => m.default) || AI_POLISH_MODES[0];
+}
+
+function syncPolishModeHint() {
+  const status = document.getElementById('aiPolishStatus');
+  const mode = getSelectedPolishMode();
+  if (status && mode) status.textContent = mode.description + ' 不会自动发布。';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  syncPolishModels();
+  syncPolishModeHint();
+});
 
 function insertMd(before, after) {
   const ta = document.getElementById('content');
@@ -97,6 +117,8 @@ async function polishContent() {
   const status = document.getElementById('aiPolishStatus');
   const provider = document.getElementById('aiPolishProvider').value;
   const model = document.getElementById('aiPolishModel').value;
+  const mode = document.getElementById('aiPolishMode').value;
+  const modeInfo = getSelectedPolishMode();
   const title = document.getElementById('title').value;
   const tags = document.getElementById('tags').value;
   const ta = document.getElementById('content');
@@ -108,18 +130,18 @@ async function polishContent() {
   const previous = ta.value;
   btn.disabled = true;
   btn.textContent = '润色中…';
-  status.textContent = '正在轻微润色：只修语病、重复和口语表达，不会改风格。';
+  status.textContent = '正在处理：' + (modeInfo ? modeInfo.label : 'AI润色') + '…';
   try {
     const resp = await fetch('/admin/api/ai/polish', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({title, tags, content: original, provider, model})
+      body: JSON.stringify({title, tags, content: original, provider, model, mode})
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || '润色失败');
     ta.value = data.content || previous;
     ta.focus();
-    status.textContent = '已完成。建议你再快速看一遍，确认没有改偏。';
+    status.textContent = '已完成：' + (modeInfo ? modeInfo.label : 'AI润色') + '。建议你再快速看一遍，确认没有改偏。';
   } catch (e) {
     ta.value = previous;
     status.textContent = '润色失败：' + e.message;
@@ -128,6 +150,7 @@ async function polishContent() {
     btn.disabled = false;
     btn.textContent = '✨ AI润色';
     syncPolishModels();
+    syncPolishModeHint();
   }
 }
 function handleUpload(input) {

@@ -803,6 +803,10 @@ img { max-width: 100%; height: auto; display: block; }
   font-size: 0.82rem !important;
   background: var(--bg-card);
 }
+.editor-toolbar-mode {
+  max-width: 170px;
+  border-color: rgba(58, 107, 79, 0.28) !important;
+}
 .editor-toolbar-select:disabled {
   opacity: 0.55;
   cursor: not-allowed;

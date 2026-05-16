@@ -9,7 +9,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 import config
 from models import get_db
 from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
-from services.ai_polish import get_public_polish_profiles, polish_content
+from services.ai_polish import get_public_polish_modes, get_public_polish_profiles, polish_content
 from services.articles import (
     delete_article_file,
     get_article_meta,
@@ -92,6 +92,7 @@ def _edit_template(article=None):
         'admin/edit.html',
         article=article,
         ai_polish_profiles=get_public_polish_profiles(),
+        ai_polish_modes=get_public_polish_modes(),
     )
 
 
@@ -190,10 +191,11 @@ def ai_polish():
     content = (data.get('content') or '').strip()
     provider_id = (data.get('provider') or '').strip()
     model = (data.get('model') or '').strip()
+    mode = (data.get('mode') or '').strip()
     if not content:
         return jsonify({'error': '正文不能为空'}), 400
     try:
-        polished = polish_content(title, tags, content, provider_id=provider_id, model=model)
+        polished = polish_content(title, tags, content, provider_id=provider_id, model=model, mode_id=mode)
     except ValueError as exc:
         return jsonify({'error': str(exc)}), 400
     except Exception as exc:
