@@ -146,6 +146,14 @@ def get_polish_profiles() -> list[dict]:
 
     default_profiles = [
         _profile(
+            'deepseek',
+            'DeepSeek',
+            os.environ.get('AI_POLISH_DEEPSEEK_API_BASE', 'https://api.deepseek.com/v1'),
+            'AI_POLISH_DEEPSEEK_API_KEY',
+            _csv(os.environ.get('AI_POLISH_DEEPSEEK_MODELS', 'deepseek-v4-flash,deepseek-v4-pro')),
+            os.environ.get('AI_POLISH_DEEPSEEK_MODEL', 'deepseek-v4-flash'),
+        ),
+        _profile(
             'waterhill',
             '水浇岭 / GPT',
             config.AI_POLISH_API_BASE,
@@ -160,14 +168,6 @@ def get_polish_profiles() -> list[dict]:
             'AI_POLISH_MIMO_API_KEY',
             _csv(os.environ.get('AI_POLISH_MIMO_MODELS', 'mimo-v2.5-pro')),
             os.environ.get('AI_POLISH_MIMO_MODEL', 'mimo-v2.5-pro'),
-        ),
-        _profile(
-            'deepseek',
-            'DeepSeek',
-            os.environ.get('AI_POLISH_DEEPSEEK_API_BASE', 'https://api.deepseek.com/v1'),
-            'AI_POLISH_DEEPSEEK_API_KEY',
-            _csv(os.environ.get('AI_POLISH_DEEPSEEK_MODELS', 'deepseek-v4-flash,deepseek-v4-pro')),
-            os.environ.get('AI_POLISH_DEEPSEEK_MODEL', 'deepseek-v4-flash'),
         ),
     ]
     return [p for p in default_profiles if p['api_base'] and p['models']]

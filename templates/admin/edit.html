@@ -28,7 +28,7 @@
           <span class="editor-toolbar-spacer"></span>
           <select id="aiPolishProvider" class="editor-toolbar-select" onchange="syncPolishModels()" title="选择 AI 供应商">
             {% for provider in ai_polish_profiles %}
-              <option value="{{ provider.id }}" {% if not provider.configured %}disabled{% endif %}>
+              <option value="{{ provider.id }}" {% if loop.first %}selected{% endif %} {% if not provider.configured %}disabled{% endif %}>
                 {{ provider.label }}{% if not provider.configured %}（未配置）{% endif %}
               </option>
             {% endfor %}
