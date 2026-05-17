@@ -2,35 +2,27 @@ import os
 import sqlite3
 import uuid
 from datetime import datetime
-from functools import wraps
 
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 import config
 from models import get_db
 from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
-from services.ai_polish import get_public_polish_modes, get_public_polish_profiles, polish_content
+from services.ai_polish import get_public_polish_modes, get_public_polish_profiles
 from services.articles import (
     delete_article_file,
     get_article_meta,
     list_admin_articles,
     list_all_tags,
-    list_all_tags_admin,
     list_drafts,
     publish_article as svc_publish_article,
     read_article_file,
     slugify,
     write_article_file,
 )
+from services.auth import login_required
+from services.home_layout_admin import handle_layout
 from services.wechat_export import build_digest, render_wechat_html
-from services.home_layout import load_home_layout, save_home_layout
-from services.home_modules import (
-    normalize_section_order,
-    normalize_section_visibility,
-    section_order_from_text,
-    section_order_to_text,
-    section_registry,
-)
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -38,15 +30,6 @@ bp = Blueprint('admin', __name__, url_prefix='/admin')
 @bp.context_processor
 def inject_admin_nav():
     return {'admin_nav': build_admin_nav()}
-
-
-def login_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('admin.login'))
-        return f(*args, **kwargs)
-    return wrapper
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -88,7 +71,7 @@ def module_page(module_id):
     if admin_module.url != request.path:
         return redirect(admin_module.url)
     if module_id == 'daily_quote':
-        return layout()
+        return handle_layout()
     if not admin_module.template:
         return render_template('admin/module_placeholder.html', module=admin_module)
     return render_template(admin_module.template, **build_admin_module_context(admin_module))
@@ -225,123 +208,7 @@ def upload():
     return jsonify({'url': url_for('static', filename=f'images/{filename}')})
 
 
-@bp.route('/api/ai/polish', methods=['POST'])
-@login_required
-def ai_polish():
-    data = request.get_json(silent=True) or {}
-    title = (data.get('title') or '').strip()
-    tags = (data.get('tags') or '').strip()
-    content = (data.get('content') or '').strip()
-    provider_id = (data.get('provider') or '').strip()
-    model = (data.get('model') or '').strip()
-    mode = (data.get('mode') or '').strip()
-    if not content:
-        return jsonify({'error': '正文不能为空'}), 400
-    try:
-        polished = polish_content(title, tags, content, provider_id=provider_id, model=model, mode_id=mode)
-    except ValueError as exc:
-        return jsonify({'error': str(exc)}), 400
-    except Exception as exc:
-        return jsonify({'error': str(exc)}), 502
-    return jsonify({'content': polished})
-
-
 @bp.route('/layout', methods=['GET', 'POST'])
 @login_required
 def layout():
-    layout_config = load_home_layout()
-    if request.method == 'POST':
-        quotes_raw = request.form.get("quotes", "").strip()
-        quotes = [q.strip() for q in quotes_raw.splitlines() if q.strip()]
-        section_order_raw = request.form.get("section_order", "")
-        registry = section_registry()
-
-        hero_label = request.form.get("hero_label", "").strip()
-        hero_title = request.form.get("hero_title", "").strip()
-        hero_subtitle = request.form.get("hero_subtitle", "").strip()
-
-        hero_tags = {}
-        i = 0
-        while True:
-            name = request.form.get(f"hero_tag_{i}_name", "").strip()
-            if not name:
-                break
-            label = request.form.get(f"hero_tag_{i}_label", "").strip()
-            title = request.form.get(f"hero_tag_{i}_title", "").strip()
-            subtitle = request.form.get(f"hero_tag_{i}_subtitle", "").strip()
-            if label or title or subtitle:
-                hero_tags[name] = {"label": label, "title": title, "subtitle": subtitle}
-            i += 1
-
-        layout_config["hero"] = {
-            "_default": {
-                "label": hero_label or "水浇岭",
-                "title": hero_title or "水浇岭的博客",
-                "subtitle": hero_subtitle or "写点有意思的东西",
-            },
-            "tags": hero_tags,
-        }
-        layout_config["quotes"] = quotes or ["书山有路勤为径，学海无涯苦作舟。"]
-        layout_config["section_order"] = section_order_from_text(section_order_raw)
-        layout_config["section_visibility"] = {
-            section_id: request.form.get(f"section_enabled_{section_id}") == "on"
-            for section_id in registry
-        }
-        save_home_layout(layout_config)
-        flash('首页布局已更新', 'success')
-        return redirect(url_for('admin.layout'))
-
-    quotes_text = "\n".join(layout_config.get("quotes", []))
-    section_order = normalize_section_order(layout_config.get("section_order"))
-    section_order_text = section_order_to_text(section_order)
-    registry = section_registry()
-    section_visibility = normalize_section_visibility(layout_config.get("section_visibility"))
-    hero = layout_config.get("hero", {})
-    if not isinstance(hero, dict):
-        hero = {}
-    if "_default" in hero:
-        # new format
-        hero_default = hero.get("_default", {})
-        hero_label_val = hero_default.get("label", "水浇岭")
-        hero_title_val = hero_default.get("title", "水浇岭的博客")
-        hero_subtitle_val = hero_default.get("subtitle", "写点有意思的东西")
-        hero_tags = hero.get("tags", {})
-    else:
-        # legacy flat format
-        hero_label_val = hero.get("label", "水浇岭")
-        hero_title_val = hero.get("title", "水浇岭的博客")
-        hero_subtitle_val = hero.get("subtitle", "写点有意思的东西")
-        hero_tags = {}
-    all_tags = list_all_tags_admin()
-    hero_tags_entries = [
-        {
-            "tag": tag,
-            "label": hero_tags.get(tag, {}).get("label", ""),
-            "title": hero_tags.get(tag, {}).get("title", ""),
-            "subtitle": hero_tags.get(tag, {}).get("subtitle", ""),
-        }
-        for tag in all_tags
-    ]
-    section_help = [
-        {
-            "id": section_id,
-            "name": definition.name,
-            "template": definition.template,
-            "enabled": section_visibility.get(section_id, True),
-            "in_order": section_id in section_order,
-        }
-        for section_id, definition in sorted(
-            registry.items(),
-            key=lambda item: (item[1].default_order, item[0]),
-        )
-    ]
-    return render_template(
-        'admin/layout.html',
-        hero_label=hero_label_val,
-        hero_title=hero_title_val,
-        hero_subtitle=hero_subtitle_val,
-        hero_tags_entries=hero_tags_entries,
-        quotes_text=quotes_text,
-        section_order_text=section_order_text,
-        section_help=section_help,
-    )
+    return handle_layout()
