@@ -25,6 +25,21 @@
   pointer-events: none;
 }
 
+/* ── Card inner layout: main content left, placeholder right ─ */
+.aw__body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+}
+.aw__main {
+  flex-shrink: 0;
+}
+.aw__space {
+  flex: 1;
+  min-width: 16px;
+}
+
 /* ── Header with month navigation ──────────────────── */
 .aw__hd {
   display: flex;
@@ -238,10 +253,10 @@
   .aw__days { grid-template-rows: repeat(7, 24px); gap: 3px; line-height: 24px; }
   .aw__wk { grid-template-rows: repeat(7, 24px); gap: 3px; }
   .aw__weeks { gap: 3px; }
-  .aw__grid { gap: 4px; }
+  .aw__grid { gap: 8px; }
   .aw__hd { gap: 8px; }
-  .aw__stats { gap: 10px; font-size: 0.68rem; }
   .aw__title { font-size: 0.85rem; }
   .aw__nav { width: 28px; height: 28px; font-size: 0.75rem; }
   .aw__nav--disabled { width: 28px; height: 28px; }
+  .aw__space { display: none; }
 }

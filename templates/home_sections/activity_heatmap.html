@@ -19,34 +19,40 @@
     {% endif %}
   </header>
 
-  <div class="aw__stats">
-    <span class="aw__stat">📝 本月 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
-    <span class="aw__stat">🔥 <strong>{{ activity_heatmap.total }}</strong> 次活动</span>
-    <span class="aw__stat">🏷️ <strong>{{ activity_heatmap.week_count }}</strong> 周</span>
-  </div>
+  <div class="aw__body">
+    <div class="aw__main">
+      <div class="aw__stats">
+        <span class="aw__stat">📝 本月 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
+        <span class="aw__stat">🔥 <strong>{{ activity_heatmap.total }}</strong> 次活动</span>
+        <span class="aw__stat">🏷️ <strong>{{ activity_heatmap.week_count }}</strong> 周</span>
+      </div>
 
-  <div class="aw__grid">
-    <div class="aw__days" aria-hidden="true">
-      {% for label in activity_heatmap.weekday_labels %}<span>{{ label }}</span>{% endfor %}
-    </div>
-    <div class="aw__weeks" role="img" aria-label="本月每日文章活动热力图">
-      {% for week in activity_heatmap.weeks %}
-        <div class="aw__wk">
-          {% for day in week %}
-            <span class="aw__d lv{{ day.level }}{% if not day.in_month %} aw__d--off{% endif %}{% if day.is_today %} aw__d--now{% endif %}"
-                  title="{{ day.date }}：{{ day.count }} 次活动{% if day.words %}，{{ day.words }} 字{% endif %}"
-                  aria-label="{{ day.label }}"
-                  data-tip="{% if day.words %}{{ day.words }} 字{% else %}{{ day.count }} 次{% endif %}">{{ day.day }}</span>
+      <div class="aw__grid">
+        <div class="aw__days" aria-hidden="true">
+          {% for label in activity_heatmap.weekday_labels %}<span>{{ label }}</span>{% endfor %}
+        </div>
+        <div class="aw__weeks" role="img" aria-label="本月每日文章活动热力图">
+          {% for week in activity_heatmap.weeks %}
+            <div class="aw__wk">
+              {% for day in week %}
+                <span class="aw__d lv{{ day.level }}{% if not day.in_month %} aw__d--off{% endif %}{% if day.is_today %} aw__d--now{% endif %}"
+                      title="{{ day.date }}：{{ day.count }} 次活动{% if day.words %}，{{ day.words }} 字{% endif %}"
+                      aria-label="{{ day.label }}"
+                      data-tip="{% if day.words %}{{ day.words }} 字{% else %}{{ day.count }} 次{% endif %}">{{ day.day }}</span>
+              {% endfor %}
+            </div>
           {% endfor %}
         </div>
-      {% endfor %}
-    </div>
-  </div>
+      </div>
 
-  <div class="aw__leg" aria-hidden="true">
-    <span>少</span>
-    <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i>
-    <span>多</span>
+      <div class="aw__leg" aria-hidden="true">
+        <span>少</span>
+        <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i>
+        <span>多</span>
+      </div>
+    </div>
+
+    <div class="aw__space" aria-hidden="true"></div>
   </div>
 </section>
 
