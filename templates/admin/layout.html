@@ -31,12 +31,26 @@
     <section class="layout-section">
       <h3 class="layout-section-title">🏷️ 标签 Hero 覆盖</h3>
       <p class="layout-section-desc">
-        每行一个标签覆盖，格式：<code>标签名 | 标签文字 | 标题 | 副标题</code>。<br>
-        以 <code>#</code> 开头的行为注释，会被忽略。<br>
-        示例：<code>AI | AI | 人工智能探索 | LLM、Agent、Prompt Engineering</code>
+        为每个标签自定义 Hero 区域。留空则使用上方默认值。<br>
+        标签列表自动从文章数据同步，新建标签后刷新此页面即可看到。
       </p>
-      <textarea name="hero_tags" rows="6" class="layout-textarea layout-textarea-mono" placeholder="天然愚蠢杂谈 | 杂谈 | 胡思乱想集 | 随便写写
-见字如晤 | 信件 | 见字如晤 | 写给朋友的话">{{ hero_tags_text }}</textarea>
+      {% if hero_tags_entries %}
+      <div class="hero-tags-list">
+        {% for entry in hero_tags_entries %}
+        <div class="hero-tag-row">
+          <input type="hidden" name="hero_tag_{{ loop.index0 }}_name" value="{{ entry.tag }}">
+          <div class="hero-tag-name" title="{{ entry.tag }}">{{ entry.tag }}</div>
+          <div class="hero-tag-fields">
+            <input name="hero_tag_{{ loop.index0 }}_label" value="{{ entry.label }}" placeholder="标签文字" class="hero-input hero-tag-input">
+            <input name="hero_tag_{{ loop.index0 }}_title" value="{{ entry.title }}" placeholder="标题" class="hero-input hero-tag-input">
+            <input name="hero_tag_{{ loop.index0 }}_subtitle" value="{{ entry.subtitle }}" placeholder="副标题" class="hero-input hero-tag-input">
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="layout-section-desc" style="color:var(--text-muted);">暂无标签。发布带标签的文章后，标签会自动出现在这里。</p>
+      {% endif %}
     </section>
 
     <section class="layout-section">
@@ -90,6 +104,11 @@
 .hero-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; font-family: \"Noto Serif SC\", serif; }
 .hero-input:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }
 .hero-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+.hero-tags-list { display: flex; flex-direction: column; gap: 16px; }
+.hero-tag-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); }
+.hero-tag-name { flex: 0 0 120px; padding-top: 10px; font-weight: 600; color: var(--accent-primary); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero-tag-fields { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.hero-tag-input { width: 100%; }
 .layout-actions { margin-top: 32px; display: flex; gap: 12px; }
 </style>
 {% endblock %}

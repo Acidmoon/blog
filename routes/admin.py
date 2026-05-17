@@ -14,6 +14,7 @@ from services.articles import (
     delete_article_file,
     get_article_meta,
     list_admin_articles,
+    list_all_tags,
     read_article_file,
     slugify,
     write_article_file,
@@ -240,20 +241,19 @@ def layout():
         hero_label = request.form.get("hero_label", "").strip()
         hero_title = request.form.get("hero_title", "").strip()
         hero_subtitle = request.form.get("hero_subtitle", "").strip()
-        hero_tags_raw = request.form.get("hero_tags", "").strip()
 
         hero_tags = {}
-        for line in hero_tags_raw.splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = [p.strip() for p in line.split("|")]
-            if len(parts) >= 4 and parts[0]:
-                hero_tags[parts[0]] = {
-                    "label": parts[1] or "",
-                    "title": parts[2] or "",
-                    "subtitle": parts[3] or "",
-                }
+        i = 0
+        while True:
+            name = request.form.get(f"hero_tag_{i}_name", "").strip()
+            if not name:
+                break
+            label = request.form.get(f"hero_tag_{i}_label", "").strip()
+            title = request.form.get(f"hero_tag_{i}_title", "").strip()
+            subtitle = request.form.get(f"hero_tag_{i}_subtitle", "").strip()
+            if label or title or subtitle:
+                hero_tags[name] = {"label": label, "title": title, "subtitle": subtitle}
+            i += 1
 
         layout_config["hero"] = {
             "_default": {
@@ -294,11 +294,16 @@ def layout():
         hero_title_val = hero.get("title", "水浇岭的博客")
         hero_subtitle_val = hero.get("subtitle", "写点有意思的东西")
         hero_tags = {}
-    hero_tags_lines = [
-        f"{tag} | {cfg.get('label', '')} | {cfg.get('title', '')} | {cfg.get('subtitle', '')}"
-        for tag, cfg in hero_tags.items()
+    all_tags = list_all_tags()
+    hero_tags_entries = [
+        {
+            "tag": tag,
+            "label": hero_tags.get(tag, {}).get("label", ""),
+            "title": hero_tags.get(tag, {}).get("title", ""),
+            "subtitle": hero_tags.get(tag, {}).get("subtitle", ""),
+        }
+        for tag in all_tags
     ]
-    hero_tags_text = "\n".join(hero_tags_lines)
     section_help = [
         {
             "id": section_id,
@@ -317,7 +322,7 @@ def layout():
         hero_label=hero_label_val,
         hero_title=hero_title_val,
         hero_subtitle=hero_subtitle_val,
-        hero_tags_text=hero_tags_text,
+        hero_tags_entries=hero_tags_entries,
         quotes_text=quotes_text,
         section_order_text=section_order_text,
         section_help=section_help,
