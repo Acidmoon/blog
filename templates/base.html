@@ -24,7 +24,7 @@
   <!-- Navigation -->
   <nav class="navbar" role="navigation" aria-label="主导航">
     <div class="nav-inner">
-      <button class="nav-back" id="navBack" onclick="history.back()" title="返回" aria-label="返回上一页" style="display:none;">
+      <button class="nav-back" id="navBack" onclick="if(document.referrer){history.back()}else{location.href='/'}" title="返回" aria-label="返回上一页" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
           <polyline points="15 18 9 12 15 6"/>
         </svg>

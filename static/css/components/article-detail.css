@@ -312,4 +312,7 @@
   .article-page-wrapper { padding: 10px 16px 0; }
   .toc-mobile-toggle { display: flex; }
 }
+@media (max-width: 640px) {
+  .article-page-wrapper { padding-top: 28px; }
+}
 
