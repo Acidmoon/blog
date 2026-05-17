@@ -26,4 +26,6 @@ def ai_polish():
         return jsonify({'error': str(exc)}), 400
     except Exception as exc:
         return jsonify({'error': str(exc)}), 502
+    except SystemExit:
+        return jsonify({'error': 'AI 接口请求超时或连接中断'}), 504
     return jsonify({'content': polished})

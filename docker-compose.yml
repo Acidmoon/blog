@@ -4,6 +4,7 @@ services:
     build: .
     container_name: waterhill-blog
     restart: always
+    command: ["gunicorn", "-w", "2", "-t", "120", "-b", "0.0.0.0:8082", "app:app"]
     ports:
       - "127.0.0.1:8082:8082"
     environment:
