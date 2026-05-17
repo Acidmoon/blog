@@ -151,11 +151,11 @@ async function polishContent() {
       body: JSON.stringify({title, tags, content: original, provider, model, mode})
     });
     let data;
+    const bodyText = await resp.text();
     try {
-      data = await resp.json();
+      data = JSON.parse(bodyText);
     } catch {
-      const text = await resp.text();
-      throw new Error('服务器返回异常（HTTP ' + resp.status + '）: ' + text.slice(0, 200));
+      throw new Error('服务器返回异常（HTTP ' + resp.status + '）: ' + bodyText.slice(0, 200));
     }
     if (!resp.ok) throw new Error(data.error || '润色失败');
     ta.value = data.content || previous;
