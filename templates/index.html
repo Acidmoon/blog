@@ -17,20 +17,34 @@
   </svg>
 </section>
 
-<main class="container home-sections">
-  {% for section in home_sections %}
-    {% with section_id=section.id,
-            section_name=section.name,
-            articles=section.context.articles,
-            page=section.context.page,
-            total=section.context.total,
-            per_page=section.context.per_page,
-            total_pages=section.context.total_pages,
-            current_tag=section.context.current_tag,
-            all_tags=section.context.all_tags,
-            daily_quote=section.context.daily_quote %}
-      {% include section.template %}
-    {% endwith %}
-  {% endfor %}
-</main>
+<div class="home-layout">
+  {% if sidebar_sections %}
+    <aside class="home-sidebar" aria-label="首页侧边栏模块">
+      {% for section in sidebar_sections %}
+        {% with section_id=section.id,
+                section_name=section.name,
+                activity_heatmap=section.context.activity_heatmap %}
+          {% include section.template %}
+        {% endwith %}
+      {% endfor %}
+    </aside>
+  {% endif %}
+
+  <main class="container home-sections">
+    {% for section in home_sections %}
+      {% with section_id=section.id,
+              section_name=section.name,
+              articles=section.context.articles,
+              page=section.context.page,
+              total=section.context.total,
+              per_page=section.context.per_page,
+              total_pages=section.context.total_pages,
+              current_tag=section.context.current_tag,
+              all_tags=section.context.all_tags,
+              daily_quote=section.context.daily_quote %}
+        {% include section.template %}
+      {% endwith %}
+    {% endfor %}
+  </main>
+</div>
 {% endblock %}

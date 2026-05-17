@@ -1,0 +1,45 @@
+<section class="activity-widget" aria-label="{{ activity_heatmap.title }}">
+  <div class="activity-widget__header">
+    <div>
+      <div class="activity-widget__eyebrow">Activity</div>
+      <h2 class="activity-widget__title">{{ activity_heatmap.title }}</h2>
+    </div>
+    <div class="activity-widget__total">
+      <strong>{{ activity_heatmap.total }}</strong>
+      <span>次</span>
+    </div>
+  </div>
+  <p class="activity-widget__subtitle">{{ activity_heatmap.subtitle }}</p>
+
+  <div class="activity-widget__grid-wrap">
+    <div class="activity-widget__weekdays" aria-hidden="true">
+      {% for label in activity_heatmap.weekday_labels %}
+        <span>{{ label }}</span>
+      {% endfor %}
+    </div>
+    <div class="activity-widget__weeks" role="img" aria-label="本月每日文章活动热力图">
+      {% for week in activity_heatmap.weeks %}
+        <div class="activity-widget__week">
+          {% for day in week %}
+            <span
+              class="activity-widget__day level-{{ day.level }}{% if not day.in_month %} is-muted{% endif %}{% if day.is_today %} is-today{% endif %}"
+              title="{{ day.label }}"
+              aria-label="{{ day.label }}"
+              data-count="{{ day.count }}"
+            >{{ day.day }}</span>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="activity-widget__legend" aria-hidden="true">
+    <span>少</span>
+    <i class="level-0"></i>
+    <i class="level-1"></i>
+    <i class="level-2"></i>
+    <i class="level-3"></i>
+    <i class="level-4"></i>
+    <span>多</span>
+  </div>
+</section>

@@ -46,7 +46,7 @@ def index():
     articles, total = list_published_articles(page=page, tag=tag)
     layout = load_home_layout()
     all_tags = list_all_tags()
-    home_sections = build_home_sections(
+    all_home_sections = build_home_sections(
         layout,
         articles=articles,
         page=page,
@@ -54,12 +54,16 @@ def index():
         current_tag=tag,
         all_tags=all_tags,
     )
+    sidebar_ids = {"activity_heatmap"}
+    sidebar_sections = [section for section in all_home_sections if section.get("id") in sidebar_ids]
+    home_sections = [section for section in all_home_sections if section.get("id") not in sidebar_ids]
 
     hero = resolve_hero(layout.get("hero"), tag)
 
     return render_template('index.html',
         hero=hero,
         home_sections=home_sections,
+        sidebar_sections=sidebar_sections,
     )
 
 
