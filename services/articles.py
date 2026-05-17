@@ -9,6 +9,13 @@ import config
 from models import get_db
 
 
+def _count_words(text: str) -> int:
+    """Count Chinese characters + English words in a text."""
+    cjk = len(re.findall(r'[\u4e00-\u9fff\u3400-\u4dbf]', text))
+    en_words = len(re.findall(r'[a-zA-Z0-9]+', text))
+    return cjk + en_words
+
+
 def slugify(text):
     text = text.strip().lower()
     text = re.sub(r'[^\w\u4e00-\u9fff\s-]', '', text)
@@ -97,7 +104,13 @@ def list_published_articles(page=1, tag=''):
             "SELECT * FROM articles WHERE published=1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
             (config.ARTICLES_PER_PAGE, (page - 1) * config.ARTICLES_PER_PAGE)
         ).fetchall()
-    return [dict(row) for row in rows], total
+    result = []
+    for row in rows:
+        article = dict(row)
+        content = read_article_file(article['slug'])
+        article['current_word_count'] = _count_words(content) if content else 0
+        result.append(article)
+    return result, total
 
 
 def list_admin_articles():

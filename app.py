@@ -12,6 +12,7 @@ def create_app():
     app.config.from_object(config)
     app.secret_key = config.SECRET_KEY
     app.json.ensure_ascii = False
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     # Ensure all errors return JSON, not HTML
     @app.errorhandler(400)

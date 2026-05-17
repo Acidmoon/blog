@@ -4,7 +4,7 @@ services:
     build: .
     container_name: waterhill-blog
     restart: always
-    command: ["gunicorn", "-w", "2", "-t", "120", "-b", "0.0.0.0:8082", "app:app"]
+    command: ["gunicorn", "-w", "2", "-t", "120", "--reload", "-b", "0.0.0.0:8082", "app:app"]
     ports:
       - "127.0.0.1:8082:8082"
     environment:
@@ -33,3 +33,8 @@ services:
       - /root/blog/static/js:/app/static/js
       - /root/blog/home_layout.json:/app/home_layout.json
       - /root/blog/config.py:/app/config.py
+      - /root/blog/app.py:/app/app.py
+      - /root/blog/routes:/app/routes
+      - /root/blog/services:/app/services
+      - /root/blog/models.py:/app/models.py
+      - /root/blog/modules:/app/modules

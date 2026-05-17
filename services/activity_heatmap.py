@@ -8,7 +8,6 @@ from pathlib import Path
 
 import config
 from models import get_db
-from services.articles import read_article_file
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -61,32 +60,26 @@ def _activity_counts(start: date, end: date) -> dict[date, int]:
 
 
 def _word_counts(start: date, end: date) -> dict[date, int]:
-    """Count words in articles created or updated on each day in the range."""
+    """Count words from stored word_count at article creation time.
+    Words are attributed only to the creation date — subsequent edits
+    do not change the word count or move it to another day."""
     words_per_day: dict[date, int] = defaultdict(int)
     conn = get_db()
     rows = conn.execute(
         """
-        SELECT slug, created_at, updated_at
+        SELECT slug, created_at, word_count
         FROM articles
         WHERE published=1
-          AND (date(created_at) BETWEEN ? AND ? OR date(updated_at) BETWEEN ? AND ?)
+          AND date(created_at) BETWEEN ? AND ?
         """,
-        (start.isoformat(), end.isoformat(), start.isoformat(), end.isoformat()),
+        (start.isoformat(), end.isoformat()),
     ).fetchall()
 
     for row in rows:
-        slug = row["slug"]
-        content = read_article_file(slug)
-        if not content:
-            continue
-        wc = _count_words(content)
-        # Attribute words to each day this article had activity on
-        seen: set[date] = set()
-        for field in ("created_at", "updated_at"):
-            day = _parse_date(row[field])
-            if day and start <= day <= end and day not in seen:
-                words_per_day[day] += wc
-                seen.add(day)
+        wc = row["word_count"] or 0
+        day = _parse_date(row["created_at"])
+        if day and start <= day <= end and wc > 0:
+            words_per_day[day] += wc
     return dict(words_per_day)
 
 

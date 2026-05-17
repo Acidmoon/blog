@@ -20,6 +20,7 @@ from services.articles import (
     slugify,
     write_article_file,
 )
+from services.activity_heatmap import _count_words
 from services.auth import login_required
 from services.home_layout_admin import handle_layout
 from services.wechat_export import build_digest, render_wechat_html
@@ -100,16 +101,17 @@ def new_article():
         now = datetime.now().isoformat()
         conn = get_db()
         try:
+            wc = _count_words(content)
             conn.execute(
-                "INSERT INTO articles (slug, title, tags, created_at, updated_at, published) VALUES (?,?,?,?,?,0)",
-                (slug, title, tags, now, now)
+                "INSERT INTO articles (slug, title, tags, created_at, updated_at, published, word_count) VALUES (?,?,?,?,?,0,?)",
+                (slug, title, tags, now, now, wc)
             )
             conn.commit()
         except sqlite3.IntegrityError:
             slug = f"{slug}-{uuid.uuid4().hex[:4]}"
             conn.execute(
-                "INSERT INTO articles (slug, title, tags, created_at, updated_at, published) VALUES (?,?,?,?,?,0)",
-                (slug, title, tags, now, now)
+                "INSERT INTO articles (slug, title, tags, created_at, updated_at, published, word_count) VALUES (?,?,?,?,?,0,?)",
+                (slug, title, tags, now, now, wc)
             )
             conn.commit()
         write_article_file(slug, content)

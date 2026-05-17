@@ -49,9 +49,15 @@ def init_db():
             tags TEXT DEFAULT '',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
-            published INTEGER DEFAULT 1
+            published INTEGER DEFAULT 1,
+            word_count INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_articles_created ON articles(created_at DESC);
     """)
+    # Migration: add word_count column if missing (existing DB)
+    try:
+        conn.execute("ALTER TABLE articles ADD COLUMN word_count INTEGER DEFAULT 0")
+    except Exception:
+        pass  # column already exists
     conn.commit()
     conn.close()

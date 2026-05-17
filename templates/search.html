@@ -25,7 +25,16 @@
         <a href="/article/{{ article.slug }}">{{ title_html|safe }}</a>
       </h2>
       <div class="search-result-meta">
-        <time>{{ article.created_at[:10] }}</time>
+        {% set yn = article.created_at[:4] %}
+        {% set mn = article.created_at[5:7]|int %}
+        {% set dn = article.created_at[8:10]|int %}
+        <time>{{ yn }}年{{ mn }}月{{ dn }}日 {{ article.created_at[11:19] }}</time>
+        {% if article.current_word_count %}
+        · <span class="article-words">{{ article.current_word_count }} 字</span>
+        {% endif %}
+        {% if article.created_at[:10] != article.updated_at[:10] %}
+        · <span class="article-edited">修改于 {{ article.updated_at[:4] }}年{{ article.updated_at[5:7]|int }}月{{ article.updated_at[8:10]|int }}日</span>
+        {% endif %}
         {% if article.tags %}
         <span class="article-tags">
           {% for t in article.tags.split(',') if t.strip() %}

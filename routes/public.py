@@ -4,7 +4,7 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fro
 
 import config
 from services.activity_heatmap import build_month_activity_heatmap
-from services.articles import get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
+from services.articles import _count_words, get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
 from services.home_layout import load_home_layout, resolve_hero
 from services.home_modules import build_home_sections
 from services.search import search_articles
@@ -86,6 +86,7 @@ def article(slug):
     content = read_article_file(slug)
     if content is None:
         abort(404)
+    meta['current_word_count'] = _count_words(content)
     html = render_md(content)
     return render_template('article.html', article=meta, content=html)
 

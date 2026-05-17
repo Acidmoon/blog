@@ -1,7 +1,7 @@
 import re
 
 from models import get_db
-from services.articles import read_article_file
+from services.articles import _count_words, read_article_file
 
 
 def highlight_text(text, query):
@@ -25,6 +25,7 @@ def search_articles(query):
         title_match = q in article['title'].lower()
         tag_match = q in (article['tags'] or '').lower()
         content = read_article_file(article['slug'])
+        article['current_word_count'] = _count_words(content) if content else 0
         content_match = content and q in content.lower()
         if title_match or tag_match or content_match:
             snippet = ''
