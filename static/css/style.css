@@ -532,6 +532,7 @@ img { max-width: 100%; height: auto; display: block; }
   line-height: 1.35;
   margin-top: 2em;
   margin-bottom: 0.6em;
+  scroll-margin-top: 80px;
   color: var(--text-primary);
 }
 .article-body h1 { font-size: 1.55rem; }
@@ -1309,6 +1310,15 @@ img { max-width: 100%; height: auto; display: block; }
   margin-bottom: 36px;
   text-align: center;
 }
+.search-back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  margin-bottom: 14px;
+  transition: color 0.2s;
+}
+.search-back-link:hover { color: var(--accent-primary); }
 .search-title {
   font-size: 1.4rem;
   font-weight: 600;
