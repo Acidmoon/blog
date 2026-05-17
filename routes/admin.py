@@ -237,6 +237,15 @@ def layout():
         section_order_raw = request.form.get("section_order", "")
         registry = section_registry()
 
+        hero_label = request.form.get("hero_label", "").strip()
+        hero_title = request.form.get("hero_title", "").strip()
+        hero_subtitle = request.form.get("hero_subtitle", "").strip()
+
+        layout_config["hero"] = {
+            "label": hero_label or "水浇岭",
+            "title": hero_title or "水浇岭的博客",
+            "subtitle": hero_subtitle or "写点有意思的东西",
+        }
         layout_config["quotes"] = quotes or ["书山有路勤为径，学海无涯苦作舟。"]
         layout_config["section_order"] = section_order_from_text(section_order_raw)
         layout_config["section_visibility"] = {
@@ -252,6 +261,12 @@ def layout():
     section_order_text = section_order_to_text(section_order)
     registry = section_registry()
     section_visibility = normalize_section_visibility(layout_config.get("section_visibility"))
+    hero = layout_config.get("hero", {})
+    if not isinstance(hero, dict):
+        hero = {}
+    hero_label = hero.get("label", "水浇岭")
+    hero_title = hero.get("title", "水浇岭的博客")
+    hero_subtitle = hero.get("subtitle", "写点有意思的东西")
     section_help = [
         {
             "id": section_id,
@@ -267,6 +282,9 @@ def layout():
     ]
     return render_template(
         'admin/layout.html',
+        hero_label=hero_label,
+        hero_title=hero_title,
+        hero_subtitle=hero_subtitle,
         quotes_text=quotes_text,
         section_order_text=section_order_text,
         section_help=section_help,

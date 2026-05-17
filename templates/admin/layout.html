@@ -10,6 +10,25 @@
   <form method="post" class="layout-form">
 
     <section class="layout-section">
+      <h3 class="layout-section-title">🏠 Hero 区域</h3>
+      <p class="layout-section-desc">首页顶部的大标题区。留空则使用默认值。</p>
+      <div class="hero-fields">
+        <label class="hero-field">
+          <span>标签</span>
+          <input name="hero_label" value="{{ hero_label }}" placeholder="水浇岭" class="hero-input">
+        </label>
+        <label class="hero-field">
+          <span>标题</span>
+          <input name="hero_title" value="{{ hero_title }}" placeholder="水浇岭的博客" class="hero-input">
+        </label>
+        <label class="hero-field">
+          <span>副标题</span>
+          <input name="hero_subtitle" value="{{ hero_subtitle }}" placeholder="写点有意思的东西" class="hero-input">
+        </label>
+      </div>
+    </section>
+
+    <section class="layout-section">
       <h3 class="layout-section-title">🧩 首页模块顺序</h3>
       <p class="layout-section-desc">
         每行一个模块 ID。这里不是固定槽位；首页会按这个列表从上到下渲染，之后新增模块也只需要注册模块和模板，不再改首页骨架。
@@ -55,6 +74,11 @@
 .layout-textarea { width: 100%; min-height: 220px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; line-height: 1.6; resize: vertical; font-family: "Noto Serif SC", serif; }
 .layout-textarea-mono { min-height: 120px; font-family: "JetBrains Mono", monospace; }
 .layout-textarea:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }
+.hero-fields { display: flex; flex-direction: column; gap: 14px; }
+.hero-field { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--text-secondary); }
+.hero-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; font-family: \"Noto Serif SC\", serif; }
+.hero-input:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }
+.hero-input::placeholder { color: var(--text-muted); opacity: 0.6; }
 .layout-actions { margin-top: 32px; display: flex; gap: 12px; }
 </style>
 {% endblock %}

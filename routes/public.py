@@ -55,7 +55,19 @@ def index():
         all_tags=all_tags,
     )
 
+    hero = layout.get("hero", {})
+    hero_defaults = {
+        "label": config.SITE_TITLE.split("的")[0] if "的" in config.SITE_TITLE else "水浇岭",
+        "title": config.SITE_TITLE,
+        "subtitle": config.SITE_SUBTITLE,
+    }
+    if not isinstance(hero, dict):
+        hero = {}
+    for key, default in hero_defaults.items():
+        hero.setdefault(key, default)
+
     return render_template('index.html',
+        hero=hero,
         home_sections=home_sections,
     )
 
