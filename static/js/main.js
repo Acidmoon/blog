@@ -289,18 +289,18 @@ function initArticleTOC() {
 
   // Collect h2 and h3 with IDs
   var headings = articleBody.querySelectorAll('h2, h3');
-  if (headings.length < 2) {
-    // Not enough headings — hide TOC entirely
-    if (tocAside) tocAside.style.display = 'none';
-    if (mobileToggle) mobileToggle.style.display = 'none';
-    return;
+
+  function _slug(text) {
+    // Keep alphanumeric + CJK, replace others with nothing
+    return text.replace(/[^a-zA-Z0-9\u4e00-\u9fff-]/g, '').slice(0, 20);
   }
 
   var items = [];
   headings.forEach(function(h, i) {
     var id = h.id || h.getAttribute('id');
     if (!id) {
-      id = 'heading-' + i + '-' + h.textContent.replace(/[^a-zA-Z0-9\\u4e00-\\u9fff-]/g, '').slice(0, 20);
+      id = 'heading-' + _slug(h.textContent);
+      if (!id || id === 'heading-') id = 'heading-' + i;
       h.id = id;
     }
     items.push({
@@ -312,6 +312,9 @@ function initArticleTOC() {
   });
 
   function buildNav(items) {
+    if (items.length === 0) {
+      return '<span class="toc-empty">暂无目录</span>';
+    }
     var html = '';
     items.forEach(function(item) {
       var cls = 'toc-item' + (item.tag === 'h3' ? ' toc-h3' : '');
@@ -324,29 +327,36 @@ function initArticleTOC() {
   tocNav.innerHTML = navHtml;
   if (tocMobileNav) tocMobileNav.innerHTML = navHtml;
 
-  // IntersectionObserver for active heading
-  var observerOptions = { rootMargin: '-80px 0px -60% 0px' };
-  var activeId = null;
-  var observer = new IntersectionObserver(function(entries) {
-    entries.forEach(function(entry) {
-      if (entry.isIntersecting) {
-        activeId = entry.target.id;
-        updateActive();
-      }
-    });
-  }, observerOptions);
+  if (items.length < 2) {
+    // Still show TOC sidebar but with empty state or single item
+    // Don't set up IntersectionObserver for 0-1 headings
+    // But DON'T hide the sidebar — let user see it
+    // Mobile toggle still works
+  } else {
+    // IntersectionObserver for active heading
+    var observerOptions = { rootMargin: '-80px 0px -60% 0px' };
+    var activeId = null;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          activeId = entry.target.id;
+          updateActive();
+        }
+      });
+    }, observerOptions);
 
-  items.forEach(function(item) { observer.observe(item.el); });
+    items.forEach(function(item) { observer.observe(item.el); });
 
-  function updateActive() {
-    var allDesktop = tocNav.querySelectorAll('.toc-item');
-    var allMobile = tocMobileNav ? tocMobileNav.querySelectorAll('.toc-item') : [];
-    allDesktop.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
-    allMobile.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+    function updateActive() {
+      var allDesktop = tocNav.querySelectorAll('.toc-item');
+      var allMobile = tocMobileNav ? tocMobileNav.querySelectorAll('.toc-item') : [];
+      allDesktop.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+      allMobile.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+    }
+
+    // Initial active
+    updateActive();
   }
-
-  // Initial active
-  updateActive();
 
   // Mobile toggle
   if (mobileToggle && mobilePanel && mobileClose) {

@@ -671,7 +671,7 @@ img { max-width: 100%; height: auto; display: block; }
   gap: 48px;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 20px 24px 0;
+  padding: 0 24px;
 }
 .article-main {
   flex: 0 1 740px;
@@ -716,6 +716,11 @@ img { max-width: 100%; height: auto; display: block; }
   font-weight: 500;
 }
 .toc-item.toc-h3 { padding-left: 24px; font-size: 0.78rem; }
+.toc-empty {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  padding: 4px 0;
+}
 
 /* Mobile TOC */
 .toc-mobile-toggle {
