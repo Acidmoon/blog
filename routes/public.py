@@ -4,7 +4,7 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fro
 
 import config
 from services.articles import get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
-from services.home_layout import load_home_layout
+from services.home_layout import load_home_layout, resolve_hero
 from services.home_modules import build_home_sections
 from services.search import search_articles
 
@@ -55,16 +55,7 @@ def index():
         all_tags=all_tags,
     )
 
-    hero = layout.get("hero", {})
-    hero_defaults = {
-        "label": config.SITE_TITLE.split("的")[0] if "的" in config.SITE_TITLE else "水浇岭",
-        "title": config.SITE_TITLE,
-        "subtitle": config.SITE_SUBTITLE,
-    }
-    if not isinstance(hero, dict):
-        hero = {}
-    for key, default in hero_defaults.items():
-        hero.setdefault(key, default)
+    hero = resolve_hero(layout.get("hero"), tag)
 
     return render_template('index.html',
         hero=hero,

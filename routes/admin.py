@@ -240,11 +240,28 @@ def layout():
         hero_label = request.form.get("hero_label", "").strip()
         hero_title = request.form.get("hero_title", "").strip()
         hero_subtitle = request.form.get("hero_subtitle", "").strip()
+        hero_tags_raw = request.form.get("hero_tags", "").strip()
+
+        hero_tags = {}
+        for line in hero_tags_raw.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 4 and parts[0]:
+                hero_tags[parts[0]] = {
+                    "label": parts[1] or "",
+                    "title": parts[2] or "",
+                    "subtitle": parts[3] or "",
+                }
 
         layout_config["hero"] = {
-            "label": hero_label or "水浇岭",
-            "title": hero_title or "水浇岭的博客",
-            "subtitle": hero_subtitle or "写点有意思的东西",
+            "_default": {
+                "label": hero_label or "水浇岭",
+                "title": hero_title or "水浇岭的博客",
+                "subtitle": hero_subtitle or "写点有意思的东西",
+            },
+            "tags": hero_tags,
         }
         layout_config["quotes"] = quotes or ["书山有路勤为径，学海无涯苦作舟。"]
         layout_config["section_order"] = section_order_from_text(section_order_raw)
@@ -264,9 +281,24 @@ def layout():
     hero = layout_config.get("hero", {})
     if not isinstance(hero, dict):
         hero = {}
-    hero_label = hero.get("label", "水浇岭")
-    hero_title = hero.get("title", "水浇岭的博客")
-    hero_subtitle = hero.get("subtitle", "写点有意思的东西")
+    if "_default" in hero:
+        # new format
+        hero_default = hero.get("_default", {})
+        hero_label_val = hero_default.get("label", "水浇岭")
+        hero_title_val = hero_default.get("title", "水浇岭的博客")
+        hero_subtitle_val = hero_default.get("subtitle", "写点有意思的东西")
+        hero_tags = hero.get("tags", {})
+    else:
+        # legacy flat format
+        hero_label_val = hero.get("label", "水浇岭")
+        hero_title_val = hero.get("title", "水浇岭的博客")
+        hero_subtitle_val = hero.get("subtitle", "写点有意思的东西")
+        hero_tags = {}
+    hero_tags_lines = [
+        f"{tag} | {cfg.get('label', '')} | {cfg.get('title', '')} | {cfg.get('subtitle', '')}"
+        for tag, cfg in hero_tags.items()
+    ]
+    hero_tags_text = "\n".join(hero_tags_lines)
     section_help = [
         {
             "id": section_id,
@@ -282,9 +314,10 @@ def layout():
     ]
     return render_template(
         'admin/layout.html',
-        hero_label=hero_label,
-        hero_title=hero_title,
-        hero_subtitle=hero_subtitle,
+        hero_label=hero_label_val,
+        hero_title=hero_title_val,
+        hero_subtitle=hero_subtitle_val,
+        hero_tags_text=hero_tags_text,
         quotes_text=quotes_text,
         section_order_text=section_order_text,
         section_help=section_help,

@@ -115,3 +115,25 @@ def get_daily_quote(quotes: list[str]) -> str:
     config.QUOTE_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     config.QUOTE_CACHE_PATH.write_text(json.dumps(cached, ensure_ascii=False))
     return text
+
+
+def resolve_hero(layout_hero, tag: str) -> dict:
+    """Resolve hero config for a given tag (empty string = default)."""
+    defaults = {"label": "水浇岭", "title": "水浇岭的博客", "subtitle": "写点有意思的东西"}
+
+    if not isinstance(layout_hero, dict):
+        hero = dict(defaults)
+    elif "_default" in layout_hero:
+        # new format: {_default: {...}, tags: {tag: {...}}}
+        base = {**defaults, **layout_hero.get("_default", {})}
+        if tag and isinstance(layout_hero.get("tags"), dict):
+            base.update(layout_hero["tags"].get(tag, {}))
+        hero = base
+    else:
+        # legacy flat format: {label, title, subtitle}
+        hero = {**defaults, **layout_hero}
+
+    # ensure all three keys exist
+    for k in ("label", "title", "subtitle"):
+        hero.setdefault(k, defaults[k])
+    return hero

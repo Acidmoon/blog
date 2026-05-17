@@ -10,8 +10,8 @@
   <form method="post" class="layout-form">
 
     <section class="layout-section">
-      <h3 class="layout-section-title">🏠 Hero 区域</h3>
-      <p class="layout-section-desc">首页顶部的大标题区。留空则使用默认值。</p>
+      <h3 class="layout-section-title">🏠 Hero 区域（默认）</h3>
+      <p class="layout-section-desc">首页顶部的大标题区。未选中标签或标签未配置覆盖时使用此默认值。</p>
       <div class="hero-fields">
         <label class="hero-field">
           <span>标签</span>
@@ -26,6 +26,17 @@
           <input name="hero_subtitle" value="{{ hero_subtitle }}" placeholder="写点有意思的东西" class="hero-input">
         </label>
       </div>
+    </section>
+
+    <section class="layout-section">
+      <h3 class="layout-section-title">🏷️ 标签 Hero 覆盖</h3>
+      <p class="layout-section-desc">
+        每行一个标签覆盖，格式：<code>标签名 | 标签文字 | 标题 | 副标题</code>。<br>
+        以 <code>#</code> 开头的行为注释，会被忽略。<br>
+        示例：<code>AI | AI | 人工智能探索 | LLM、Agent、Prompt Engineering</code>
+      </p>
+      <textarea name="hero_tags" rows="6" class="layout-textarea layout-textarea-mono" placeholder="天然愚蠢杂谈 | 杂谈 | 胡思乱想集 | 随便写写
+见字如晤 | 信件 | 见字如晤 | 写给朋友的话">{{ hero_tags_text }}</textarea>
     </section>
 
     <section class="layout-section">
