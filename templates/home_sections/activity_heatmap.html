@@ -36,7 +36,7 @@
             <span class="aw__d lv{{ day.level }}{% if not day.in_month %} aw__d--off{% endif %}{% if day.is_today %} aw__d--now{% endif %}"
                   title="{{ day.date }}：{{ day.count }} 次活动{% if day.words %}，{{ day.words }} 字{% endif %}"
                   aria-label="{{ day.label }}"
-                  data-tip="{% if day.words %}{{ day.words }} 字{% else %}{{ day.count }} 次{% endif %}"></span>
+                  data-tip="{% if day.words %}{{ day.words }} 字{% else %}{{ day.count }} 次{% endif %}">{{ day.day }}</span>
           {% endfor %}
         </div>
       {% endfor %}

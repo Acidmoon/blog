@@ -102,6 +102,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.4s ease, color 0.3s ease;
   padding-top: 60px;
+  position: relative;
 }
 a { color: var(--accent-primary); text-decoration: none; transition: color 0.2s; }
 a:hover { color: var(--accent-secondary); }
@@ -134,14 +135,21 @@ img { max-width: 100%; height: auto; display: block; }
   margin: 0;
 }
 .home-sidebar {
+  /* deprecated, replaced by .left-rail */
+}
+/* ── Left Rail (heatmap fills the left side) ───────────── */
+.left-rail {
   position: absolute;
-  right: 100%;
-  margin-right: 28px;
-  top: 0;
-  width: 320px;
+  top: 60px;
+  left: 0;
+  width: calc((100vw - 740px) / 2 - 28px);
+  padding: 85px 16px 24px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+  box-sizing: border-box;
 }
 
 
@@ -165,6 +173,20 @@ img { max-width: 100%; height: auto; display: block; }
   .page-link { padding: 6px 14px; font-size: 0.85rem; }
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .site-footer { padding: 40px 0 28px; }
+}
+
+/* Collapse left rail on narrow screens */
+@media (max-width: 850px) {
+  .left-rail {
+    position: static;
+    width: 100%;
+    max-width: 740px;
+    margin: 0 auto 18px;
+    padding: 0 24px;
+    max-height: none;
+    overflow-y: visible;
+    top: auto;
+  }
 }
 
 /* ═══ Water Ripple Click Effect ═══════════════════════════
