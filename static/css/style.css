@@ -95,6 +95,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.4s ease, color 0.3s ease;
+  padding-top: 60px;
 }
 a { color: var(--accent-primary); text-decoration: none; transition: color 0.2s; }
 a:hover { color: var(--accent-secondary); }
@@ -218,7 +219,7 @@ img { max-width: 100%; height: auto; display: block; }
 .hero {
   position: relative;
   text-align: center;
-  padding: 120px 0 60px;
+  padding: 60px 0 60px;
   background: var(--hero-gradient);
   overflow: hidden;
 }
@@ -482,7 +483,7 @@ img { max-width: 100%; height: auto; display: block; }
   transition: width 0.1s linear;
 }
 .article-full {
-  padding: 80px 0 60px;
+  padding: 20px 0 60px;
 }
 .article-header {
   margin-bottom: 40px;
@@ -731,7 +732,7 @@ img { max-width: 100%; height: auto; display: block; }
 .admin-page {
   max-width: 860px;
   margin: 0 auto;
-  padding: 80px 24px 40px;
+  padding: 20px 24px 40px;
 }
 .admin-header {
   display: flex;
@@ -977,7 +978,7 @@ img { max-width: 100%; height: auto; display: block; }
   align-items: center;
   justify-content: center;
   min-height: 70vh;
-  padding-top: 80px;
+  padding-top: 20px;
 }
 .login-card {
   background: var(--bg-card);
@@ -997,13 +998,13 @@ img { max-width: 100%; height: auto; display: block; }
 /* ── Responsive ────────────────────────────────────── */
 @media (max-width: 720px) {
   .container { padding: 0 16px; }
-  .hero { padding: 100px 0 40px; }
+  .hero { padding: 40px 0 40px; }
   .hero-title { font-size: 2rem; }
   .hero-subtitle { font-size: 0.95rem; }
   .article-card { padding: 18px 20px; }
   .article-title { font-size: 1.05rem; }
   .article-title-lg { font-size: 1.5rem; }
-  .article-full { padding: 64px 0 40px; }
+  .article-full { padding: 10px 0 40px; }
   .article-body { font-size: 0.98rem; line-height: 1.8; }
   .nav-inner { padding: 0 16px; }
   .nav-links a { padding: 6px 10px; }
@@ -1281,7 +1282,8 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Responsive: collapse search on small screens ── */
 @media (max-width: 640px) {
-  .hero { padding: 80px 0 32px; }
+  body { padding-top: 100px; }
+  .hero { padding: 10px 0 32px; }
   .hero-title { font-size: 1.6rem; }
   .hero-subtitle { font-size: 0.88rem; }
   .nav-inner {

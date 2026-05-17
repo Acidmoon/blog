@@ -45,7 +45,7 @@
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-  <div class="container" style="padding-top: 80px;">
+  <div class="container" style="padding-top: 20px;">
     {% for category, msg in messages %}
     <div class="flash {{ category }}">{{ msg }}</div>
     {% endfor %}
