@@ -150,6 +150,7 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
 
     total_words = sum(words.values())
     today_words = words.get(today, 0)
+    days_remaining = (date(today.year, 12, 31) - today).days
 
     # Month names for display
     month_names = ["一月", "二月", "三月", "四月", "五月", "六月",
@@ -168,6 +169,7 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
         "total_words": total_words,
         "today_words": today_words,
         "week_count": len(weeks),
+        "days_remaining": days_remaining,
         # Navigation
         "prev_year": prev_year,
         "prev_month": prev_month,
