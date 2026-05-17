@@ -667,8 +667,7 @@ img { max-width: 100%; height: auto; display: block; }
 /* ── Article Page Wrapper (TOC sidebar) ────────────── */
 .article-page-wrapper {
   display: flex;
-  justify-content: center;
-  gap: 130px;
+  gap: 48px;
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 24px;
