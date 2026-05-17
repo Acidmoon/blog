@@ -21,6 +21,12 @@ def get_db():
     except RuntimeError:
         return _new_connection()
     db = g.get('_blog_db')
+    if db is not None:
+        # Detect closed connections (e.g. from older code that still calls .close())
+        try:
+            db.execute("SELECT 1")
+        except sqlite3.ProgrammingError:
+            db = None
     if db is None:
         db = _new_connection()
         g._blog_db = db

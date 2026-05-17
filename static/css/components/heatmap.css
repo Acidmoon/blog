@@ -58,10 +58,24 @@
   line-height: 1.4;
 }
 .aw__sub {
-  margin: 0 0 13px;
+  margin: 0 0 8px;
   font-size: 0.72rem;
   color: var(--text-tertiary);
   letter-spacing: 0.01em;
+}
+
+/* stats */
+.aw__stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 13px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+.aw__stat strong {
+  color: var(--accent-primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 /* grid */
@@ -112,7 +126,7 @@
 }
 /* tooltip on hover */
 .aw__d:hover::after {
-  content: attr(data-tip) " 次";
+  content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 5px);
   left: 50%;

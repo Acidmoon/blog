@@ -8,6 +8,11 @@
   </header>
   <p class="aw__sub">{{ activity_heatmap.subtitle }}</p>
 
+  <div class="aw__stats" aria-label="字数统计">
+    <span class="aw__stat">今日 <strong>{{ activity_heatmap.today_words }}</strong> 字</span>
+    <span class="aw__stat">本月累计 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
+  </div>
+
   <div class="aw__grid">
     <div class="aw__days" aria-hidden="true">
       {% for label in activity_heatmap.weekday_labels %}<span>{{ label }}</span>{% endfor %}
@@ -17,9 +22,9 @@
         <div class="aw__wk">
           {% for day in week %}
             <span class="aw__d lv{{ day.level }}{% if not day.in_month %} aw__d--off{% endif %}{% if day.is_today %} aw__d--now{% endif %}"
-                  title="{{ day.date }}：{{ day.count }} 次"
+                  title="{{ day.date }}：{{ day.count }} 次活动{% if day.words %}，{{ day.words }} 字{% endif %}"
                   aria-label="{{ day.label }}"
-                  data-tip="{{ day.count }}"></span>
+                  data-tip="{% if day.words %}{{ day.words }} 字{% else %}{{ day.count }} 次{% endif %}"></span>
           {% endfor %}
         </div>
       {% endfor %}
