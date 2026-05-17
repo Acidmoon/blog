@@ -174,9 +174,8 @@
 [data-theme="dark"] .aw__leg .lv4 { background: #67b985; }
 
 @media (max-width: 980px) {
-  .home-layout { max-width: 740px; display: block; }
-  .home-layout .home-sections { padding: 0; }
-  .home-sidebar { position: static; width: 100%; margin: 0 0 18px; }
+  .home-layout { max-width: 740px; }
+  .home-sidebar { position: static; right: auto; margin: 0 0 18px; width: 100%; }
   .aw { max-width: 100%; }
 }
 

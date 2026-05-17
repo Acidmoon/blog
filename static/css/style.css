@@ -125,25 +125,20 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Homepage Layout ──────────────────────────────────── */
 .home-layout {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 28px;
-  max-width: 1030px;
+  position: relative;
+  max-width: 740px;
   margin: 0 auto;
   padding: 0 24px;
 }
 .home-layout .home-sections {
   margin: 0;
-  flex: 0 1 740px;
-  min-width: 0;
-  padding: 0;
 }
 .home-sidebar {
+  position: absolute;
+  right: 100%;
+  margin-right: 28px;
+  top: 0;
   width: 228px;
-  flex: 0 0 228px;
-  position: sticky;
-  top: 86px;
   display: flex;
   flex-direction: column;
   gap: 16px;
