@@ -11,6 +11,15 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(config)
     app.secret_key = config.SECRET_KEY
+    app.json.ensure_ascii = False
+
+    # Ensure all errors return JSON, not HTML
+    @app.errorhandler(400)
+    @app.errorhandler(500)
+    @app.errorhandler(502)
+    def json_error(exc):
+        from flask import jsonify
+        return jsonify({'error': str(exc)}), exc.code if hasattr(exc, 'code') else 500
 
     config.ensure_directories()
     init_db()
