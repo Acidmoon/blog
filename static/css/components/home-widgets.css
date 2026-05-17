@@ -1,0 +1,69 @@
+/* home-widgets.css */
+/* ── Tag Filter ──────────────────────────────────────── */
+.tag-filter-section {
+  margin: 36px 0 32px;
+  text-align: center;
+}
+.tag-filter-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.tag {
+  display: inline-block;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: var(--tag-bg);
+  border: 1px solid transparent;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.tag:hover {
+  color: var(--accent-primary);
+  background: var(--tag-hover);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+.tag.active {
+  color: #fff;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(58, 107, 79, 0.25);
+}
+.tag.active:hover {
+  color: #fff;
+  background: var(--accent-primary);
+}
+
+
+/* home-widgets.css */
+/* ── Daily Quote Line ──────────────────────────────── */
+.quote-line {
+  margin: 28px 0 20px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding-left: 18px;
+  border-left: 3px solid var(--accent-secondary);
+  opacity: 0.85;
+}
+.quote-line-mark {
+  color: var(--accent-secondary);
+  font-size: 1.1rem;
+  opacity: 0.5;
+  margin-right: 2px;
+}
+
+/* ══ Search — 搜索组件 ═══════════════════════════════ */
+

@@ -1,0 +1,193 @@
+/* search.css */
+/* ── Search Bar (Navbar) ─────────────────────────── */
+.search-form {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 0 4px 0 12px;
+  transition: all 0.25s;
+}
+.search-form:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--tag-bg);
+  background: var(--bg-card);
+}
+.search-icon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: color 0.2s;
+}
+.search-form:focus-within .search-icon {
+  color: var(--accent-primary);
+}
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  min-width: 0;
+}
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+.search-submit {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent-primary);
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+.search-submit:hover,
+.search-form:focus-within .search-submit {
+  opacity: 1;
+}
+
+
+/* search.css */
+/* ── Search Results Page ─────────────────────────── */
+.search-header {
+  margin-bottom: 36px;
+  text-align: center;
+}
+.search-back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  margin-bottom: 14px;
+  transition: color 0.2s;
+}
+.search-back-link:hover { color: var(--accent-primary); }
+.search-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.search-query {
+  color: var(--accent-primary);
+  letter-spacing: 0.02em;
+}
+.search-result-snippet mark,
+.search-result-title mark {
+  background: var(--accent-secondary);
+  color: var(--bg-base);
+  padding: 0.08em 0.22em;
+  border-radius: 3px;
+  font-weight: 500;
+}
+[data-theme="dark"] .search-result-snippet mark,
+[data-theme="dark"] .search-result-title mark {
+  color: #0c1117;
+}
+.search-stats {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.search-stats strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.search-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  transition: all 0.25s;
+}
+.search-result-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--glow-accent);
+  transform: translateY(-1px);
+}
+.search-result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.search-result-title a {
+  color: var(--text-primary);
+  transition: color 0.2s;
+}
+.search-result-title a:hover {
+  color: var(--accent-primary);
+}
+.search-result-meta {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.search-result-snippet {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  word-break: break-all;
+}
+.empty-state-hint {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-top: 12px;
+}
+.empty-state-hint a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+
+/* search.css */
+/* ── Responsive: collapse search on small screens ── */
+@media (max-width: 640px) {
+  body { padding-top: 100px; }
+  .hero { padding: 10px 0 32px; }
+  .hero-title { font-size: 1.6rem; }
+  .hero-subtitle { font-size: 0.88rem; }
+  .nav-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+  .nav-brand { font-size: 1rem; }
+  .nav-center {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  .nav-links {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .nav-links a { font-size: 0.78rem; padding: 4px 8px; }
+  .article-card { padding: 16px 16px; }
+  .article-title { font-size: 1rem; }
+  .article-list { gap: 12px; }
+  .search-header { margin-bottom: 24px; }
+  .search-title { font-size: 1.2rem; }
+  .search-result-card { padding: 16px 18px; }
+}
+
