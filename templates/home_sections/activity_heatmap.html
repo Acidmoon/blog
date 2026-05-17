@@ -51,10 +51,31 @@
 </section>
 
 <script>
-function awNavMonth(year, month) {
-  var u = new URL(location.href);
-  u.searchParams.set('heatmap_year', year);
-  u.searchParams.set('heatmap_month', month);
-  location.href = u.toString();
-}
+(function(){
+  var section = document.currentScript.parentElement;
+  var year = section.getAttribute('data-aw-year');
+  var month = section.getAttribute('data-aw-month');
+  var hasNext = section.getAttribute('data-aw-hasnext') === '1';
+
+  window.awNavMonth = function(y, m) {
+    var btns = section.querySelectorAll('.aw__nav');
+    btns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.5'; });
+
+    fetch('/api/heatmap?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m))
+      .then(function(r){ return r.text(); })
+      .then(function(html){
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        var newSection = tmp.querySelector('.aw');
+        if (newSection) {
+          section.parentNode.replaceChild(newSection, section);
+          section = newSection;
+        }
+      })
+      .catch(function(err){
+        console.error('Heatmap nav failed:', err);
+        btns.forEach(function(b){ b.disabled = false; b.style.opacity = ''; });
+      });
+  };
+})();
 </script>

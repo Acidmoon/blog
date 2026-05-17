@@ -93,3 +93,12 @@ def article(slug):
 @bp.route('/static/<path:filename>')
 def static_files(filename):
     return send_from_directory('static', filename)
+
+
+@bp.route('/api/heatmap')
+def api_heatmap():
+    """Return the activity heatmap HTML fragment for AJAX month switching."""
+    year = request.args.get("year", type=int)
+    month = request.args.get("month", type=int)
+    data = build_month_activity_heatmap(year=year, month=month)
+    return render_template('home_sections/activity_heatmap.html', activity_heatmap=data)
