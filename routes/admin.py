@@ -18,6 +18,7 @@ from services.articles import (
     slugify,
     write_article_file,
 )
+from services.wechat_export import build_digest, render_wechat_html
 from services.home_layout import load_home_layout, save_home_layout
 from services.home_modules import (
     normalize_section_order,
@@ -152,6 +153,29 @@ def edit_article(slug):
         return redirect(url_for('public.article', slug=slug))
     article['content'] = read_article_file(slug) or ''
     return _edit_template(article=article)
+
+
+@bp.route('/wechat-export/<slug>')
+@login_required
+def wechat_export(slug):
+    article = get_article_meta(slug, published_only=False)
+    if not article:
+        abort(404)
+    content = read_article_file(slug) or ''
+    base_url = request.url_root.rstrip('/')
+    source_url = url_for('public.article', slug=slug, _external=True)
+    export = render_wechat_html(
+        title=article.get('title') or '',
+        markdown_text=content,
+        base_url=base_url,
+        source_url=source_url,
+        author='水浇岭',
+        tags=article.get('tags') or '',
+    )
+    export['digest'] = build_digest(content)
+    export['source_url'] = source_url
+    export['article'] = article
+    return render_template('admin/wechat_export.html', **export)
 
 
 @bp.route('/delete/<slug>', methods=['POST'])

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}公众号导出 · {{ article.title }}{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-form" style="max-width: 980px;">
+    <h2 class="serif">📣 微信公众号导出</h2>
+    <p class="editor-hint">适合直接复制到公众号编辑器；已尽量转换为公众号友好的内联样式。</p>
+
+    <div class="wechat-export-meta">
+      <div><strong>标题：</strong>{{ article.title }}</div>
+      <div><strong>摘要：</strong>{{ digest or '（无）' }}</div>
+      <div><strong>标签：</strong>{{ article.tags or '（无）' }}</div>
+      <div><strong>原文链接：</strong><a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url }}</a></div>
+    </div>
+
+    <div class="form-actions" style="margin-top: 16px;">
+      <button type="button" class="btn btn-primary" onclick="copyWechatHtml()">复制公众号正文</button>
+      <button type="button" class="btn btn-secondary" onclick="copyWechatPlain()">复制纯文本</button>
+      <button type="button" class="btn btn-secondary" onclick="downloadWechatHtml()">下载 HTML</button>
+      <a href="/admin/edit/{{ article.slug }}" class="btn btn-secondary">返回编辑</a>
+    </div>
+
+    <div class="wechat-export-preview">
+      <h3 class="serif">预览</h3>
+      <iframe id="wechatPreview" class="wechat-preview-frame" srcdoc="{{ html|e }}"></iframe>
+    </div>
+
+    <textarea id="wechatHtmlSource" class="wechat-export-source" readonly>{{ html|e }}</textarea>
+    <textarea id="wechatPlainSource" class="wechat-export-source" readonly>{{ plain_text|e }}</textarea>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+function getHtmlText() {
+  return document.getElementById('wechatHtmlSource').value;
+}
+function getPlainText() {
+  return document.getElementById('wechatPlainSource').value;
+}
+async function copyWechatHtml() {
+  const html = getHtmlText();
+  const plain = getPlainText();
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], {type: 'text/html'}),
+          'text/plain': new Blob([plain], {type: 'text/plain'})
+        })
+      ]);
+    } else {
+      await navigator.clipboard.writeText(plain);
+    }
+    alert('已复制公众号正文');
+  } catch (e) {
+    alert('复制失败，请手动全选复制：' + e.message);
+  }
+}
+async function copyWechatPlain() {
+  try {
+    await navigator.clipboard.writeText(getPlainText());
+    alert('已复制纯文本');
+  } catch (e) {
+    alert('复制失败：' + e.message);
+  }
+}
+function downloadWechatHtml() {
+  const blob = new Blob([getHtmlText()], {type: 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'wechat-{{ article.slug }}.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

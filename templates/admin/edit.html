@@ -48,6 +48,9 @@
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">{% if article %}💾 保存修改{% else %}🚀 发布{% endif %}</button>
         <a href="/admin" class="btn btn-secondary">取消</a>
+        {% if article %}
+        <a href="/admin/wechat-export/{{ article.slug }}" class="btn btn-secondary">导出公众号</a>
+        {% endif %}
       </div>
     </form>
   </div>
