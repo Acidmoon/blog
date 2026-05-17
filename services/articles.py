@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import markdown as md_lib
@@ -69,6 +70,19 @@ def list_all_tags():
     return sorted(all_tags)
 
 
+def list_all_tags_admin():
+    """Return all tags from ALL articles (including drafts), for admin hero config."""
+    all_tags = set()
+    conn = get_db()
+    for article in conn.execute("SELECT tags FROM articles").fetchall():
+        for tag in (article['tags'] or '').split(','):
+            tag = tag.strip()
+            if tag:
+                all_tags.add(tag)
+    conn.close()
+    return sorted(all_tags)
+
+
 def list_published_articles(page=1, tag=''):
     conn = get_db()
     if tag:
@@ -91,7 +105,29 @@ def list_published_articles(page=1, tag=''):
 
 
 def list_admin_articles():
+    """Return published articles for admin dashboard, newest first."""
     conn = get_db()
-    rows = conn.execute("SELECT * FROM articles ORDER BY created_at DESC").fetchall()
+    rows = conn.execute(
+        "SELECT * FROM articles WHERE published=1 ORDER BY created_at DESC"
+    ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def list_drafts():
+    """Return draft articles (published=0), newest first."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM articles WHERE published=0 ORDER BY created_at DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def publish_article(slug):
+    """Set article to published=1."""
+    conn = get_db()
+    conn.execute("UPDATE articles SET published=1, updated_at=? WHERE slug=?", 
+                 (datetime.now().isoformat(), slug))
+    conn.commit()
+    conn.close()

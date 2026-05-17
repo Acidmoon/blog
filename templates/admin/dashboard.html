@@ -10,35 +10,74 @@
     </div>
   </div>
 
-  <div class="admin-table">
-    <table>
-      <thead>
-        <tr>
-          <th>标题</th>
-          <th>标签</th>
-          <th>发布时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for article in articles %}
-        <tr>
-          <td><a href="/article/{{ article.slug }}">{{ article.title }}</a></td>
-          <td>{{ article.tags }}</td>
-          <td>{{ article.created_at[:10] }}</td>
-          <td class="action-cell">
-            <a href="/admin/edit/{{ article.slug }}" class="btn-sm">编辑</a>
-            <a href="/admin/wechat-export/{{ article.slug }}" class="btn-sm">导出公众号</a>
-            <form action="/admin/delete/{{ article.slug }}" method="post" style="display:inline" onsubmit="return confirm('确定删除「{{ article.title }}」？')">
-              <button type="submit" class="btn-sm btn-danger">删除</button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4" class="empty-cell">还没有文章，去写第一篇吧</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% if drafts %}
+  <section class="admin-section">
+    <h3 class="admin-section-title">📝 草稿</h3>
+    <div class="admin-table">
+      <table>
+        <thead>
+          <tr>
+            <th>标题</th>
+            <th>标签</th>
+            <th>创建时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for article in drafts %}
+          <tr class="draft-row">
+            <td><span class="draft-indicator">草稿</span> {{ article.title }}</td>
+            <td>{{ article.tags }}</td>
+            <td>{{ article.created_at[:10] }}</td>
+            <td class="action-cell">
+              <a href="/admin/edit/{{ article.slug }}" class="btn-sm">编辑</a>
+              <form action="/admin/publish/{{ article.slug }}" method="post" style="display:inline">
+                <button type="submit" class="btn-sm btn-publish">发布</button>
+              </form>
+              <form action="/admin/delete/{{ article.slug }}" method="post" style="display:inline" onsubmit="return confirm('确定删除草稿「{{ article.title }}」？')">
+                <button type="submit" class="btn-sm btn-danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="admin-section">
+    <h3 class="admin-section-title">📰 已发布文章</h3>
+    <div class="admin-table">
+      <table>
+        <thead>
+          <tr>
+            <th>标题</th>
+            <th>标签</th>
+            <th>发布时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for article in articles %}
+          <tr>
+            <td><a href="/article/{{ article.slug }}">{{ article.title }}</a></td>
+            <td>{{ article.tags }}</td>
+            <td>{{ article.created_at[:10] }}</td>
+            <td class="action-cell">
+              <a href="/admin/edit/{{ article.slug }}" class="btn-sm">编辑</a>
+              <a href="/admin/wechat-export/{{ article.slug }}" class="btn-sm">导出公众号</a>
+              <form action="/admin/delete/{{ article.slug }}" method="post" style="display:inline" onsubmit="return confirm('确定删除「{{ article.title }}」？')">
+                <button type="submit" class="btn-sm btn-danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="empty-cell">还没有文章，去写第一篇吧</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </main>
 {% endblock %}

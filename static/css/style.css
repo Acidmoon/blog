@@ -1025,6 +1025,53 @@ img { max-width: 100%; height: auto; display: block; }
   color: #fff;
   border-color: #c0392b;
 }
+.btn-publish {
+  color: #27ae60;
+  border-color: #27ae60;
+  background: transparent;
+}
+.btn-publish:hover {
+  background: #27ae60;
+  color: #fff;
+  border-color: #27ae60;
+}
+
+/* Draft styles */
+.draft-badge {
+  display: inline-block;
+  background: #f39c12;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.draft-indicator {
+  display: inline-block;
+  background: #f39c12;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-right: 6px;
+  font-weight: 500;
+}
+.draft-row {
+  background: rgba(243, 156, 18, 0.04);
+}
+.admin-section {
+  margin: 32px 0;
+}
+.admin-section-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
 
 /* Admin Table */
 .admin-table {

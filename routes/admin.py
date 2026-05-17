@@ -15,6 +15,9 @@ from services.articles import (
     get_article_meta,
     list_admin_articles,
     list_all_tags,
+    list_all_tags_admin,
+    list_drafts,
+    publish_article as svc_publish_article,
     read_article_file,
     slugify,
     write_article_file,
@@ -65,7 +68,9 @@ def logout():
 @bp.route('')
 @login_required
 def dashboard():
-    return render_template('admin/dashboard.html', articles=list_admin_articles())
+    drafts = list_drafts()
+    published = list_admin_articles()
+    return render_template('admin/dashboard.html', drafts=drafts, articles=published)
 
 
 @bp.route('/modules')
@@ -113,21 +118,21 @@ def new_article():
         conn = get_db()
         try:
             conn.execute(
-                "INSERT INTO articles (slug, title, tags, created_at, updated_at) VALUES (?,?,?,?,?)",
+                "INSERT INTO articles (slug, title, tags, created_at, updated_at, published) VALUES (?,?,?,?,?,0)",
                 (slug, title, tags, now, now)
             )
             conn.commit()
         except sqlite3.IntegrityError:
             slug = f"{slug}-{uuid.uuid4().hex[:4]}"
             conn.execute(
-                "INSERT INTO articles (slug, title, tags, created_at, updated_at) VALUES (?,?,?,?,?)",
+                "INSERT INTO articles (slug, title, tags, created_at, updated_at, published) VALUES (?,?,?,?,?,0)",
                 (slug, title, tags, now, now)
             )
             conn.commit()
         conn.close()
         write_article_file(slug, content)
-        flash('文章已发布', 'success')
-        return redirect(url_for('public.article', slug=slug))
+        flash('草稿已保存', 'success')
+        return redirect(url_for('admin.edit_article', slug=slug))
     return _edit_template(article=None)
 
 
@@ -151,7 +156,9 @@ def edit_article(slug):
         conn.close()
         write_article_file(slug, content)
         flash('文章已更新', 'success')
-        return redirect(url_for('public.article', slug=slug))
+        if article.get('published'):
+            return redirect(url_for('public.article', slug=slug))
+        return redirect(url_for('admin.edit_article', slug=slug))
     article['content'] = read_article_file(slug) or ''
     return _edit_template(article=article)
 
@@ -189,6 +196,17 @@ def delete_article(slug):
     delete_article_file(slug)
     flash('文章已删除', 'success')
     return redirect(url_for('admin.dashboard'))
+
+
+@bp.route('/publish/<slug>', methods=['POST'])
+@login_required
+def publish(slug):
+    article = get_article_meta(slug, published_only=False)
+    if not article:
+        abort(404)
+    svc_publish_article(slug)
+    flash('文章已发布', 'success')
+    return redirect(url_for('public.article', slug=slug))
 
 
 @bp.route('/upload', methods=['POST'])
@@ -294,7 +312,7 @@ def layout():
         hero_title_val = hero.get("title", "水浇岭的博客")
         hero_subtitle_val = hero.get("subtitle", "写点有意思的东西")
         hero_tags = {}
-    all_tags = list_all_tags()
+    all_tags = list_all_tags_admin()
     hero_tags_entries = [
         {
             "tag": tag,

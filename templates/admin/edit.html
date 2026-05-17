@@ -1,9 +1,16 @@
 {% extends "base.html" %}
-{% block title %}{% if article %}编辑文章{% else %}写新文章{% endif %} · {{ config.SITE_TITLE }}{% endblock %}
+{% block title %}{% if article %}{% if not article.published %}草稿：{% endif %}编辑文章{% else %}写新文章{% endif %} · {{ config.SITE_TITLE }}{% endblock %}
 {% block content %}
 <main class="admin-page">
   <div class="admin-form editor-page">
-    <h2 class="serif">{% if article %}✏️ 编辑文章{% else %}📝 写新文章{% endif %}</h2>
+    <h2 class="serif">
+      {% if article %}
+        {% if not article.published %}<span class="draft-badge">草稿</span>{% endif %}
+        ✏️ 编辑文章
+      {% else %}
+        📝 写新文章
+      {% endif %}
+    </h2>
     <form method="post">
       <div class="form-group">
         <label for="title">标题</label>
@@ -46,7 +53,10 @@
         <p id="aiPolishStatus" class="editor-hint">AI润色只会轻修语病、重复和口语表达，不会自动发布。</p>
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">{% if article %}💾 保存修改{% else %}🚀 发布{% endif %}</button>
+        <button type="submit" class="btn btn-primary">{% if article and not article.published %}💾 保存草稿{% elif article %}💾 保存修改{% else %}💾 保存草稿{% endif %}</button>
+        {% if article and not article.published %}
+        <button type="button" class="btn btn-publish" onclick="if(confirm('确定发布这篇文章？发布后将在首页显示。')){var f=document.createElement('form');f.method='post';f.action='/admin/publish/{{ article.slug }}';document.body.appendChild(f);f.submit()}">🚀 发布</button>
+        {% endif %}
         <a href="/admin" class="btn btn-secondary">取消</a>
         {% if article %}
         <a href="/admin/wechat-export/{{ article.slug }}" class="btn btn-secondary">导出公众号</a>
