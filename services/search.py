@@ -18,7 +18,6 @@ def search_articles(query):
     rows = conn.execute(
         "SELECT * FROM articles WHERE published=1 ORDER BY created_at DESC"
     ).fetchall()
-    conn.close()
     q = query.lower().strip()
     results = []
     for row in rows:

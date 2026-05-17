@@ -112,7 +112,6 @@ def new_article():
                 (slug, title, tags, now, now)
             )
             conn.commit()
-        conn.close()
         write_article_file(slug, content)
         flash('草稿已保存', 'success')
         return redirect(url_for('admin.edit_article', slug=slug))
@@ -136,7 +135,6 @@ def edit_article(slug):
             (title, tags, now, slug)
         )
         conn.commit()
-        conn.close()
         write_article_file(slug, content)
         flash('文章已更新', 'success')
         if article.get('published'):
@@ -175,7 +173,6 @@ def delete_article(slug):
     conn = get_db()
     conn.execute("DELETE FROM articles WHERE slug=?", (slug,))
     conn.commit()
-    conn.close()
     delete_article_file(slug)
     flash('文章已删除', 'success')
     return redirect(url_for('admin.dashboard'))

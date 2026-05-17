@@ -36,7 +36,6 @@ def _activity_counts(start: date, end: date) -> dict[date, int]:
         """,
         (start.isoformat(), end.isoformat(), start.isoformat(), end.isoformat()),
     ).fetchall()
-    conn.close()
 
     for row in rows:
         seen_for_article: set[date] = set()

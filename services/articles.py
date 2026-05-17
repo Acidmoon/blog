@@ -36,7 +36,6 @@ def get_article_meta(slug, published_only=True):
         ).fetchone()
     else:
         row = conn.execute("SELECT * FROM articles WHERE slug=?", (slug,)).fetchone()
-    conn.close()
     return dict(row) if row else None
 
 
@@ -66,7 +65,6 @@ def list_all_tags():
             tag = tag.strip()
             if tag:
                 all_tags.add(tag)
-    conn.close()
     return sorted(all_tags)
 
 
@@ -79,7 +77,6 @@ def list_all_tags_admin():
             tag = tag.strip()
             if tag:
                 all_tags.add(tag)
-    conn.close()
     return sorted(all_tags)
 
 
@@ -100,7 +97,6 @@ def list_published_articles(page=1, tag=''):
             "SELECT * FROM articles WHERE published=1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
             (config.ARTICLES_PER_PAGE, (page - 1) * config.ARTICLES_PER_PAGE)
         ).fetchall()
-    conn.close()
     return [dict(row) for row in rows], total
 
 
@@ -110,7 +106,6 @@ def list_admin_articles():
     rows = conn.execute(
         "SELECT * FROM articles WHERE published=1 ORDER BY created_at DESC"
     ).fetchall()
-    conn.close()
     return [dict(row) for row in rows]
 
 
@@ -120,7 +115,6 @@ def list_drafts():
     rows = conn.execute(
         "SELECT * FROM articles WHERE published=0 ORDER BY created_at DESC"
     ).fetchall()
-    conn.close()
     return [dict(row) for row in rows]
 
 
@@ -130,4 +124,3 @@ def publish_article(slug):
     conn.execute("UPDATE articles SET published=1, updated_at=? WHERE slug=?", 
                  (datetime.now().isoformat(), slug))
     conn.commit()
-    conn.close()

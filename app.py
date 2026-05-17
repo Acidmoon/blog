@@ -1,7 +1,7 @@
 from flask import Flask
 
 import config
-from models import init_db
+from models import close_db, init_db
 from module_loader import load_modules
 from routes import register_blueprints
 from services.admin_modules import build_admin_nav
@@ -24,6 +24,9 @@ def create_app():
     config.ensure_directories()
     init_db()
     load_modules(app)
+
+    # Per-request DB connection lifecycle
+    app.teardown_appcontext(close_db)
 
     @app.context_processor
     def inject_global_admin_nav():
