@@ -275,6 +275,93 @@ function initWaterRipple() {
   });
 }
 
+/* ── Article TOC ──────────────────────────────────── */
+function initArticleTOC() {
+  const articleBody = document.getElementById('articleBody');
+  const tocNav = document.getElementById('tocNav');
+  const tocMobileNav = document.getElementById('tocMobileNav');
+  const tocAside = document.getElementById('articleToc');
+  const mobileToggle = document.getElementById('tocMobileToggle');
+  const mobilePanel = document.getElementById('tocMobilePanel');
+  const mobileClose = document.getElementById('tocMobileClose');
+
+  if (!articleBody || !tocNav) return;
+
+  // Collect h2 and h3 with IDs
+  var headings = articleBody.querySelectorAll('h2, h3');
+  if (headings.length < 2) {
+    // Not enough headings — hide TOC entirely
+    if (tocAside) tocAside.style.display = 'none';
+    if (mobileToggle) mobileToggle.style.display = 'none';
+    return;
+  }
+
+  var items = [];
+  headings.forEach(function(h, i) {
+    var id = h.id || h.getAttribute('id');
+    if (!id) {
+      id = 'heading-' + i + '-' + h.textContent.replace(/[^a-zA-Z0-9\\u4e00-\\u9fff-]/g, '').slice(0, 20);
+      h.id = id;
+    }
+    items.push({
+      id: id,
+      tag: h.tagName.toLowerCase(),
+      text: h.textContent.trim(),
+      el: h
+    });
+  });
+
+  function buildNav(items) {
+    var html = '';
+    items.forEach(function(item) {
+      var cls = 'toc-item' + (item.tag === 'h3' ? ' toc-h3' : '');
+      html += '<a href="#' + item.id + '" class="' + cls + '" data-heading="' + item.id + '">' + item.text + '</a>';
+    });
+    return html;
+  }
+
+  var navHtml = buildNav(items);
+  tocNav.innerHTML = navHtml;
+  if (tocMobileNav) tocMobileNav.innerHTML = navHtml;
+
+  // IntersectionObserver for active heading
+  var observerOptions = { rootMargin: '-80px 0px -60% 0px' };
+  var activeId = null;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        activeId = entry.target.id;
+        updateActive();
+      }
+    });
+  }, observerOptions);
+
+  items.forEach(function(item) { observer.observe(item.el); });
+
+  function updateActive() {
+    var allDesktop = tocNav.querySelectorAll('.toc-item');
+    var allMobile = tocMobileNav ? tocMobileNav.querySelectorAll('.toc-item') : [];
+    allDesktop.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+    allMobile.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+  }
+
+  // Initial active
+  updateActive();
+
+  // Mobile toggle
+  if (mobileToggle && mobilePanel && mobileClose) {
+    mobileToggle.addEventListener('click', function() { mobilePanel.classList.add('open'); });
+    mobileClose.addEventListener('click', function() { mobilePanel.classList.remove('open'); });
+    mobilePanel.addEventListener('click', function(e) {
+      if (e.target === mobilePanel) mobilePanel.classList.remove('open');
+      // Close panel when a TOC link is clicked
+      if (e.target.closest('.toc-item')) {
+        setTimeout(function() { mobilePanel.classList.remove('open'); }, 200);
+      }
+    });
+  }
+}
+
 /* ── Initialize ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
@@ -285,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCardClick();
   initCopyButtons();
   initArticleImages();
+  initArticleTOC();
   initSearch();
   initWaterRipple();
 });
