@@ -12,9 +12,9 @@ MODULE = {
     "admin_modules": [
         AdminModuleDefinition(
             id="daily_quote",
-            label="一言",
+            label="设置",
             url="/admin/modules/daily_quote",
-            description="管理每日一言与首页模块顺序",
+            description="管理首页 Hero 区域、每日一言与模块顺序",
             icon="📜",
             order=20,
         ),
