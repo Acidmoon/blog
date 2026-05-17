@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Blueprint, abort, redirect, render_template, request, send_from_directory, url_for
 
 import config
+from services.activity_heatmap import build_month_activity_heatmap
 from services.articles import get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
 from services.home_layout import load_home_layout, resolve_hero
 from services.home_modules import build_home_sections
@@ -54,9 +55,19 @@ def index():
         current_tag=tag,
         all_tags=all_tags,
     )
-    sidebar_ids = {"activity_heatmap"}
+    sidebar_ids: set[str] = set()  # activity_heatmap is now in the main content flow
     sidebar_sections = [section for section in all_home_sections if section.get("id") in sidebar_ids]
     home_sections = [section for section in all_home_sections if section.get("id") not in sidebar_ids]
+
+    # Inject heatmap year/month from query params
+    heatmap_year = request.args.get("heatmap_year", type=int)
+    heatmap_month = request.args.get("heatmap_month", type=int)
+    for section in home_sections:
+        if section.get("id") == "activity_heatmap":
+            section["context"]["activity_heatmap"] = build_month_activity_heatmap(
+                year=heatmap_year, month=heatmap_month
+            )
+            break
 
     hero = resolve_hero(layout.get("hero"), tag)
 

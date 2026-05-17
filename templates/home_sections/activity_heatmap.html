@@ -1,16 +1,28 @@
-<section class="aw" aria-label="{{ activity_heatmap.title }}">
+<section class="aw" aria-label="月度活动热力图"
+         data-aw-year="{{ activity_heatmap.year }}"
+         data-aw-month="{{ activity_heatmap.month }}"
+         data-aw-prev="{{ activity_heatmap.prev_year }}-{{ activity_heatmap.prev_month }}"
+         data-aw-next="{{ activity_heatmap.next_year }}-{{ activity_heatmap.next_month }}"
+         data-aw-hasnext="{{ '1' if activity_heatmap.has_next else '0' }}">
   <header class="aw__hd">
-    <div>
-      <span class="aw__eyebrow">笔迹</span>
-      <h2 class="aw__title serif">{{ activity_heatmap.title }}</h2>
+    <button class="aw__nav aw__nav--prev" aria-label="上个月"
+            onclick="awNavMonth('{{ activity_heatmap.prev_year }}','{{ activity_heatmap.prev_month }}')">◀</button>
+    <div class="aw__title-block">
+      <span class="aw__title serif">{{ activity_heatmap.year }}年{{ activity_heatmap.month_display }}</span>
+      <span class="aw__eyebrow">文章活动热力图</span>
     </div>
-    <b class="aw__badge" aria-label="本月共 {{ activity_heatmap.total }} 次活动">{{ activity_heatmap.total }}</b>
+    {% if activity_heatmap.has_next %}
+    <button class="aw__nav aw__nav--next" aria-label="下个月"
+            onclick="awNavMonth('{{ activity_heatmap.next_year }}','{{ activity_heatmap.next_month }}')">▶</button>
+    {% else %}
+    <span class="aw__nav aw__nav--disabled">▶</span>
+    {% endif %}
   </header>
-  <p class="aw__sub">{{ activity_heatmap.subtitle }}</p>
 
-  <div class="aw__stats" aria-label="字数统计">
-    <span class="aw__stat">今日 <strong>{{ activity_heatmap.today_words }}</strong> 字</span>
-    <span class="aw__stat">本月累计 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
+  <div class="aw__stats">
+    <span class="aw__stat">📝 本月 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
+    <span class="aw__stat">🔥 <strong>{{ activity_heatmap.total }}</strong> 次活动</span>
+    <span class="aw__stat">🏷️ <strong>{{ activity_heatmap.week_count }}</strong> 周</span>
   </div>
 
   <div class="aw__grid">
@@ -37,3 +49,12 @@
     <span>多</span>
   </div>
 </section>
+
+<script>
+function awNavMonth(year, month) {
+  var u = new URL(location.href);
+  u.searchParams.set('heatmap_year', year);
+  u.searchParams.set('heatmap_month', month);
+  location.href = u.toString();
+}
+</script>

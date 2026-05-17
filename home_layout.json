@@ -10,6 +10,11 @@
         "label": "杂谈",
         "title": "胡思乱想集",
         "subtitle": "天马行空，不拘一格"
+      },
+      "见字如晤": {
+        "label": "信件",
+        "title": "见字如面",
+        "subtitle": "口述"
       }
     }
   },
@@ -24,12 +29,14 @@
     "daily_quote",
     "tag_filter",
     "article_list",
-    "pagination"
+    "pagination",
+    "activity_heatmap"
   ],
   "section_visibility": {
-    "daily_quote": true,
-    "tag_filter": true,
+    "activity_heatmap": true,
     "article_list": true,
-    "pagination": true
+    "daily_quote": true,
+    "pagination": true,
+    "tag_filter": true
   }
 }
