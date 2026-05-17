@@ -89,6 +89,30 @@ def module_page(module_id):
         return redirect(admin_module.url)
     if module_id == 'daily_quote':
         return layout()
+    if module_id == 'deepseek_balance':
+        from services.deepseek_balance import fetch_balance, get_api_key, save_api_key
+
+        if request.method == 'POST':
+            if request.form.get('clear'):
+                save_api_key('')
+                flash('API Key 已清除', 'success')
+            else:
+                api_key = request.form.get('api_key', '').strip()
+                if api_key:
+                    save_api_key(api_key)
+                    flash('API Key 已保存', 'success')
+                else:
+                    flash('API Key 不能为空', 'error')
+            return redirect(url_for('admin.module_page', module_id='deepseek_balance'))
+
+        current_key = get_api_key()
+        preview = fetch_balance() if current_key else None
+        return render_template(
+            admin_module.template,
+            current_key=current_key,
+            preview=preview,
+            **build_admin_module_context(admin_module),
+        )
     if not admin_module.template:
         return render_template('admin/module_placeholder.html', module=admin_module)
     return render_template(admin_module.template, **build_admin_module_context(admin_module))

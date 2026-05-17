@@ -1,0 +1,34 @@
+{% if balance.configured %}
+<div class="balance-widget{% if balance.error %} balance-widget--error{% endif %}">
+  <div class="balance-widget__header">
+    <span class="balance-widget__icon">⚡</span>
+    <span class="balance-widget__title">DeepSeek</span>
+  </div>
+  {% if balance.error %}
+  <div class="balance-widget__error">{{ balance.error }}</div>
+  {% else %}
+  <div class="balance-widget__amount">{{ balance.total_balance }}</div>
+  <div class="balance-widget__details">
+    <div class="balance-widget__row">
+      <span class="balance-widget__label">充值</span>
+      <span class="balance-widget__value">{{ balance.topped_up_balance }}</span>
+    </div>
+    <div class="balance-widget__row">
+      <span class="balance-widget__label">赠送</span>
+      <span class="balance-widget__value">{{ balance.granted_balance }}</span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="balance-widget balance-widget--empty">
+  <div class="balance-widget__header">
+    <span class="balance-widget__icon">⚡</span>
+    <span class="balance-widget__title">DeepSeek</span>
+  </div>
+  <div class="balance-widget__hint">
+    未配置 API Key<br>
+    <a href="/admin/modules/deepseek_balance" class="balance-widget__link">前往设置 →</a>
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}DeepSeek 余额设置 · {{ config.SITE_TITLE }}{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+  <div class="container">
+    <h1>💰 DeepSeek 余额设置</h1>
+    <p class="admin-page__desc">配置 DeepSeek API Key，首页侧边栏将实时显示账户余额。</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="balance-settings-form">
+      <div class="form-group">
+        <label for="api_key">API Key</label>
+        <input
+          type="password"
+          id="api_key"
+          name="api_key"
+          value="{{ current_key }}"
+          placeholder="sk-..."
+          class="form-input"
+        >
+        <p class="form-hint">获取地址：<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com/api_keys</a></p>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">💾 保存</button>
+        {% if current_key %}
+        <button type="submit" name="clear" value="1" class="btn btn-danger">🗑 清除</button>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if current_key %}
+    <div class="balance-preview">
+      <h2>当前余额</h2>
+      {% if preview and preview.error %}
+      <div class="balance-error">{{ preview.error }}</div>
+      {% elif preview %}
+      <div class="balance-stats">
+        <div class="balance-stat">
+          <span class="balance-stat__label">总余额</span>
+          <span class="balance-stat__value">{{ preview.total_balance }}</span>
+        </div>
+        <div class="balance-stat">
+          <span class="balance-stat__label">充值余额</span>
+          <span class="balance-stat__value">{{ preview.topped_up_balance }}</span>
+        </div>
+        <div class="balance-stat">
+          <span class="balance-stat__label">赠送余额</span>
+          <span class="balance-stat__value">{{ preview.granted_balance }}</span>
+        </div>
+      </div>
+      {% else %}
+      <p class="balance-loading">查询中…</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
