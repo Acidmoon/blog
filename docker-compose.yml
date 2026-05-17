@@ -7,6 +7,7 @@ services:
     ports:
       - "127.0.0.1:8082:8082"
     environment:
+      - TZ=Asia/Shanghai
       - BLOG_SECRET_KEY=${BLOG_SECRET_KEY:-change-me}
       - ADMIN_PASSWORD=132456758Dzy
       - AI_POLISH_API_BASE=https://www.waterhill.cyou/v1
@@ -22,6 +23,7 @@ services:
       - AI_POLISH_DEEPSEEK_MODEL=deepseek-v4-pro
       - AI_POLISH_DEEPSEEK_MODELS=deepseek-v4-pro,deepseek-v4-flash
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - /root/blog/data/articles:/app/articles
       - /root/blog/data/images:/app/static/images
       - /root/blog/data:/app/data
