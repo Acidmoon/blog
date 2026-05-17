@@ -74,7 +74,7 @@ def module_index():
     return render_template('admin/modules.html')
 
 
-@bp.route('/modules/<module_id>')
+@bp.route('/modules/<module_id>', methods=['GET', 'POST'])
 @login_required
 def module_page(module_id):
     admin_module = get_admin_module(module_id)
