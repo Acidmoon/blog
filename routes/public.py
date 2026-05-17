@@ -4,7 +4,6 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fro
 
 import config
 from services.articles import get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
-from services.deepseek_balance import fetch_balance
 from services.home_layout import load_home_layout, resolve_hero
 from services.home_modules import build_home_sections
 from services.search import search_articles
@@ -57,11 +56,9 @@ def index():
     )
 
     hero = resolve_hero(layout.get("hero"), tag)
-    balance = fetch_balance()
 
     return render_template('index.html',
         hero=hero,
-        balance=balance,
         home_sections=home_sections,
     )
 
