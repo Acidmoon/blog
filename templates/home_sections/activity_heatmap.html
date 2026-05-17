@@ -52,13 +52,15 @@
 
 <script>
 (function(){
-  var section = document.currentScript.parentElement;
-  var year = section.getAttribute('data-aw-year');
-  var month = section.getAttribute('data-aw-month');
-  var hasNext = section.getAttribute('data-aw-hasnext') === '1';
+  var aw = document.currentScript.previousElementSibling;
+  // Ensure we have the .aw section, not the parent rail
+  if (aw && !aw.classList.contains('aw')) {
+    aw = aw.querySelector('.aw');
+  }
+  if (!aw) return;
 
   window.awNavMonth = function(y, m) {
-    var btns = section.querySelectorAll('.aw__nav');
+    var btns = aw.querySelectorAll('.aw__nav');
     btns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.5'; });
 
     fetch('/api/heatmap?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m))
@@ -66,10 +68,10 @@
       .then(function(html){
         var tmp = document.createElement('div');
         tmp.innerHTML = html;
-        var newSection = tmp.querySelector('.aw');
-        if (newSection) {
-          section.parentNode.replaceChild(newSection, section);
-          section = newSection;
+        var newAw = tmp.querySelector('.aw');
+        if (newAw && aw.parentNode) {
+          aw.parentNode.replaceChild(newAw, aw);
+          aw = newAw;
         }
       })
       .catch(function(err){
