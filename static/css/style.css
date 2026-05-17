@@ -668,7 +668,7 @@ img { max-width: 100%; height: auto; display: block; }
 .article-page-wrapper {
   display: flex;
   justify-content: center;
-  gap: 100px;
+  gap: 130px;
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 24px;
