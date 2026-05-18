@@ -102,6 +102,24 @@ DEFAULT_POLISH_MODE = 'light'
 _PROVIDER_ID_RE = re.compile(r'^[a-zA-Z0-9_.:-]{1,64}$')
 _MODE_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
 
+ORGANIZE_SPOKEN_DRAFT_SYSTEM_PROMPT = """你是中文博客的口述稿整理编辑。你的任务不是润色成品文，而是在正式润色之前，把作者口语化、断裂、跳跃的草稿先理顺成一份“意思更清楚、结构更顺、仍然很接近原文”的中间稿。
+
+工作边界：
+- 先理解文章在讲什么、作者想表达什么，再按语义整理。
+- 尽量保留原文措辞、语气、观点、顺序和信息量；不要改成另一篇文章。
+- 只修复口语输入造成的问题：重复词、口头禅、断句混乱、指代不清、语序不顺、明显错别字、同一意思反复绕圈。
+- 可以把过长段落拆成自然段；可以把明显属于同一层意思的句子放到一起。
+- 不要增加事实、例子、数据、经历、结论或新观点。
+- 不要做强风格化润色，不要加标题党表达，不要公众号腔，不要 AI 腔。
+- 保留已有 Markdown、链接、代码块、列表、引用的大意和结构。
+
+输出要求：
+- 只输出理顺后的正文，不要解释，不要前后寒暄，不要包裹代码块。
+- 这是给下一步 AI 润色使用的中间稿，所以要清楚、顺畅、贴近原文，而不是最终改写稿。
+"""
+
+ORGANIZE_SPOKEN_DRAFT_USER_INSTRUCTION = '请先把下面这篇口语/草稿正文按原意理顺。重点是理解我想说什么，修复断裂、重复和语序问题，自然分段，但尽量不要改我的原文表达，也不要新增内容。'
+
 
 def _csv(value: str) -> list[str]:
     return [item.strip() for item in (value or '').split(',') if item.strip()]
@@ -253,30 +271,18 @@ def _build_user_prompt(title: str, tags: str, content: str, mode: dict) -> str:
 """
 
 
-def polish_content(
-    title: str,
-    tags: str,
-    content: str,
-    provider_id: str | None = None,
-    model: str | None = None,
-    mode_id: str | None = None,
-) -> str:
-    content = (content or '').strip()
-    if not content:
-        raise ValueError('正文不能为空')
+def _build_organize_prompt(title: str, tags: str, content: str) -> str:
+    return f"""标题：{title or '未填写'}
+标签：{tags or '未填写'}
 
-    mode = _resolve_mode(mode_id)
-    profile, selected_model, api_key = _resolve_profile(provider_id, model)
-    payload = {
-        'model': selected_model,
-        'messages': [
-            {'role': 'system', 'content': mode['system_prompt']},
-            {'role': 'user', 'content': _build_user_prompt(title, tags, content, mode)},
-        ],
-        'temperature': mode['temperature'],
-        'top_p': mode['top_p'],
-        'max_tokens': 4096,
-    }
+{ORGANIZE_SPOKEN_DRAFT_USER_INSTRUCTION}
+
+草稿正文：
+{content}
+"""
+
+
+def _call_chat_completion(profile: dict, api_key: str, payload: dict) -> str:
     data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
     req = urllib.request.Request(
         f"{profile['api_base']}/chat/completions",
@@ -299,11 +305,56 @@ def polish_content(
 
     try:
         result = json.loads(raw)
-        polished = result['choices'][0]['message'].get('content', '').strip()
+        content = result['choices'][0]['message'].get('content', '').strip()
     except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
         raise RuntimeError('AI 接口返回格式无法解析') from exc
 
-    polished = polished.strip()
+    return content.strip()
+
+
+def polish_content(
+    title: str,
+    tags: str,
+    content: str,
+    provider_id: str | None = None,
+    model: str | None = None,
+    mode_id: str | None = None,
+    organize_first: bool = False,
+) -> str:
+    content = (content or '').strip()
+    if not content:
+        raise ValueError('正文不能为空')
+
+    mode = _resolve_mode(mode_id)
+    profile, selected_model, api_key = _resolve_profile(provider_id, model)
+    if organize_first:
+        organize_payload = {
+            'model': selected_model,
+            'messages': [
+                {'role': 'system', 'content': ORGANIZE_SPOKEN_DRAFT_SYSTEM_PROMPT},
+                {'role': 'user', 'content': _build_organize_prompt(title, tags, content)},
+            ],
+            'temperature': 0.18,
+            'top_p': 0.82,
+            'max_tokens': 4096,
+        }
+        organized = _call_chat_completion(profile, api_key, organize_payload)
+        organized = _strip_leaked_metadata(organized, title, tags)
+        if not organized:
+            raise RuntimeError('AI 没有返回理顺后的内容')
+        content = organized
+
+    payload = {
+        'model': selected_model,
+        'messages': [
+            {'role': 'system', 'content': mode['system_prompt']},
+            {'role': 'user', 'content': _build_user_prompt(title, tags, content, mode)},
+        ],
+        'temperature': mode['temperature'],
+        'top_p': mode['top_p'],
+        'max_tokens': 4096,
+    }
+    polished = _call_chat_completion(profile, api_key, payload)
     for prefix in ('润色后的正文：', '润色后：', '正文：'):
         if polished.startswith(prefix):
             polished = polished[len(prefix):].lstrip()

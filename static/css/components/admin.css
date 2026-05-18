@@ -105,6 +105,31 @@
   max-width: 170px;
   border-color: rgba(58, 107, 79, 0.28) !important;
 }
+.editor-toolbar-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid rgba(58, 107, 79, 0.18);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.editor-toolbar-option input {
+  width: auto !important;
+  margin: 0;
+  accent-color: var(--accent-primary);
+}
+.editor-toolbar-option:has(input:checked) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: rgba(58, 107, 79, 0.08);
+}
 .editor-toolbar-select:disabled {
   opacity: 0.55;
   cursor: not-allowed;

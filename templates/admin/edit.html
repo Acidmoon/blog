@@ -46,6 +46,10 @@
               <option value="{{ mode.id }}" data-description="{{ mode.description }}" {% if mode.default %}selected{% endif %}>{{ mode.label }}</option>
             {% endfor %}
           </select>
+          <label class="editor-toolbar-option" title="先按原意理顺口语稿，再执行所选 AI 润色">
+            <input type="checkbox" id="aiOrganizeFirst">
+            <span>先理顺口语稿</span>
+          </label>
           <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="按所选风格处理正文">✨ AI润色</button>
           <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
         </div>
@@ -80,6 +84,7 @@ function syncPolishModels() {
   if (!provider) {
     btn.disabled = true;
     modelSelect.disabled = true;
+    syncPolishModeHint();
     return;
   }
   if (providerSelect.value !== provider.id) providerSelect.value = provider.id;
@@ -93,6 +98,7 @@ function syncPolishModels() {
   const usable = Boolean(provider.configured && provider.models && provider.models.length);
   modelSelect.disabled = !usable;
   btn.disabled = !usable;
+  syncPolishModeHint();
 }
 
 function getSelectedPolishMode() {
@@ -103,11 +109,16 @@ function getSelectedPolishMode() {
 function syncPolishModeHint() {
   const status = document.getElementById('aiPolishStatus');
   const mode = getSelectedPolishMode();
-  if (status && mode) status.textContent = mode.description + ' 不会自动发布。';
+  const organize = document.getElementById('aiOrganizeFirst')?.checked;
+  if (status && mode) {
+    const prefix = organize ? '会先按原意理顺口语稿，再执行：' : '';
+    status.textContent = prefix + mode.description + ' 不会自动发布。';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   syncPolishModels();
+  document.getElementById('aiOrganizeFirst')?.addEventListener('change', syncPolishModeHint);
   syncPolishModeHint();
 });
 
@@ -131,6 +142,7 @@ async function polishContent() {
   const provider = document.getElementById('aiPolishProvider').value;
   const model = document.getElementById('aiPolishModel').value;
   const mode = document.getElementById('aiPolishMode').value;
+  const organizeFirst = document.getElementById('aiOrganizeFirst')?.checked || false;
   const modeInfo = getSelectedPolishMode();
   const title = document.getElementById('title').value;
   const tags = document.getElementById('tags').value;
@@ -143,12 +155,12 @@ async function polishContent() {
   const previous = ta.value;
   btn.disabled = true;
   btn.textContent = '润色中…';
-  status.textContent = '正在处理：' + (modeInfo ? modeInfo.label : 'AI润色') + '…';
+  status.textContent = '正在处理：' + (organizeFirst ? '先理顺口语稿 → ' : '') + (modeInfo ? modeInfo.label : 'AI润色') + '…';
   try {
     const resp = await fetch('/admin/api/ai/polish', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({title, tags, content: original, provider, model, mode})
+      body: JSON.stringify({title, tags, content: original, provider, model, mode, organize_first: organizeFirst})
     });
     let data;
     const bodyText = await resp.text();
@@ -160,7 +172,7 @@ async function polishContent() {
     if (!resp.ok) throw new Error(data.error || '润色失败');
     ta.value = data.content || previous;
     ta.focus();
-    status.textContent = '已完成：' + (modeInfo ? modeInfo.label : 'AI润色') + '。建议你再快速看一遍，确认没有改偏。';
+    status.textContent = '已完成：' + (organizeFirst ? '先理顺口语稿 → ' : '') + (modeInfo ? modeInfo.label : 'AI润色') + '。建议你再快速看一遍，确认没有改偏。';
   } catch (e) {
     ta.value = previous;
     status.textContent = '润色失败：' + e.message;

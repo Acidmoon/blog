@@ -18,10 +18,19 @@ def ai_polish():
     provider_id = (data.get('provider') or '').strip()
     model = (data.get('model') or '').strip()
     mode = (data.get('mode') or '').strip()
+    organize_first = bool(data.get('organize_first'))
     if not content:
         return jsonify({'error': '正文不能为空'}), 400
     try:
-        polished = polish_content(title, tags, content, provider_id=provider_id, model=model, mode_id=mode)
+        polished = polish_content(
+            title,
+            tags,
+            content,
+            provider_id=provider_id,
+            model=model,
+            mode_id=mode,
+            organize_first=organize_first,
+        )
     except ValueError as exc:
         return jsonify({'error': str(exc)}), 400
     except Exception as exc:
