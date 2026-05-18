@@ -21,7 +21,7 @@ services:
       - AI_POLISH_MIMO_MODELS=mimo-v2.5-pro
       - AI_POLISH_DEEPSEEK_API_BASE=https://api.deepseek.com/v1
       - AI_POLISH_DEEPSEEK_API_KEY=${AI_POLISH_DEEPSEEK_API_KEY:-}
-      - AI_POLISH_DEEPSEEK_MODEL=deepseek-v4-pro
+      - AI_POLISH_DEEPSEEK_MODEL=deepseek-v4-flash
       - AI_POLISH_DEEPSEEK_MODELS=deepseek-v4-pro,deepseek-v4-flash
     volumes:
       - /etc/localtime:/etc/localtime:ro
