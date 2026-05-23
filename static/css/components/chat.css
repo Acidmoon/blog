@@ -24,7 +24,7 @@
 .chat-workspace {
   min-height: calc(100vh - 60px);
   display: grid;
-  grid-template-columns: minmax(250px, 34vw) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 27vw) minmax(0, 1fr);
   position: relative;
 }
 
@@ -32,7 +32,7 @@
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
-  width: 42vw;
+  width: 34vw;
   pointer-events: none;
   background:
     linear-gradient(90deg, rgba(58, 107, 79, 0.08), transparent 68%),
@@ -47,7 +47,7 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: calc(100vh - 60px);
-  padding: clamp(28px, 5vw, 64px);
+  padding: clamp(26px, 4vw, 56px);
   border-right: 1px solid rgba(229, 221, 211, 0.72);
 }
 
@@ -63,7 +63,7 @@
 }
 
 .chat-rail-main {
-  max-width: 390px;
+  max-width: 330px;
 }
 
 .chat-kicker,
@@ -78,7 +78,7 @@
 .chat-rail-main h1 {
   margin: 10px 0 16px;
   color: var(--text-primary);
-  font-size: clamp(2.4rem, 5.8vw, 5.4rem);
+  font-size: clamp(2.1rem, 4.6vw, 4.7rem);
   line-height: 1.04;
 }
 
@@ -195,6 +195,72 @@
   word-break: break-word;
   line-height: 1.86;
   font-size: 1rem;
+}
+
+.chat-bubble :where(p, ul, ol, blockquote, pre, table) {
+  margin: 0 0 0.9em;
+}
+
+.chat-bubble :where(p, ul, ol, blockquote, pre, table):last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble :where(h1, h2, h3, h4, h5, h6) {
+  margin: 1.1em 0 0.45em;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  line-height: 1.28;
+}
+
+.chat-bubble :where(ul, ol) {
+  padding-left: 1.35em;
+}
+
+.chat-bubble blockquote {
+  padding: 0.2em 0 0.2em 1em;
+  border-left: 3px solid var(--accent-secondary);
+  color: var(--text-secondary);
+}
+
+.chat-bubble code {
+  padding: 0.12em 0.36em;
+  border-radius: 5px;
+  background: var(--code-bg);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.chat-bubble pre {
+  overflow-x: auto;
+  padding: 14px;
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  background: var(--code-bg);
+}
+
+.chat-bubble pre code {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.chat-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+}
+
+.chat-bubble th,
+.chat-bubble td {
+  padding: 8px 10px;
+  border: 1px solid var(--border-light);
+  text-align: left;
+}
+
+.chat-bubble .arithmatex {
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .chat-message.assistant .chat-bubble {

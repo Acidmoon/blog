@@ -13,6 +13,7 @@ from services.ai_chat import (
     ChatValidationError,
     chat_completion,
     get_public_chat_settings,
+    render_chat_markdown,
     verify_access_code,
 )
 from services.articles import _count_words, get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
@@ -147,7 +148,7 @@ def api_chat():
         return jsonify({'error': str(exc)}), 504
     except ChatAPIError as exc:
         return jsonify({'error': str(exc)}), 502
-    return jsonify({'content': content})
+    return jsonify({'content': content, 'html': render_chat_markdown(content)})
 
 
 @bp.route('/static/<path:filename>')

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+from html.parser import HTMLParser
 import json
 import socket
 import threading
@@ -13,6 +14,7 @@ from datetime import datetime
 from typing import Mapping
 
 import config
+from services.articles import render_md
 from services.site_settings import get_settings, set_settings
 
 
@@ -63,6 +65,79 @@ class ChatAPIError(Exception):
 
 class ChatTimeoutError(ChatAPIError):
     pass
+
+
+class _ChatHTMLSanitizer(HTMLParser):
+    allowed_tags = {
+        'p', 'br', 'strong', 'em', 'b', 'i', 'code', 'pre', 'blockquote',
+        'ul', 'ol', 'li', 'a', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div',
+    }
+    allowed_attrs = {
+        'a': {'href', 'title'},
+        'code': {'class'},
+        'pre': {'class'},
+        'span': {'class'},
+        'div': {'class'},
+    }
+    allowed_classes = {'arithmatex', 'codehilite', 'highlight'}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def _clean_attrs(self, tag: str, attrs: list[tuple[str, str | None]]) -> str:
+        cleaned: list[str] = []
+        allowed = self.allowed_attrs.get(tag, set())
+        for name, value in attrs:
+            if name not in allowed or value is None:
+                continue
+            if name == 'href':
+                href = value.strip()
+                if href.startswith(('http://', 'https://', 'mailto:', '#')):
+                    cleaned.append(f' href="{self._escape_attr(href)}" rel="noopener noreferrer" target="_blank"')
+                continue
+            if name == 'class':
+                classes = [c for c in value.split() if c in self.allowed_classes or c.startswith(('language-', 'highlight'))]
+                if classes:
+                    cleaned.append(f' class="{self._escape_attr(" ".join(classes))}"')
+                continue
+            cleaned.append(f' {name}="{self._escape_attr(value)}"')
+        return ''.join(cleaned)
+
+    @staticmethod
+    def _escape_attr(value: str) -> str:
+        return (
+            value.replace('&', '&amp;')
+            .replace('"', '&quot;')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+        )
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in self.allowed_tags:
+            return
+        self.parts.append(f'<{tag}{self._clean_attrs(tag, attrs)}>')
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self.allowed_tags and tag not in {'br', 'hr'}:
+            self.parts.append(f'</{tag}>')
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {'br', 'hr'}:
+            self.parts.append(f'<{tag}>')
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
+
+    def handle_entityref(self, name: str) -> None:
+        self.parts.append(f'&{name};')
+
+    def handle_charref(self, name: str) -> None:
+        self.parts.append(f'&#{name};')
+
+    def html(self) -> str:
+        return ''.join(self.parts)
 
 
 def _as_bool(value: str) -> bool:
@@ -190,6 +265,13 @@ def validate_chat_messages(messages: object) -> list[dict[str, str]]:
     if normalized[-1]['role'] != 'user':
         raise ChatValidationError('最后一条消息必须来自用户')
     return normalized
+
+
+def render_chat_markdown(text: str) -> str:
+    sanitizer = _ChatHTMLSanitizer()
+    sanitizer.feed(render_md(text or ''))
+    sanitizer.close()
+    return sanitizer.html()
 
 
 def reset_rate_limits() -> None:

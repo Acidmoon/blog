@@ -71,6 +71,15 @@
 {% block scripts %}
 {% if chat_enabled %}
 <script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script>
 (function() {
   const shell = document.querySelector('.chat-shell');
   const authModal = document.getElementById('chatAuthModal');
@@ -93,16 +102,27 @@
     if (el) el.textContent = text || '';
   }
 
-  function appendMessage(role, content) {
+  function typesetMath(node) {
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise([node]).catch(function() {});
+    }
+  }
+
+  function appendMessage(role, content, html) {
     if (emptyEl) emptyEl.hidden = true;
     const item = document.createElement('div');
     item.className = 'chat-message ' + role;
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
-    bubble.textContent = content;
+    if (role === 'assistant' && html) {
+      bubble.innerHTML = html;
+    } else {
+      bubble.textContent = content;
+    }
     item.appendChild(bubble);
     messagesEl.appendChild(item);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+    if (role === 'assistant') typesetMath(bubble);
   }
 
   function renderStoredMessages() {
@@ -116,7 +136,7 @@
     if (!Array.isArray(messages)) messages = [];
     messages.slice(-20).forEach(msg => {
       if (msg && (msg.role === 'user' || msg.role === 'assistant') && msg.content) {
-        appendMessage(msg.role, msg.content);
+        appendMessage(msg.role, msg.content, msg.html);
       }
     });
   }
@@ -173,8 +193,8 @@
     setStatus(statusEl, '正在回复…');
     try {
       const data = await postJSON('/api/chat', {messages: messages.slice(-20)});
-      messages.push({role: 'assistant', content: data.content});
-      appendMessage('assistant', data.content);
+      messages.push({role: 'assistant', content: data.content, html: data.html});
+      appendMessage('assistant', data.content, data.html);
       saveMessages();
       setStatus(statusEl, '');
     } catch (err) {

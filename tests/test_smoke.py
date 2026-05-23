@@ -13,6 +13,7 @@ from services.ai_chat import (
     check_rate_limit,
     get_public_chat_settings,
     reset_rate_limits,
+    render_chat_markdown,
     save_public_chat_settings,
     validate_chat_messages,
 )
@@ -180,6 +181,7 @@ def test_public_chat_mock_success(client, monkeypatch, reset_chat_settings):
     r = client.post('/api/chat', json={'messages': [{'role': 'user', 'content': 'hello'}]})
     assert r.status_code == 200
     assert r.get_json()['content'] == 'mock answer'
+    assert '<p>mock answer</p>' in r.get_json()['html']
 
 
 def test_public_chat_api_error_returns_json(client, monkeypatch, reset_chat_settings):
@@ -268,3 +270,10 @@ def test_rate_limit_exceeded(reset_chat_settings):
     check_rate_limit('127.0.0.1', settings, now=1000)
     with pytest.raises(ChatRateLimitError):
         check_rate_limit('127.0.0.1', settings, now=1001)
+
+
+def test_render_chat_markdown_sanitizes_html():
+    html = render_chat_markdown('**bold** $x^2$ <script>alert(1)</script>')
+    assert '<strong>bold</strong>' in html
+    assert 'arithmatex' in html
+    assert '<script>' not in html
