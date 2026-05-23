@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, send_from_directory, url_for
 
 import config
 from services.activity_heatmap import build_month_activity_heatmap
@@ -11,8 +11,10 @@ from services.ai_chat import (
     ChatRateLimitError,
     ChatTimeoutError,
     ChatValidationError,
+    authorize_ip,
     chat_completion,
     get_public_chat_settings,
+    is_ip_authorized,
     render_chat_markdown,
     verify_access_code,
 )
@@ -22,6 +24,10 @@ from services.home_modules import build_home_sections
 from services.search import search_articles
 
 bp = Blueprint('public', __name__)
+
+
+def _client_ip() -> str:
+    return request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
 
 
 @bp.context_processor
@@ -106,7 +112,7 @@ def article(slug):
 @bp.route('/chat')
 def chat():
     settings = get_public_chat_settings()
-    authorized = bool(session.get('public_chat_authorized'))
+    authorized = is_ip_authorized(_client_ip())
     return render_template(
         'chat.html',
         chat_enabled=settings['enabled'],
@@ -121,7 +127,7 @@ def api_chat_auth():
     code = data.get('code') or ''
     if not verify_access_code(code):
         return jsonify({'error': '朋友口令不正确'}), 401
-    session['public_chat_authorized'] = True
+    authorize_ip(_client_ip())
     return jsonify({'ok': True})
 
 
@@ -130,10 +136,10 @@ def api_chat():
     settings = get_public_chat_settings()
     if not settings['enabled']:
         return jsonify({'error': '公开聊天未启用'}), 403
-    if not session.get('public_chat_authorized'):
+    if not is_ip_authorized(_client_ip()):
         return jsonify({'error': '请先输入朋友口令'}), 401
     data = request.get_json(silent=True) or {}
-    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    client_ip = _client_ip()
     try:
         content = chat_completion(data.get('messages'), client_ip)
     except ChatDisabledError as exc:

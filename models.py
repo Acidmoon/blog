@@ -58,6 +58,11 @@ def init_db():
             value TEXT NOT NULL DEFAULT '',
             updated_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS public_chat_ip_auth (
+            ip TEXT PRIMARY KEY,
+            expires_at REAL NOT NULL,
+            updated_at TEXT NOT NULL
+        );
     """)
     # Migration: add word_count column if missing (existing DB)
     try:

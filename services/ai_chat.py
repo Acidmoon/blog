@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Mapping
 
 import config
+from models import get_db
 from services.articles import render_md
 from services.site_settings import get_settings, set_settings
 
@@ -38,6 +39,7 @@ MAX_CHAT_MESSAGES = 20
 MAX_USER_MESSAGE_CHARS = 4000
 MAX_CHAT_TOKENS = 2048
 CHAT_TEMPERATURE = 0.7
+CHAT_AUTH_TTL_SECONDS = 6 * 60 * 60
 
 _RATE_LIMITS: dict[str, dict[str, object]] = {}
 _RATE_LIMIT_LOCK = threading.Lock()
@@ -239,6 +241,42 @@ def verify_access_code(code: str) -> bool:
     provided_bytes = str(code or '').strip().encode('utf-8')
     expected_bytes = expected.encode('utf-8')
     return hmac.compare_digest(provided_bytes, expected_bytes)
+
+
+def authorize_ip(client_ip: str, now: float | None = None) -> None:
+    now = time.time() if now is None else now
+    expires_at = now + CHAT_AUTH_TTL_SECONDS
+    updated_at = datetime.now().isoformat(timespec='seconds')
+    ip = client_ip or 'unknown'
+    conn = get_db()
+    conn.execute(
+        """
+        INSERT INTO public_chat_ip_auth (ip, expires_at, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(ip) DO UPDATE SET
+            expires_at=excluded.expires_at,
+            updated_at=excluded.updated_at
+        """,
+        (ip, expires_at, updated_at),
+    )
+    conn.commit()
+
+
+def is_ip_authorized(client_ip: str, now: float | None = None) -> bool:
+    now = time.time() if now is None else now
+    ip = client_ip or 'unknown'
+    conn = get_db()
+    row = conn.execute(
+        "SELECT expires_at FROM public_chat_ip_auth WHERE ip=?",
+        (ip,),
+    ).fetchone()
+    if not row:
+        return False
+    if float(row['expires_at']) <= now:
+        conn.execute("DELETE FROM public_chat_ip_auth WHERE ip=?", (ip,))
+        conn.commit()
+        return False
+    return True
 
 
 def validate_chat_messages(messages: object) -> list[dict[str, str]]:

@@ -3,15 +3,19 @@
 import pytest
 
 from module_loader import REGISTRY
+from models import get_db
 from services.ai_chat import (
     ChatAPIError,
     ChatTimeoutError,
+    CHAT_AUTH_TTL_SECONDS,
     MAX_CHAT_MESSAGES,
     MAX_USER_MESSAGE_CHARS,
     ChatRateLimitError,
     ChatValidationError,
+    authorize_ip,
     check_rate_limit,
     get_public_chat_settings,
+    is_ip_authorized,
     reset_rate_limits,
     render_chat_markdown,
     save_public_chat_settings,
@@ -44,11 +48,15 @@ def reset_chat_settings(app):
             'public_chat_rate_limit_minute': '5',
             'public_chat_rate_limit_day': '100',
         })
+        get_db().execute("DELETE FROM public_chat_ip_auth")
+        get_db().commit()
         reset_rate_limits()
     yield
     with app.app_context():
         set_settings({key: value for key, value in original.items() if value is not None})
         delete_settings([key for key, value in original.items() if value is None])
+        get_db().execute("DELETE FROM public_chat_ip_auth")
+        get_db().commit()
         reset_rate_limits()
 
 
@@ -163,6 +171,33 @@ def test_public_chat_auth_accepts_good_code(client, reset_chat_settings):
     assert r.get_json()['ok'] is True
 
 
+def test_public_chat_api_allows_recent_ip_auth(client, monkeypatch, reset_chat_settings):
+    with client.application.app_context():
+        set_settings({
+            'public_chat_enabled': '1',
+            'public_chat_api_key': 'test-key',
+            'public_chat_access_code': 'zaobixianyu',
+        })
+    client.post(
+        '/api/chat/auth',
+        json={'code': 'zaobixianyu'},
+        environ_base={'REMOTE_ADDR': '203.0.113.9'},
+    )
+
+    def fake_completion(settings, payload):
+        return 'ip auth ok'
+
+    monkeypatch.setattr('services.ai_chat._call_chat_completion', fake_completion)
+    fresh_client = client.application.test_client()
+    r = fresh_client.post(
+        '/api/chat',
+        json={'messages': [{'role': 'user', 'content': 'hello'}]},
+        environ_base={'REMOTE_ADDR': '203.0.113.9'},
+    )
+    assert r.status_code == 200
+    assert r.get_json()['content'] == 'ip auth ok'
+
+
 def test_public_chat_mock_success(client, monkeypatch, reset_chat_settings):
     with client.application.app_context():
         set_settings({
@@ -270,6 +305,13 @@ def test_rate_limit_exceeded(reset_chat_settings):
     check_rate_limit('127.0.0.1', settings, now=1000)
     with pytest.raises(ChatRateLimitError):
         check_rate_limit('127.0.0.1', settings, now=1001)
+
+
+def test_ip_authorization_expires(app, reset_chat_settings):
+    with app.app_context():
+        authorize_ip('198.51.100.8', now=100)
+        assert is_ip_authorized('198.51.100.8', now=100 + CHAT_AUTH_TTL_SECONDS - 1)
+        assert not is_ip_authorized('198.51.100.8', now=100 + CHAT_AUTH_TTL_SECONDS + 1)
 
 
 def test_render_chat_markdown_sanitizes_html():

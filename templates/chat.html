@@ -226,6 +226,11 @@ MathJax = {
   if (authInput) authInput.addEventListener('keydown', event => {
     if (event.key === 'Enter') authorize();
   });
+  if (input) input.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    if (form) form.requestSubmit();
+  });
   if (form) form.addEventListener('submit', sendMessage);
   if (input) input.addEventListener('input', resizeInput);
   resizeInput();
