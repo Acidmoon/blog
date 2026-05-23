@@ -8,7 +8,8 @@ SECRET_KEY = os.environ.get('BLOG_SECRET_KEY', 'change-this-to-a-random-secret-k
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or os.environ.get('BLOG_ADMIN_PASSWORD', 'admin123')
 
 DATABASE = str(DATA_DIR / 'blog.db')
-ARTICLES_DIR = str(BASE_DIR / 'articles')
+_default_articles_dir = DATA_DIR / 'articles' if (DATA_DIR / 'articles').exists() else BASE_DIR / 'articles'
+ARTICLES_DIR = os.environ.get('ARTICLES_DIR') or os.environ.get('BLOG_ARTICLES_DIR') or str(_default_articles_dir)
 UPLOAD_DIR = str(BASE_DIR / 'static' / 'images')
 HOME_LAYOUT_PATH = BASE_DIR / 'home_layout.json'
 QUOTE_CACHE_PATH = DATA_DIR / 'quote_cache.json'
@@ -16,12 +17,13 @@ QUOTE_CACHE_PATH = DATA_DIR / 'quote_cache.json'
 SITE_TITLE = '水浇岭的博客'
 SITE_SUBTITLE = '写点有意思的东西'
 ARTICLES_PER_PAGE = 10
-ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-05-15')
+ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-05-24-chat2')
 
 AI_POLISH_API_BASE = os.environ.get('AI_POLISH_API_BASE', 'https://www.waterhill.cyou/v1').rstrip('/')
 AI_POLISH_API_KEY = os.environ.get('AI_POLISH_API_KEY', '')
 AI_POLISH_MODEL = os.environ.get('AI_POLISH_MODEL', 'gpt-5.5')
 AI_POLISH_TIMEOUT = float(os.environ.get('AI_POLISH_TIMEOUT', '60'))
+AI_CHAT_TIMEOUT = float(os.environ.get('AI_CHAT_TIMEOUT', '90'))
 
 
 def ensure_directories():

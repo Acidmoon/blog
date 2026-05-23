@@ -20,6 +20,7 @@ def build_admin_nav() -> list[dict[str, str]]:
     """Build the top navigation shown after login."""
     nav = [{"url": "/admin", "label": "文章"}]
     nav.extend({"url": item.url, "label": item.label} for item in admin_module_list())
+    nav.append({"url": "/admin/chat-settings", "label": "AI 对话"})
     nav.append({"url": "/admin/logout", "label": "退出"})
     return nav
 

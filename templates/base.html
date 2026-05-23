@@ -41,6 +41,9 @@
       </div>
       <div class="nav-links">
         <a href="/">首页</a>
+        {% if public_chat_enabled is defined and public_chat_enabled() %}
+        <a href="/chat">AI 对话</a>
+        {% endif %}
         {% if session.logged_in %}
           {% for item in admin_nav %}
         <a href="{{ item.url }}">{{ item.label }}</a>

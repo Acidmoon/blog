@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}AI 对话 · {{ config.SITE_TITLE }}{% endblock %}
+{% block description %}和水浇岭博客的公开 AI 助手对话{% endblock %}
+
+{% block content %}
+<main class="chat-page">
+  <section class="chat-shell" data-enabled="{{ '1' if chat_enabled else '0' }}" data-authorized="{{ '1' if chat_authorized else '0' }}">
+    {% if not chat_enabled %}
+    <header class="chat-header">
+      <div>
+        <p class="chat-kicker">AI Chat</p>
+        <h1 class="serif">和水浇岭的 AI 助手聊聊</h1>
+      </div>
+      <span class="chat-model">{{ chat_model }}</span>
+    </header>
+    <div class="chat-unavailable">
+      <h2>公开对话暂未开启</h2>
+      <p>站长还没有开放这个入口，晚点再来看看。</p>
+    </div>
+    {% else %}
+    <div class="chat-workspace" id="chatWorkspace">
+      <aside class="chat-rail" aria-label="AI 对话介绍">
+        <a href="/" class="chat-home-link serif">水浇岭</a>
+        <div class="chat-rail-main">
+          <p class="chat-kicker">Waterhill AI</p>
+          <h1 class="serif">把话放进山雾里</h1>
+          <p>聊技术、写作、想法和那些还没整理成文章的念头。</p>
+        </div>
+        <div class="chat-rail-meta">
+          <span>{{ chat_model }}</span>
+          <button type="button" class="chat-clear" id="chatClearBtn">清空对话</button>
+        </div>
+      </aside>
+
+      <section class="chat-conversation" aria-label="AI 对话">
+        <div class="chat-messages" id="chatMessages" aria-live="polite">
+          <div class="chat-empty" id="chatEmpty">
+            <p class="chat-empty-kicker">未落笔</p>
+            <h2 class="serif">先问一个问题。</h2>
+            <p>也可以把一段模糊的想法丢进来，让它先变清楚。</p>
+          </div>
+        </div>
+        <div class="chat-bottom">
+          <form class="chat-composer" id="chatForm">
+            <textarea id="chatInput" rows="1" maxlength="4000" placeholder="写下一个问题，或者一段没想明白的话"></textarea>
+            <button type="submit" class="chat-send" id="chatSendBtn" aria-label="发送">↗</button>
+          </form>
+          <p class="chat-status" id="chatStatus"></p>
+        </div>
+      </section>
+    </div>
+
+    <div class="chat-auth-modal" id="chatAuthModal" {% if chat_authorized %}hidden{% endif %}>
+      <div class="chat-auth-backdrop"></div>
+      <div class="chat-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="chatAuthTitle">
+        <p class="chat-kicker">入山口令</p>
+        <h2 id="chatAuthTitle" class="serif">先对一下暗号</h2>
+        <p class="chat-auth-desc">验证通过后，这层雾会散掉。</p>
+        <div class="chat-auth-row">
+          <input id="chatAccessCode" type="password" autocomplete="current-password" placeholder="zaobixianyu">
+          <button type="button" id="chatAuthBtn">进入</button>
+        </div>
+        <p class="chat-status" id="chatAuthStatus"></p>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% if chat_enabled %}
+<script>
+(function() {
+  const shell = document.querySelector('.chat-shell');
+  const authModal = document.getElementById('chatAuthModal');
+  const workspace = document.getElementById('chatWorkspace');
+  const authInput = document.getElementById('chatAccessCode');
+  const authBtn = document.getElementById('chatAuthBtn');
+  const authStatus = document.getElementById('chatAuthStatus');
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('chatInput');
+  const messagesEl = document.getElementById('chatMessages');
+  const statusEl = document.getElementById('chatStatus');
+  const sendBtn = document.getElementById('chatSendBtn');
+  const clearBtn = document.getElementById('chatClearBtn');
+  const emptyEl = document.getElementById('chatEmpty');
+  const storageKey = 'waterhill-public-chat-messages';
+  let messages = [];
+  let restored = false;
+
+  function setStatus(el, text) {
+    if (el) el.textContent = text || '';
+  }
+
+  function appendMessage(role, content) {
+    if (emptyEl) emptyEl.hidden = true;
+    const item = document.createElement('div');
+    item.className = 'chat-message ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = content;
+    item.appendChild(bubble);
+    messagesEl.appendChild(item);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function renderStoredMessages() {
+    if (restored) return;
+    restored = true;
+    try {
+      messages = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    } catch {
+      messages = [];
+    }
+    if (!Array.isArray(messages)) messages = [];
+    messages.slice(-20).forEach(msg => {
+      if (msg && (msg.role === 'user' || msg.role === 'assistant') && msg.content) {
+        appendMessage(msg.role, msg.content);
+      }
+    });
+  }
+
+  function saveMessages() {
+    localStorage.setItem(storageKey, JSON.stringify(messages.slice(-20)));
+  }
+
+  async function postJSON(url, payload) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || '请求失败');
+    return data;
+  }
+
+  async function authorize() {
+    const code = authInput.value.trim();
+    if (!code) {
+      setStatus(authStatus, '请输入朋友口令。');
+      return;
+    }
+    authBtn.disabled = true;
+    setStatus(authStatus, '正在校验…');
+    try {
+      await postJSON('/api/chat/auth', {code});
+      if (authModal) authModal.remove();
+      renderStoredMessages();
+      setStatus(authStatus, '');
+      input.focus();
+    } catch (err) {
+      setStatus(authStatus, err.message);
+    } finally {
+      authBtn.disabled = false;
+    }
+  }
+
+  async function sendMessage(event) {
+    event.preventDefault();
+    const content = input.value.trim();
+    if (!content) return;
+    if (content.length > 4000) {
+      setStatus(statusEl, '单条消息不能超过 4000 字符。');
+      return;
+    }
+    input.value = '';
+    messages.push({role: 'user', content});
+    appendMessage('user', content);
+    saveMessages();
+    sendBtn.disabled = true;
+    setStatus(statusEl, '正在回复…');
+    try {
+      const data = await postJSON('/api/chat', {messages: messages.slice(-20)});
+      messages.push({role: 'assistant', content: data.content});
+      appendMessage('assistant', data.content);
+      saveMessages();
+      setStatus(statusEl, '');
+    } catch (err) {
+      setStatus(statusEl, err.message);
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  function clearChat() {
+    messages = [];
+    localStorage.removeItem(storageKey);
+    messagesEl.querySelectorAll('.chat-message').forEach(node => node.remove());
+    if (emptyEl) emptyEl.hidden = false;
+    setStatus(statusEl, '');
+  }
+
+  if (shell && shell.dataset.authorized === '1') renderStoredMessages();
+  if (shell && shell.dataset.authorized !== '1' && authInput) authInput.focus();
+  if (authBtn) authBtn.addEventListener('click', authorize);
+  if (authInput) authInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') authorize();
+  });
+  if (form) form.addEventListener('submit', sendMessage);
+  if (clearBtn) clearBtn.addEventListener('click', clearChat);
+})();
+</script>
+{% endif %}
+{% endblock %}

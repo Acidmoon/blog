@@ -7,6 +7,7 @@
 @import url("components/footer.css");
 @import url("components/admin.css");
 @import url("components/search.css");
+@import url("components/chat.css?v=2026-05-24-chat2");
 
 /* ── Theme Tokens ───────────────────────────────────── */
 :root {
@@ -291,4 +292,3 @@ img { max-width: 100%; height: auto; display: block; }
 [data-theme="dark"] .water-ripple--splash {
   background: var(--accent-secondary);
 }
-

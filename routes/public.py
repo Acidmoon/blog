@@ -1,9 +1,20 @@
 from datetime import datetime
 
-from flask import Blueprint, abort, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 import config
 from services.activity_heatmap import build_month_activity_heatmap
+from services.ai_chat import (
+    ChatAPIError,
+    ChatDisabledError,
+    ChatNotConfiguredError,
+    ChatRateLimitError,
+    ChatTimeoutError,
+    ChatValidationError,
+    chat_completion,
+    get_public_chat_settings,
+    verify_access_code,
+)
 from services.articles import _count_words, get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
 from services.home_layout import load_home_layout, resolve_hero
 from services.home_modules import build_home_sections
@@ -89,6 +100,54 @@ def article(slug):
     meta['current_word_count'] = _count_words(content)
     html = render_md(content)
     return render_template('article.html', article=meta, content=html)
+
+
+@bp.route('/chat')
+def chat():
+    settings = get_public_chat_settings()
+    authorized = bool(session.get('public_chat_authorized'))
+    return render_template(
+        'chat.html',
+        chat_enabled=settings['enabled'],
+        chat_authorized=authorized,
+        chat_model=settings['model'],
+    )
+
+
+@bp.route('/api/chat/auth', methods=['POST'])
+def api_chat_auth():
+    data = request.get_json(silent=True) or {}
+    code = data.get('code') or ''
+    if not verify_access_code(code):
+        return jsonify({'error': '朋友口令不正确'}), 401
+    session['public_chat_authorized'] = True
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/chat', methods=['POST'])
+def api_chat():
+    settings = get_public_chat_settings()
+    if not settings['enabled']:
+        return jsonify({'error': '公开聊天未启用'}), 403
+    if not session.get('public_chat_authorized'):
+        return jsonify({'error': '请先输入朋友口令'}), 401
+    data = request.get_json(silent=True) or {}
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    try:
+        content = chat_completion(data.get('messages'), client_ip)
+    except ChatDisabledError as exc:
+        return jsonify({'error': str(exc)}), 403
+    except ChatNotConfiguredError as exc:
+        return jsonify({'error': str(exc)}), 503
+    except ChatValidationError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except ChatRateLimitError as exc:
+        return jsonify({'error': str(exc)}), 429
+    except ChatTimeoutError as exc:
+        return jsonify({'error': str(exc)}), 504
+    except ChatAPIError as exc:
+        return jsonify({'error': str(exc)}), 502
+    return jsonify({'content': content})
 
 
 @bp.route('/static/<path:filename>')

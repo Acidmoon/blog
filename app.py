@@ -5,6 +5,7 @@ from models import close_db, init_db
 from module_loader import load_modules
 from routes import register_blueprints
 from services.admin_modules import build_admin_nav
+from services.ai_chat import is_public_chat_enabled
 
 
 def create_app():
@@ -31,7 +32,10 @@ def create_app():
 
     @app.context_processor
     def inject_global_admin_nav():
-        return {"admin_nav": build_admin_nav()}
+        return {
+            "admin_nav": build_admin_nav(),
+            "public_chat_enabled": is_public_chat_enabled,
+        }
 
     register_blueprints(app)
 

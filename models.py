@@ -53,6 +53,11 @@ def init_db():
             word_count INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_articles_created ON articles(created_at DESC);
+        CREATE TABLE IF NOT EXISTS site_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL
+        );
     """)
     # Migration: add word_count column if missing (existing DB)
     try:

@@ -8,6 +8,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 import config
 from models import get_db
 from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
+from services.ai_chat import get_public_chat_admin_settings, save_public_chat_settings
 from services.ai_polish import get_public_polish_modes, get_public_polish_profiles
 from services.articles import (
     delete_article_file,
@@ -61,6 +62,20 @@ def dashboard():
 @login_required
 def module_index():
     return render_template('admin/modules.html')
+
+
+@bp.route('/chat-settings', methods=['GET', 'POST'])
+@login_required
+def chat_settings():
+    if request.method == 'POST':
+        try:
+            save_public_chat_settings(request.form)
+        except ValueError as exc:
+            flash(str(exc), 'error')
+        else:
+            flash('AI 对话设置已保存', 'success')
+            return redirect(url_for('admin.chat_settings'))
+    return render_template('admin/chat_settings.html', settings=get_public_chat_admin_settings())
 
 
 @bp.route('/modules/<module_id>', methods=['GET', 'POST'])
