@@ -145,6 +145,12 @@ MathJax = {
     localStorage.setItem(storageKey, JSON.stringify(messages.slice(-20)));
   }
 
+  function resizeInput() {
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 190) + 'px';
+  }
+
   async function postJSON(url, payload) {
     const resp = await fetch(url, {
       method: 'POST',
@@ -186,6 +192,7 @@ MathJax = {
       return;
     }
     input.value = '';
+    resizeInput();
     messages.push({role: 'user', content});
     appendMessage('user', content);
     saveMessages();
@@ -220,6 +227,8 @@ MathJax = {
     if (event.key === 'Enter') authorize();
   });
   if (form) form.addEventListener('submit', sendMessage);
+  if (input) input.addEventListener('input', resizeInput);
+  resizeInput();
   if (clearBtn) clearBtn.addEventListener('click', clearChat);
 })();
 </script>

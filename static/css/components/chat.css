@@ -120,14 +120,14 @@
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: calc(100vh - 60px);
-  padding: 0 clamp(18px, 4vw, 58px);
+  padding: 0 clamp(22px, 5vw, 82px);
 }
 
 .chat-messages {
   display: flex;
   flex-direction: column;
   gap: 26px;
-  width: min(100%, 820px);
+  width: min(100%, 1120px);
   margin: 0 auto;
   padding: clamp(34px, 6vw, 78px) 0 28px;
   overflow-y: auto;
@@ -161,6 +161,10 @@
   align-items: start;
 }
 
+.chat-message.user {
+  grid-template-columns: minmax(0, 1fr) 40px;
+}
+
 .chat-message::before {
   width: 40px;
   height: 40px;
@@ -184,6 +188,8 @@
 
 .chat-message.user::before {
   content: "你";
+  grid-column: 2;
+  grid-row: 1;
   color: var(--accent-secondary);
 }
 
@@ -195,6 +201,11 @@
   word-break: break-word;
   line-height: 1.86;
   font-size: 1rem;
+}
+
+.chat-message.user .chat-bubble {
+  grid-column: 1;
+  justify-self: end;
 }
 
 .chat-bubble :where(p, ul, ol, blockquote, pre, table) {
@@ -285,7 +296,7 @@
 }
 
 .chat-bottom {
-  width: min(100%, 820px);
+  width: min(100%, 1120px);
   margin: 0 auto;
   padding: 0 0 clamp(18px, 3.5vw, 34px);
 }
@@ -321,6 +332,12 @@
   font: inherit;
   line-height: 1.58;
   resize: none;
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+.chat-composer textarea::-webkit-scrollbar {
+  display: none;
 }
 
 .chat-composer textarea:focus {
@@ -545,6 +562,9 @@
   .chat-message {
     grid-template-columns: 32px minmax(0, 1fr);
     gap: 10px;
+  }
+  .chat-message.user {
+    grid-template-columns: minmax(0, 1fr) 32px;
   }
   .chat-message::before {
     width: 32px;
