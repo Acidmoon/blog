@@ -68,6 +68,7 @@
   <!-- Main Content -->
   {% block content %}{% endblock %}
 
+  {% block footer %}
   <!-- Footer -->
   <footer class="site-footer">
     <svg class="footer-wave" viewBox="0 0 1440 32" preserveAspectRatio="none">
@@ -82,6 +83,7 @@
       </p>
     </div>
   </footer>
+  {% endblock %}
 
   <script src="{{ url_for('static', filename='js/main.js') }}?v={{ config.ASSET_VERSION }}"></script>
   <script>if(location.pathname!=='/')document.getElementById('navBack').style.display='';</script>
