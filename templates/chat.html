@@ -13,21 +13,34 @@
     </div>
     {% else %}
     <div class="chat-workspace" id="chatWorkspace">
-      <aside class="chat-rail" aria-label="对话列表">
-        <div class="chat-rail-main">
-          <a href="/" class="chat-home-link serif">水浇岭</a>
-          <p class="chat-kicker">Waterhill AI</p>
-          <h1 class="serif">把话放进山雾里</h1>
-          <p>在这里保存你的会话，继续上一次没说完的话。</p>
+      <aside class="chat-rail" aria-label="对话历史">
+        <div class="chat-rail-shell">
+          <div class="chat-rail-top">
+            <a href="/" class="chat-home-link serif">水浇岭</a>
+            <button type="button" class="chat-rail-toggle" id="chatRailToggle" aria-controls="chatRailDrawer" aria-expanded="false" title="查看历史" aria-label="查看历史">
+              <svg class="chat-rail-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
+            </button>
+          </div>
+          <div class="chat-rail-stage">
+            <div class="chat-rail-copy" id="chatRailCopy">
+              <p class="chat-kicker">Waterhill AI</p>
+              <h1 class="serif">把话放进山雾里</h1>
+              <p>在这里保存你的会话，继续上一次没说完的话。</p>
+            </div>
+            <div class="chat-rail-drawer" id="chatRailDrawer" aria-hidden="true">
+              <div class="chat-rail-meta">
+                <span>{{ chat_model }}</span>
+                {% if chat_visitor %}
+                <span>{{ chat_visitor.username }}</span>
+                {% endif %}
+                <button type="button" class="chat-clear" id="chatNewBtn">新建对话</button>
+              </div>
+              <div class="chat-session-list" id="chatSessionList" aria-label="会话列表"></div>
+            </div>
+          </div>
         </div>
-        <div class="chat-rail-meta">
-          <span>{{ chat_model }}</span>
-          {% if chat_visitor %}
-          <span>{{ chat_visitor.username }}</span>
-          {% endif %}
-          <button type="button" class="chat-clear" id="chatNewBtn">新建对话</button>
-        </div>
-        <div class="chat-session-list" id="chatSessionList" aria-label="会话列表"></div>
       </aside>
 
       <section class="chat-conversation" aria-label="AI 对话">
@@ -86,9 +99,15 @@ MathJax = {
   const fileInput = document.getElementById('chatFileInput');
   const filesEl = document.getElementById('chatFiles');
   const emptyEl = document.getElementById('chatEmpty');
+  const workspace = document.getElementById('chatWorkspace');
+  const railToggle = document.getElementById('chatRailToggle');
+  const railCopy = document.getElementById('chatRailCopy');
+  const railDrawer = document.getElementById('chatRailDrawer');
+  const railStateKey = 'waterhill-chat-rail-open';
   let sessions = [];
   let currentSessionId = null;
   let currentMessages = [];
+  let railDrawerOpen = false;
 
   function setStatus(text) {
     if (statusEl) statusEl.textContent = text || '';
@@ -109,8 +128,41 @@ MathJax = {
     emptyEl.hidden = currentMessages.length > 0;
   }
 
-  function escapeText(text) {
-    return String(text || '');
+  function formatSessionStamp(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[2]}-${match[3]} ${match[4]}:${match[5]}`;
+    }
+    return text.slice(0, 16);
+  }
+
+  function updateRailToggle() {
+    if (!railToggle) return;
+    const open = !!railDrawerOpen;
+    const icon = open
+      ? '<path d="M7 7l10 10M7 17L17 7"/>'
+      : '<path d="M4 6h16M4 12h16M4 18h16"/>';
+    railToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    railToggle.setAttribute('aria-label', open ? '收起历史' : '查看历史');
+    railToggle.setAttribute('title', open ? '收起历史' : '查看历史');
+    railToggle.innerHTML = '<svg class="chat-rail-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">' + icon + '</svg>';
+    if (workspace) {
+      workspace.classList.toggle('chat-rail-open', open);
+    }
+    if (railCopy) railCopy.setAttribute('aria-hidden', open ? 'true' : 'false');
+    if (railDrawer) railDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
+  function setRailOpen(next, persist) {
+    railDrawerOpen = !!next;
+    updateRailToggle();
+    if (persist !== false) {
+      try {
+        localStorage.setItem(railStateKey, railDrawerOpen ? 'open' : 'closed');
+      } catch (err) {}
+    }
   }
 
   function renderBubble(role, content, html) {
@@ -169,7 +221,14 @@ MathJax = {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'chat-session-item' + (session.id === currentSessionId ? ' active' : '');
-      item.textContent = session.title || '新的对话';
+      const title = document.createElement('span');
+      title.className = 'chat-session-title';
+      title.textContent = session.title || '新的对话';
+      const meta = document.createElement('span');
+      meta.className = 'chat-session-meta';
+      meta.textContent = formatSessionStamp(session.updated_at);
+      item.appendChild(title);
+      if (meta.textContent) item.appendChild(meta);
       item.addEventListener('click', () => loadSession(session.id));
       sessionList.appendChild(item);
     });
@@ -292,9 +351,23 @@ MathJax = {
   input.addEventListener('input', resizeInput);
   form.addEventListener('submit', sendMessage);
   clearBtn.addEventListener('click', createSession);
+  if (railToggle) railToggle.addEventListener('click', () => setRailOpen(!railDrawerOpen));
   if (fileInput) fileInput.addEventListener('change', uploadFile);
 
   (async function init() {
+    try {
+      const saved = localStorage.getItem(railStateKey);
+      if (saved === 'open') {
+        railDrawerOpen = true;
+      } else if (saved === 'closed') {
+        railDrawerOpen = false;
+      } else if (window.matchMedia && window.matchMedia('(max-width: 860px)').matches) {
+        railDrawerOpen = false;
+      } else {
+        railDrawerOpen = true;
+      }
+    } catch (err) {}
+    setRailOpen(railDrawerOpen, false);
     try {
       await loadSessions();
       if (!currentSessionId) {

@@ -211,6 +211,17 @@ def test_public_chat_page_requires_login(client, reset_settings):
     assert r.status_code in (302, 303)
 
 
+def test_chat_page_contains_rail_toggle_and_history_shell(client, reset_settings):
+    _enable_public_chat(client.application)
+    _login_visitor(client)
+    r = client.get('/chat')
+    assert r.status_code == 200
+    html = r.data.decode('utf-8')
+    assert 'chatRailToggle' in html
+    assert 'chatSessionList' in html
+    assert 'chatRailDrawer' in html
+
+
 def test_public_chat_api_requires_login(client, reset_settings):
     _enable_public_chat(client.application)
     r = client.post('/api/chat', json={'content': 'hello'})

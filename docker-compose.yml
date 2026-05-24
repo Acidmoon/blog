@@ -6,7 +6,7 @@ services:
     restart: always
     command: ["gunicorn", "-w", "2", "-t", "120", "--reload", "-b", "0.0.0.0:8082", "app:app"]
     ports:
-      - "127.0.0.1:8082:8082"
+      - "8082:8082"
     environment:
       - TZ=Asia/Shanghai
       - BLOG_SECRET_KEY=${BLOG_SECRET_KEY:-change-me}
