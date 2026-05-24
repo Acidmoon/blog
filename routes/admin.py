@@ -8,6 +8,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 import config
 from models import get_db
 from services.admin_modules import build_admin_module_context, build_admin_nav, get_admin_module
+from services.access_settings import get_access_settings, save_access_settings
 from services.ai_chat import get_public_chat_admin_settings, save_public_chat_settings
 from services.ai_polish import get_public_polish_modes, get_public_polish_profiles
 from services.articles import (
@@ -76,6 +77,20 @@ def chat_settings():
             flash('AI 对话设置已保存', 'success')
             return redirect(url_for('admin.chat_settings'))
     return render_template('admin/chat_settings.html', settings=get_public_chat_admin_settings())
+
+
+@bp.route('/access-settings', methods=['GET', 'POST'])
+@login_required
+def access_settings():
+    if request.method == 'POST':
+        try:
+            save_access_settings(request.form)
+        except ValueError as exc:
+            flash(str(exc), 'error')
+        else:
+            flash('访问设置已保存', 'success')
+            return redirect(url_for('admin.access_settings'))
+    return render_template('admin/access_settings.html', settings=get_access_settings())
 
 
 @bp.route('/modules/<module_id>', methods=['GET', 'POST'])

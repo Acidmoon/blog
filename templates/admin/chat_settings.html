@@ -13,7 +13,7 @@
         <input type="checkbox" name="enabled" value="1" {% if settings.enabled %}checked{% endif %}>
         <span>启用公开 AI 对话</span>
       </label>
-      <p class="form-help">启用后，顶部导航会显示“AI 对话”，朋友通过口令进入。</p>
+      <p class="form-help">启用后，顶部导航会显示“AI 对话”，访客登录后可使用。</p>
     </div>
 
     <div class="form-group">
@@ -30,12 +30,6 @@
     <div class="form-group">
       <label for="model">模型名</label>
       <input type="text" id="model" name="model" value="{{ settings.model }}" placeholder="gpt-5.5" required>
-    </div>
-
-    <div class="form-group">
-      <label for="access_code">朋友口令</label>
-      <input type="password" id="access_code" name="access_code" placeholder="{% if settings.access_code_configured %}已配置，留空则不修改{% else %}设置朋友口令{% endif %}">
-      <p class="form-help">{% if settings.access_code_configured %}当前已配置朋友口令。{% else %}启用公开聊天前必须设置朋友口令。{% endif %}</p>
     </div>
 
     <div class="form-group">

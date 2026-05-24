@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify, redirect, request, url_for
 
 import config
 from models import close_db, init_db
@@ -6,6 +6,8 @@ from module_loader import load_modules
 from routes import register_blueprints
 from services.admin_modules import build_admin_nav
 from services.ai_chat import is_public_chat_enabled
+from services.access_settings import is_visitor_login_enabled
+from services.visitor_auth import current_visitor
 
 
 def create_app():
@@ -35,9 +37,29 @@ def create_app():
         return {
             "admin_nav": build_admin_nav(),
             "public_chat_enabled": is_public_chat_enabled,
+            "visitor_login_enabled": is_visitor_login_enabled,
+            "current_visitor": current_visitor,
         }
 
     register_blueprints(app)
+
+    @app.before_request
+    def require_visitor_for_public_site():
+        if not is_visitor_login_enabled():
+            return None
+        endpoint = request.endpoint or ''
+        path = request.path or ''
+        if path == '/favicon.ico' or endpoint == 'static' or path.startswith('/static/'):
+            return None
+        if endpoint in {'public.login', 'public.logout', 'admin.login', 'admin.logout'}:
+            return None
+        if path.startswith('/admin'):
+            return None
+        if current_visitor():
+            return None
+        if path.startswith('/api/'):
+            return jsonify({'error': '请先登录'}), 401
+        return redirect(url_for('public.login', next=request.full_path.rstrip('?')))
 
     return app
 

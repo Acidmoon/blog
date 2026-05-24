@@ -351,6 +351,10 @@
   min-height: 70vh;
   padding-top: 20px;
 }
+.visitor-login-page {
+  min-height: calc(100vh - 60px);
+  padding: 40px 24px;
+}
 .login-card {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -360,9 +364,48 @@
   max-width: 400px;
   box-shadow: var(--shadow-medium);
 }
+.visitor-login-card {
+  max-width: 520px;
+  width: min(100%, 520px);
+  border-radius: 8px;
+}
+.login-subtitle {
+  margin: 8px 0 20px;
+  color: var(--text-secondary);
+}
 .login-card h2 {
   text-align: center;
   margin-bottom: 28px;
   font-family: "Noto Serif SC", serif;
 }
 
+.nav-user {
+  color: var(--text-tertiary);
+  font-size: 0.88rem;
+  padding: 6px 8px;
+}
+
+.access-settings-form,
+.chat-settings-form {
+  max-width: 760px;
+}
+
+.access-settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.access-settings-toggle input {
+  width: auto;
+  accent-color: var(--accent-primary);
+}
+
+.access-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}

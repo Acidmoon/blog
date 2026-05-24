@@ -44,6 +44,14 @@
         {% if public_chat_enabled is defined and public_chat_enabled() %}
         <a href="/chat">AI 对话</a>
         {% endif %}
+        {% if visitor_login_enabled is defined and visitor_login_enabled() %}
+        {% if current_visitor is defined and current_visitor() %}
+        <span class="nav-user">{{ current_visitor().username }}</span>
+        <a href="/logout">退出</a>
+        {% else %}
+        <a href="/login">登录</a>
+        {% endif %}
+        {% endif %}
         {% if session.logged_in %}
           {% for item in admin_nav %}
         <a href="{{ item.url }}">{{ item.label }}</a>

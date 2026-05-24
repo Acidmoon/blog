@@ -1,35 +1,33 @@
 {% extends "base.html" %}
 {% block title %}AI 对话 · {{ config.SITE_TITLE }}{% endblock %}
-{% block description %}和水浇岭博客的公开 AI 助手对话{% endblock %}
+{% block description %}和水浇岭博客的访客 AI 对话{% endblock %}
 
 {% block content %}
 <main class="chat-page">
-  <section class="chat-shell" data-enabled="{{ '1' if chat_enabled else '0' }}" data-authorized="{{ '1' if chat_authorized else '0' }}">
+  <section class="chat-shell" data-enabled="{{ '1' if chat_enabled else '0' }}">
     {% if not chat_enabled %}
-    <header class="chat-header">
-      <div>
-        <p class="chat-kicker">AI Chat</p>
-        <h1 class="serif">和水浇岭的 AI 助手聊聊</h1>
-      </div>
-      <span class="chat-model">{{ chat_model }}</span>
-    </header>
     <div class="chat-unavailable">
-      <h2>公开对话暂未开启</h2>
+      <p class="chat-kicker">AI Chat</p>
+      <h1 class="serif">公开对话暂未开启</h1>
       <p>站长还没有开放这个入口，晚点再来看看。</p>
     </div>
     {% else %}
     <div class="chat-workspace" id="chatWorkspace">
-      <aside class="chat-rail" aria-label="AI 对话介绍">
-        <a href="/" class="chat-home-link serif">水浇岭</a>
+      <aside class="chat-rail" aria-label="对话列表">
         <div class="chat-rail-main">
+          <a href="/" class="chat-home-link serif">水浇岭</a>
           <p class="chat-kicker">Waterhill AI</p>
           <h1 class="serif">把话放进山雾里</h1>
-          <p>聊技术、写作、想法和那些还没整理成文章的念头。</p>
+          <p>在这里保存你的会话，继续上一次没说完的话。</p>
         </div>
         <div class="chat-rail-meta">
           <span>{{ chat_model }}</span>
-          <button type="button" class="chat-clear" id="chatClearBtn">清空对话</button>
+          {% if chat_visitor %}
+          <span>{{ chat_visitor.username }}</span>
+          {% endif %}
+          <button type="button" class="chat-clear" id="chatNewBtn">新建对话</button>
         </div>
+        <div class="chat-session-list" id="chatSessionList" aria-label="会话列表"></div>
       </aside>
 
       <section class="chat-conversation" aria-label="AI 对话">
@@ -40,28 +38,23 @@
             <p>也可以把一段模糊的想法丢进来，让它先变清楚。</p>
           </div>
         </div>
+        <div class="chat-files" id="chatFiles" hidden></div>
         <div class="chat-bottom">
           <form class="chat-composer" id="chatForm">
-            <textarea id="chatInput" rows="1" maxlength="4000" placeholder="写下一个问题，或者一段没想明白的话"></textarea>
+            <textarea id="chatInput" rows="1" maxlength="4000" placeholder="写下一个问题，Enter 直接发送，Shift+Enter 换行"></textarea>
             <button type="submit" class="chat-send" id="chatSendBtn" aria-label="发送">↗</button>
           </form>
-          <p class="chat-status" id="chatStatus"></p>
+          <div class="chat-tools">
+            {% if chat_upload_enabled %}
+            <label class="chat-upload">
+              <input type="file" id="chatFileInput" hidden>
+              <span>上传文件</span>
+            </label>
+            {% endif %}
+            <p class="chat-status" id="chatStatus"></p>
+          </div>
         </div>
       </section>
-    </div>
-
-    <div class="chat-auth-modal" id="chatAuthModal" {% if chat_authorized %}hidden{% endif %}>
-      <div class="chat-auth-backdrop"></div>
-      <div class="chat-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="chatAuthTitle">
-        <p class="chat-kicker">入山口令</p>
-        <h2 id="chatAuthTitle" class="serif">先对一下暗号</h2>
-        <p class="chat-auth-desc">验证通过后，这层雾会散掉。</p>
-        <div class="chat-auth-row">
-          <input id="chatAccessCode" type="password" autocomplete="current-password" placeholder="zaobixianyu">
-          <button type="button" id="chatAuthBtn">进入</button>
-        </div>
-        <p class="chat-status" id="chatAuthStatus"></p>
-      </div>
     </div>
     {% endif %}
   </section>
@@ -83,25 +76,22 @@ MathJax = {
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <script>
 (function() {
-  const shell = document.querySelector('.chat-shell');
-  const authModal = document.getElementById('chatAuthModal');
-  const workspace = document.getElementById('chatWorkspace');
-  const authInput = document.getElementById('chatAccessCode');
-  const authBtn = document.getElementById('chatAuthBtn');
-  const authStatus = document.getElementById('chatAuthStatus');
   const form = document.getElementById('chatForm');
   const input = document.getElementById('chatInput');
   const messagesEl = document.getElementById('chatMessages');
   const statusEl = document.getElementById('chatStatus');
   const sendBtn = document.getElementById('chatSendBtn');
-  const clearBtn = document.getElementById('chatClearBtn');
+  const clearBtn = document.getElementById('chatNewBtn');
+  const sessionList = document.getElementById('chatSessionList');
+  const fileInput = document.getElementById('chatFileInput');
+  const filesEl = document.getElementById('chatFiles');
   const emptyEl = document.getElementById('chatEmpty');
-  const storageKey = 'waterhill-public-chat-messages';
-  let messages = [];
-  let restored = false;
+  let sessions = [];
+  let currentSessionId = null;
+  let currentMessages = [];
 
-  function setStatus(el, text) {
-    if (el) el.textContent = text || '';
+  function setStatus(text) {
+    if (statusEl) statusEl.textContent = text || '';
   }
 
   function typesetMath(node) {
@@ -110,8 +100,20 @@ MathJax = {
     }
   }
 
-  function appendMessage(role, content, html) {
-    if (emptyEl) emptyEl.hidden = true;
+  function scrollToBottom() {
+    if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function toggleEmpty() {
+    if (!emptyEl) return;
+    emptyEl.hidden = currentMessages.length > 0;
+  }
+
+  function escapeText(text) {
+    return String(text || '');
+  }
+
+  function renderBubble(role, content, html) {
     const item = document.createElement('div');
     item.className = 'chat-message ' + role;
     const bubble = document.createElement('div');
@@ -123,34 +125,54 @@ MathJax = {
     }
     item.appendChild(bubble);
     messagesEl.appendChild(item);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
     if (role === 'assistant') typesetMath(bubble);
+    scrollToBottom();
   }
 
-  function renderStoredMessages() {
-    if (restored) return;
-    restored = true;
-    try {
-      messages = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    } catch {
-      messages = [];
+  function renderMessages() {
+    messagesEl.querySelectorAll('.chat-message').forEach(node => node.remove());
+    currentMessages.forEach(msg => {
+      if (!msg || !msg.role || !msg.content) return;
+      renderBubble(msg.role, msg.content, msg.html);
+    });
+    toggleEmpty();
+    scrollToBottom();
+  }
+
+  function renderFiles(files) {
+    if (!filesEl) return;
+    filesEl.innerHTML = '';
+    if (!files || !files.length) {
+      filesEl.hidden = true;
+      return;
     }
-    if (!Array.isArray(messages)) messages = [];
-    messages.slice(-20).forEach(msg => {
-      if (msg && (msg.role === 'user' || msg.role === 'assistant') && msg.content) {
-        appendMessage(msg.role, msg.content, msg.html);
-      }
+    filesEl.hidden = false;
+    files.forEach(file => {
+      const row = document.createElement('div');
+      row.className = 'chat-file-row';
+      row.textContent = `${file.name} · ${Math.round((file.size_bytes || 0) / 1024)} KB`;
+      filesEl.appendChild(row);
     });
   }
 
-  function saveMessages() {
-    localStorage.setItem(storageKey, JSON.stringify(messages.slice(-20)));
-  }
-
-  function resizeInput() {
-    if (!input) return;
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 190) + 'px';
+  function renderSessions() {
+    if (!sessionList) return;
+    sessionList.innerHTML = '';
+    if (!sessions.length) {
+      const empty = document.createElement('div');
+      empty.className = 'chat-session-empty';
+      empty.textContent = '暂无会话';
+      sessionList.appendChild(empty);
+      return;
+    }
+    sessions.forEach(session => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'chat-session-item' + (session.id === currentSessionId ? ' active' : '');
+      item.textContent = session.title || '新的对话';
+      item.addEventListener('click', () => loadSession(session.id));
+      sessionList.appendChild(item);
+    });
   }
 
   async function postJSON(url, payload) {
@@ -164,25 +186,41 @@ MathJax = {
     return data;
   }
 
-  async function authorize() {
-    const code = authInput.value.trim();
-    if (!code) {
-      setStatus(authStatus, '请输入朋友口令。');
-      return;
+  async function fetchJSON(url) {
+    const resp = await fetch(url);
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || '请求失败');
+    return data;
+  }
+
+  async function loadSessions() {
+    const data = await fetchJSON('/api/chat/sessions');
+    sessions = data.sessions || [];
+    if (!currentSessionId && sessions.length) {
+      currentSessionId = sessions[0].id;
     }
-    authBtn.disabled = true;
-    setStatus(authStatus, '正在校验…');
-    try {
-      await postJSON('/api/chat/auth', {code});
-      if (authModal) authModal.remove();
-      renderStoredMessages();
-      setStatus(authStatus, '');
-      input.focus();
-    } catch (err) {
-      setStatus(authStatus, err.message);
-    } finally {
-      authBtn.disabled = false;
-    }
+    renderSessions();
+  }
+
+  async function loadSession(sessionId) {
+    currentSessionId = sessionId;
+    renderSessions();
+    const data = await fetchJSON(`/api/chat/sessions/${sessionId}/messages`);
+    currentMessages = data.messages || [];
+    renderMessages();
+    renderFiles(data.files || []);
+    setStatus('');
+  }
+
+  async function createSession() {
+    const data = await postJSON('/api/chat/sessions', {title: '新的对话'});
+    sessions.unshift(data.session);
+    currentSessionId = data.session.id;
+    currentMessages = [];
+    renderSessions();
+    renderMessages();
+    renderFiles([]);
+    input.focus();
   }
 
   async function sendMessage(event) {
@@ -190,53 +228,85 @@ MathJax = {
     const content = input.value.trim();
     if (!content) return;
     if (content.length > 4000) {
-      setStatus(statusEl, '单条消息不能超过 4000 字符。');
+      setStatus('单条消息不能超过 4000 字符。');
       return;
     }
     input.value = '';
     resizeInput();
-    messages.push({role: 'user', content});
-    appendMessage('user', content);
-    saveMessages();
     sendBtn.disabled = true;
-    setStatus(statusEl, '正在回复…');
+    setStatus('正在回复…');
     try {
-      const data = await postJSON('/api/chat', {messages: messages.slice(-20)});
-      messages.push({role: 'assistant', content: data.content, html: data.html});
-      appendMessage('assistant', data.content, data.html);
-      saveMessages();
-      setStatus(statusEl, '');
+      const data = await postJSON('/api/chat', {
+        session_id: currentSessionId,
+        content,
+      });
+      if (!currentSessionId) currentSessionId = data.session.id;
+      await loadSessions();
+      await loadSession(currentSessionId);
+      setStatus('');
     } catch (err) {
-      setStatus(statusEl, err.message);
+      setStatus(err.message);
     } finally {
       sendBtn.disabled = false;
       input.focus();
     }
   }
 
-  function clearChat() {
-    messages = [];
-    localStorage.removeItem(storageKey);
-    messagesEl.querySelectorAll('.chat-message').forEach(node => node.remove());
-    if (emptyEl) emptyEl.hidden = false;
-    setStatus(statusEl, '');
+  async function uploadFile() {
+    if (!currentSessionId) {
+      setStatus('请先创建或选择一个会话。');
+      return;
+    }
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    setStatus('正在上传…');
+    try {
+      const resp = await fetch(`/api/chat/sessions/${currentSessionId}/files`, {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || '上传失败');
+      setStatus('上传完成');
+      await loadSession(currentSessionId);
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      fileInput.value = '';
+    }
   }
 
-  if (shell && shell.dataset.authorized === '1') renderStoredMessages();
-  if (shell && shell.dataset.authorized !== '1' && authInput) authInput.focus();
-  if (authBtn) authBtn.addEventListener('click', authorize);
-  if (authInput) authInput.addEventListener('keydown', event => {
-    if (event.key === 'Enter') authorize();
-  });
-  if (input) input.addEventListener('keydown', event => {
+  function resizeInput() {
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 190) + 'px';
+  }
+
+  input.addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
     event.preventDefault();
     if (form) form.requestSubmit();
   });
-  if (form) form.addEventListener('submit', sendMessage);
-  if (input) input.addEventListener('input', resizeInput);
-  resizeInput();
-  if (clearBtn) clearBtn.addEventListener('click', clearChat);
+  input.addEventListener('input', resizeInput);
+  form.addEventListener('submit', sendMessage);
+  clearBtn.addEventListener('click', createSession);
+  if (fileInput) fileInput.addEventListener('change', uploadFile);
+
+  (async function init() {
+    try {
+      await loadSessions();
+      if (!currentSessionId) {
+        await createSession();
+      } else {
+        await loadSession(currentSessionId);
+      }
+    } catch (err) {
+      setStatus(err.message);
+    }
+    resizeInput();
+  })();
 })();
 </script>
 {% endif %}

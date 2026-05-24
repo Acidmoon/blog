@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hmac
 from html.parser import HTMLParser
 import json
 import socket
@@ -29,7 +28,6 @@ CHAT_SETTING_DEFAULTS = {
     'public_chat_api_base': 'https://www.waterhill.cyou/v1',
     'public_chat_api_key': '',
     'public_chat_model': 'gpt-5.5',
-    'public_chat_access_code': '',
     'public_chat_system_prompt': DEFAULT_SYSTEM_PROMPT,
     'public_chat_rate_limit_minute': '5',
     'public_chat_rate_limit_day': '100',
@@ -39,7 +37,6 @@ MAX_CHAT_MESSAGES = 20
 MAX_USER_MESSAGE_CHARS = 4000
 MAX_CHAT_TOKENS = 2048
 CHAT_TEMPERATURE = 0.7
-CHAT_AUTH_TTL_SECONDS = 6 * 60 * 60
 
 _RATE_LIMITS: dict[str, dict[str, object]] = {}
 _RATE_LIMIT_LOCK = threading.Lock()
@@ -161,7 +158,6 @@ def get_public_chat_settings() -> dict:
         'api_base': (raw['public_chat_api_base'] or CHAT_SETTING_DEFAULTS['public_chat_api_base']).rstrip('/'),
         'api_key': raw['public_chat_api_key'].strip(),
         'model': (raw['public_chat_model'] or CHAT_SETTING_DEFAULTS['public_chat_model']).strip(),
-        'access_code': raw['public_chat_access_code'].strip(),
         'system_prompt': (raw['public_chat_system_prompt'] or DEFAULT_SYSTEM_PROMPT).strip(),
         'rate_limit_minute': _as_positive_int(
             raw['public_chat_rate_limit_minute'],
@@ -179,7 +175,6 @@ def get_public_chat_admin_settings() -> dict:
     return {
         **settings,
         'api_key_configured': bool(settings['api_key']),
-        'access_code_configured': bool(settings['access_code']),
     }
 
 
@@ -194,7 +189,6 @@ def save_public_chat_settings(form: Mapping[str, str]) -> None:
     model = (form.get('model') or CHAT_SETTING_DEFAULTS['public_chat_model']).strip()
     system_prompt = (form.get('system_prompt') or DEFAULT_SYSTEM_PROMPT).strip()
     api_key = (form.get('api_key') or '').strip()
-    access_code = (form.get('access_code') or '').strip()
 
     if not api_base.startswith(('http://', 'https://')):
         raise ValueError('API Base 必须以 http:// 或 https:// 开头')
@@ -212,11 +206,8 @@ def save_public_chat_settings(form: Mapping[str, str]) -> None:
         raise ValueError('限流额度必须大于 0')
 
     final_api_key = api_key or existing['api_key']
-    final_access_code = access_code or existing['access_code']
     if enabled and not final_api_key:
         raise ValueError('启用公开聊天前必须配置 API Key')
-    if enabled and not final_access_code:
-        raise ValueError('启用公开聊天前必须配置朋友口令')
 
     updates = {
         'public_chat_enabled': '1' if enabled else '0',
@@ -228,55 +219,7 @@ def save_public_chat_settings(form: Mapping[str, str]) -> None:
     }
     if api_key:
         updates['public_chat_api_key'] = api_key
-    if access_code:
-        updates['public_chat_access_code'] = access_code
     set_settings(updates)
-
-
-def verify_access_code(code: str) -> bool:
-    settings = get_public_chat_settings()
-    expected = settings['access_code']
-    if not settings['enabled'] or not expected:
-        return False
-    provided_bytes = str(code or '').strip().encode('utf-8')
-    expected_bytes = expected.encode('utf-8')
-    return hmac.compare_digest(provided_bytes, expected_bytes)
-
-
-def authorize_ip(client_ip: str, now: float | None = None) -> None:
-    now = time.time() if now is None else now
-    expires_at = now + CHAT_AUTH_TTL_SECONDS
-    updated_at = datetime.now().isoformat(timespec='seconds')
-    ip = client_ip or 'unknown'
-    conn = get_db()
-    conn.execute(
-        """
-        INSERT INTO public_chat_ip_auth (ip, expires_at, updated_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(ip) DO UPDATE SET
-            expires_at=excluded.expires_at,
-            updated_at=excluded.updated_at
-        """,
-        (ip, expires_at, updated_at),
-    )
-    conn.commit()
-
-
-def is_ip_authorized(client_ip: str, now: float | None = None) -> bool:
-    now = time.time() if now is None else now
-    ip = client_ip or 'unknown'
-    conn = get_db()
-    row = conn.execute(
-        "SELECT expires_at FROM public_chat_ip_auth WHERE ip=?",
-        (ip,),
-    ).fetchone()
-    if not row:
-        return False
-    if float(row['expires_at']) <= now:
-        conn.execute("DELETE FROM public_chat_ip_auth WHERE ip=?", (ip,))
-        conn.commit()
-        return False
-    return True
 
 
 def validate_chat_messages(messages: object) -> list[dict[str, str]]:
@@ -381,7 +324,7 @@ def _call_chat_completion(settings: dict, payload: dict) -> str:
     return content
 
 
-def chat_completion(messages: object, client_ip: str) -> str:
+def chat_completion(messages: object, client_ip: str, extra_system_context: str = '') -> str:
     settings = get_public_chat_settings()
     if not settings['enabled']:
         raise ChatDisabledError('公开聊天未启用')
@@ -390,12 +333,13 @@ def chat_completion(messages: object, client_ip: str) -> str:
 
     validated_messages = validate_chat_messages(messages)
     check_rate_limit(client_ip, settings)
+    system_messages = [{'role': 'system', 'content': settings['system_prompt']}]
+    extra_context = str(extra_system_context or '').strip()
+    if extra_context:
+        system_messages.append({'role': 'system', 'content': extra_context})
     payload = {
         'model': settings['model'],
-        'messages': [
-            {'role': 'system', 'content': settings['system_prompt']},
-            *validated_messages,
-        ],
+        'messages': [*system_messages, *validated_messages],
         'temperature': CHAT_TEMPERATURE,
         'max_tokens': MAX_CHAT_TOKENS,
     }

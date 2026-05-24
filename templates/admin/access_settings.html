@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}访问设置 · {{ config.SITE_TITLE }}{% endblock %}
+{% block content %}
+<main class="admin-page">
+  <div class="admin-header">
+    <h2 class="serif">访问设置</h2>
+  </div>
+
+  <form method="post" class="admin-form access-settings-form">
+    <div class="form-group access-toggle-row">
+      <label class="access-settings-toggle">
+        <input type="checkbox" name="visitor_login_enabled" value="1" {% if settings.visitor_login_enabled %}checked{% endif %}>
+        <span>启用全站访客登录</span>
+      </label>
+      <p class="form-help">启用后，首页、文章、搜索和 AI 对话都需要访客登录。</p>
+    </div>
+
+    <div class="form-group">
+      <label for="visitor_login_days">访客登录有效天数</label>
+      <input type="number" id="visitor_login_days" name="visitor_login_days" value="{{ settings.visitor_login_days }}" min="1" step="1" required>
+    </div>
+
+    <div class="form-group access-toggle-row">
+      <label class="access-settings-toggle">
+        <input type="checkbox" name="chat_file_upload_enabled" value="1" {% if settings.chat_file_upload_enabled %}checked{% endif %}>
+        <span>允许 AI 文件上传</span>
+      </label>
+    </div>
+
+    <div class="access-settings-grid">
+      <div class="form-group">
+        <label for="chat_file_max_mb">单文件大小限制（MB）</label>
+        <input type="number" id="chat_file_max_mb" name="chat_file_max_mb" value="{{ settings.chat_file_max_mb }}" min="1" step="1" required>
+      </div>
+      <div class="form-group">
+        <label for="chat_user_storage_mb">单用户总空间限制（MB）</label>
+        <input type="number" id="chat_user_storage_mb" name="chat_user_storage_mb" value="{{ settings.chat_user_storage_mb }}" min="1" step="1" required>
+      </div>
+      <div class="form-group">
+        <label for="chat_session_file_limit">单会话文件数限制</label>
+        <input type="number" id="chat_session_file_limit" name="chat_session_file_limit" value="{{ settings.chat_session_file_limit }}" min="1" step="1" required>
+      </div>
+      <div class="form-group">
+        <label for="chat_file_retention_days">文件保留天数</label>
+        <input type="number" id="chat_file_retention_days" name="chat_file_retention_days" value="{{ settings.chat_file_retention_days }}" min="1" step="1" required>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">保存设置</button>
+      <a href="/admin" class="btn btn-secondary">返回后台</a>
+    </div>
+  </form>
+</main>
+{% endblock %}
