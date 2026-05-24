@@ -296,6 +296,17 @@ def test_chat_upload_disabled_by_default(client, reset_settings):
     assert r2.status_code == 400 or r2.status_code == 404
 
 
+def test_chat_session_delete_works_for_owner(client, reset_settings):
+    _enable_public_chat(client.application)
+    _login_visitor(client)
+    r = client.post('/api/chat/sessions', json={'title': 'A'})
+    session_id = r.get_json()['session']['id']
+    r2 = client.delete(f'/api/chat/sessions/{session_id}')
+    assert r2.status_code == 200
+    r3 = client.get(f'/api/chat/sessions/{session_id}/messages')
+    assert r3.status_code == 404
+
+
 def test_site_settings_defaults_and_api_key_preserved(app, reset_settings):
     with app.app_context():
         settings = get_public_chat_settings()

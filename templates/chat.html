@@ -128,6 +128,15 @@ MathJax = {
     emptyEl.hidden = currentMessages.length > 0;
   }
 
+  function getCurrentSession() {
+    return sessions.find(session => session && session.id === currentSessionId) || null;
+  }
+
+  function isCurrentSessionDraft() {
+    const current = getCurrentSession();
+    return !!current && currentMessages.length === 0 && String(current.title || '').trim() === '新的对话';
+  }
+
   function formatSessionStamp(value) {
     const text = String(value || '').trim();
     if (!text) return '';
@@ -163,6 +172,13 @@ MathJax = {
         localStorage.setItem(railStateKey, railDrawerOpen ? 'open' : 'closed');
       } catch (err) {}
     }
+  }
+
+  async function deleteJSON(url) {
+    const resp = await fetch(url, { method: 'DELETE' });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || '请求失败');
+    return data;
   }
 
   function renderBubble(role, content, html) {
@@ -218,19 +234,43 @@ MathJax = {
       return;
     }
     sessions.forEach(session => {
+      const card = document.createElement('div');
+      card.className = 'chat-session-card' + (session.id === currentSessionId ? ' active' : '');
+
       const item = document.createElement('button');
       item.type = 'button';
-      item.className = 'chat-session-item' + (session.id === currentSessionId ? ' active' : '');
+      item.className = 'chat-session-item';
+      item.setAttribute('aria-current', session.id === currentSessionId ? 'true' : 'false');
+
       const title = document.createElement('span');
       title.className = 'chat-session-title';
       title.textContent = session.title || '新的对话';
+
       const meta = document.createElement('span');
       meta.className = 'chat-session-meta';
       meta.textContent = formatSessionStamp(session.updated_at);
+
       item.appendChild(title);
       if (meta.textContent) item.appendChild(meta);
       item.addEventListener('click', () => loadSession(session.id));
-      sessionList.appendChild(item);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'chat-session-delete';
+      del.setAttribute('aria-label', '删除对话');
+      del.setAttribute('title', '删除对话');
+      del.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>';
+      del.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const titleText = (session.title || '新的对话').trim() || '新的对话';
+        if (!window.confirm(`确定删除「${titleText}」吗？`)) return;
+        deleteSession(session.id).catch(err => setStatus(err.message));
+      });
+
+      card.appendChild(item);
+      card.appendChild(del);
+      sessionList.appendChild(card);
     });
   }
 
@@ -255,7 +295,9 @@ MathJax = {
   async function loadSessions() {
     const data = await fetchJSON('/api/chat/sessions');
     sessions = data.sessions || [];
-    if (!currentSessionId && sessions.length) {
+    if (!sessions.length) {
+      currentSessionId = null;
+    } else if (!currentSessionId || !sessions.some(session => session.id === currentSessionId)) {
       currentSessionId = sessions[0].id;
     }
     renderSessions();
@@ -272,6 +314,10 @@ MathJax = {
   }
 
   async function createSession() {
+    if (isCurrentSessionDraft()) {
+      input.focus();
+      return;
+    }
     const data = await postJSON('/api/chat/sessions', {title: '新的对话'});
     sessions.unshift(data.session);
     currentSessionId = data.session.id;
@@ -280,6 +326,26 @@ MathJax = {
     renderMessages();
     renderFiles([]);
     input.focus();
+  }
+
+  async function deleteSession(sessionId) {
+    const wasCurrent = sessionId === currentSessionId;
+    setStatus('正在删除…');
+    await deleteJSON(`/api/chat/sessions/${sessionId}`);
+    if (wasCurrent) {
+      currentSessionId = null;
+      currentMessages = [];
+    }
+    await loadSessions();
+    if (wasCurrent) {
+      if (currentSessionId) {
+        await loadSession(currentSessionId);
+      } else {
+        await createSession();
+      }
+    } else {
+      setStatus('');
+    }
   }
 
   async function sendMessage(event) {
@@ -350,7 +416,9 @@ MathJax = {
   });
   input.addEventListener('input', resizeInput);
   form.addEventListener('submit', sendMessage);
-  clearBtn.addEventListener('click', createSession);
+  clearBtn.addEventListener('click', () => {
+    createSession().catch(err => setStatus(err.message));
+  });
   if (railToggle) railToggle.addEventListener('click', () => setRailOpen(!railDrawerOpen));
   if (fileInput) fileInput.addEventListener('change', uploadFile);
 
