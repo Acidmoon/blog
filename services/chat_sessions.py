@@ -90,6 +90,29 @@ def create_chat_session(user_id: int, title: str = '新的对话') -> dict:
     return _row_to_session(row)
 
 
+def update_chat_session_title(user_id: int, session_id: int, title: str) -> dict:
+    require_chat_session(user_id, session_id)
+    cleaned_title = ' '.join(str(title or '').strip().split())[:32]
+    if not cleaned_title:
+        raise ChatSessionError('对话标题不能为空')
+    now = _now_text()
+    conn = get_db()
+    conn.execute(
+        """
+        UPDATE chat_sessions
+        SET title=?, updated_at=?
+        WHERE user_id=? AND id=?
+        """,
+        (cleaned_title, now, user_id, session_id),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT id, title, created_at, updated_at FROM chat_sessions WHERE id=?",
+        (session_id,),
+    ).fetchone()
+    return _row_to_session(row)
+
+
 def list_chat_sessions(user_id: int) -> list[dict]:
     rows = get_db().execute(
         """
@@ -166,7 +189,7 @@ def list_chat_files(user_id: int, session_id: int) -> list[dict]:
 def ensure_session_for_message(user_id: int, session_id: int | None, content: str) -> dict:
     if session_id:
         return require_chat_session(user_id, session_id)
-    return create_chat_session(user_id, build_session_title(content))
+    return create_chat_session(user_id)
 
 
 def append_chat_message(session_id: int, role: str, content: str) -> dict:

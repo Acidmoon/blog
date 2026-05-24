@@ -13,6 +13,7 @@ from services.ai_chat import (
     ChatTimeoutError,
     ChatValidationError,
     chat_completion,
+    generate_chat_session_title,
     get_public_chat_settings,
     render_chat_markdown,
 )
@@ -21,6 +22,7 @@ from services.chat_sessions import (
     ChatFileUploadError,
     ChatSessionError,
     append_chat_message,
+    build_session_title,
     create_chat_session,
     delete_chat_session,
     ensure_session_for_message,
@@ -30,6 +32,7 @@ from services.chat_sessions import (
     recent_model_messages,
     save_chat_upload,
     session_file_context,
+    update_chat_session_title,
 )
 from services.home_layout import load_home_layout, resolve_hero
 from services.home_modules import build_home_sections
@@ -248,11 +251,19 @@ def api_chat():
             raise ChatValidationError('消息内容不能为空')
         if len(content) > 4000:
             raise ChatValidationError('单条用户消息不能超过 4000 字符')
-        session = ensure_session_for_message(visitor['id'], int(session_id) if session_id else None, content)
+        incoming_session_id = int(session_id) if session_id else None
+        session = ensure_session_for_message(visitor['id'], incoming_session_id, content)
+        needs_title = session['title'] == '新的对话'
         user_message = append_chat_message(session['id'], 'user', content)
         model_messages = recent_model_messages(session['id'])
         assistant_content = chat_completion(model_messages, client_ip, extra_system_context=session_file_context(session['id']))
         assistant_message = append_chat_message(session['id'], 'assistant', assistant_content)
+        if needs_title:
+            try:
+                title = generate_chat_session_title(list_chat_messages(visitor['id'], session['id']))
+            except (ChatDisabledError, ChatNotConfiguredError, ChatRateLimitError, ChatAPIError, ChatTimeoutError, ChatValidationError, ValueError):
+                title = build_session_title(content)
+            session = update_chat_session_title(visitor['id'], session['id'], title or build_session_title(content))
     except ChatDisabledError as exc:
         return jsonify({'error': str(exc)}), 403
     except ChatNotConfiguredError as exc:

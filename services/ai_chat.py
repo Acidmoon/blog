@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from html.parser import HTMLParser
 import json
+from html.parser import HTMLParser
 import socket
 import threading
 import time
+import re
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -37,6 +38,15 @@ MAX_CHAT_MESSAGES = 20
 MAX_USER_MESSAGE_CHARS = 4000
 MAX_CHAT_TOKENS = 2048
 CHAT_TEMPERATURE = 0.7
+CHAT_TITLE_MAX_MESSAGES = 8
+CHAT_TITLE_MAX_MESSAGE_CHARS = 800
+CHAT_TITLE_MAX_TOKENS = 32
+CHAT_TITLE_TEMPERATURE = 0.2
+CHAT_TITLE_SYSTEM_PROMPT = (
+    "你是中文聊天标题生成器。根据对话内容生成一个简短、准确、自然的标题。"
+    "只输出标题本身，不要加引号、前缀、解释、编号或句号。"
+    "标题要尽量具体，不要泛化成“对话记录”“聊天记录”“对话总结”这类空泛说法。"
+)
 
 _RATE_LIMITS: dict[str, dict[str, object]] = {}
 _RATE_LIMIT_LOCK = threading.Lock()
@@ -255,6 +265,85 @@ def render_chat_markdown(text: str) -> str:
     return sanitizer.html()
 
 
+def _normalize_title_messages(messages: object) -> list[dict[str, str]]:
+    if not isinstance(messages, list):
+        raise ChatValidationError('消息格式无效')
+
+    normalized: list[dict[str, str]] = []
+    for item in messages:
+        if not isinstance(item, dict):
+            raise ChatValidationError('消息格式无效')
+        role = str(item.get('role') or '').strip()
+        content = str(item.get('content') or '').strip()
+        if role not in {'user', 'assistant'}:
+            raise ChatValidationError('消息角色无效')
+        if not content:
+            raise ChatValidationError('消息内容不能为空')
+        normalized.append({
+            'role': role,
+            'content': content[:CHAT_TITLE_MAX_MESSAGE_CHARS],
+        })
+
+    if not normalized:
+        raise ChatValidationError('消息不能为空')
+    return normalized[-CHAT_TITLE_MAX_MESSAGES:]
+
+
+def _build_chat_title_prompt(messages: list[dict[str, str]]) -> str:
+    transcript = '\n\n'.join(
+        f"{'用户' if message['role'] == 'user' else '助手'}：{message['content']}"
+        for message in messages
+    )
+    return f"""请根据下面的对话内容生成一个简短标题。
+要求：
+- 只输出标题本身，不要加引号、前缀、解释或编号。
+- 尽量具体，优先概括对话的主题。
+- 长度控制在 6 到 20 个汉字左右，或者同等简短短语。
+- 不要输出“对话记录”“聊天记录”“对话总结”这类空泛标题。
+
+对话内容：
+{transcript}
+"""
+
+
+def _clean_chat_title(text: str) -> str:
+    title = ' '.join(str(text or '').strip().split())
+    if not title:
+        return ''
+    for prefix in ('标题：', '标题:', '对话标题：', '对话标题:', '会话标题：', '会话标题:'):
+        if title.startswith(prefix):
+            title = title[len(prefix):].strip()
+    title = title.strip('“”"\'《》【】[]()（）<>')
+    title = re.sub(r'^[：:，,。.!！？?、\-\s]+|[：:，,。.!！？?、\-\s]+$', '', title).strip()
+    generic_titles = {
+        '对话', '聊天', '聊天记录', '对话记录', '对话总结', '聊天总结', '聊天内容', '总结', 'conversation', 'chat',
+    }
+    if title.lower() in generic_titles:
+        return ''
+    return title[:32]
+
+
+def generate_chat_session_title(messages: object) -> str:
+    settings = get_public_chat_settings()
+    if not settings['enabled']:
+        raise ChatDisabledError('公开聊天未启用')
+    if not settings['api_key']:
+        raise ChatNotConfiguredError('公开聊天 API Key 未配置')
+
+    validated_messages = _normalize_title_messages(messages)
+    payload = {
+        'model': settings['model'],
+        'messages': [
+            {'role': 'system', 'content': CHAT_TITLE_SYSTEM_PROMPT},
+            {'role': 'user', 'content': _build_chat_title_prompt(validated_messages)},
+        ],
+        'temperature': CHAT_TITLE_TEMPERATURE,
+        'max_tokens': CHAT_TITLE_MAX_TOKENS,
+    }
+    title = _call_chat_completion(settings, payload, apply_rate_limit=False)
+    return _clean_chat_title(title)
+
+
 def reset_rate_limits() -> None:
     with _RATE_LIMIT_LOCK:
         _RATE_LIMITS.clear()
@@ -289,7 +378,9 @@ def check_rate_limit(client_ip: str, settings: dict, now: float | None = None) -
         bucket['day_count'] = int(bucket['day_count']) + 1
 
 
-def _call_chat_completion(settings: dict, payload: dict) -> str:
+def _call_chat_completion(settings: dict, payload: dict, *, client_ip: str = '', apply_rate_limit: bool = True) -> str:
+    if apply_rate_limit:
+        check_rate_limit(client_ip, settings)
     data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
     req = urllib.request.Request(
         f"{settings['api_base']}/chat/completions",
@@ -332,7 +423,6 @@ def chat_completion(messages: object, client_ip: str, extra_system_context: str 
         raise ChatNotConfiguredError('公开聊天 API Key 未配置')
 
     validated_messages = validate_chat_messages(messages)
-    check_rate_limit(client_ip, settings)
     system_messages = [{'role': 'system', 'content': settings['system_prompt']}]
     extra_context = str(extra_system_context or '').strip()
     if extra_context:
@@ -343,4 +433,4 @@ def chat_completion(messages: object, client_ip: str, extra_system_context: str 
         'temperature': CHAT_TEMPERATURE,
         'max_tokens': MAX_CHAT_TOKENS,
     }
-    return _call_chat_completion(settings, payload)
+    return _call_chat_completion(settings, payload, client_ip=client_ip, apply_rate_limit=True)

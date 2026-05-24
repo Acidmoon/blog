@@ -244,11 +244,59 @@ def test_public_chat_mock_success(client, monkeypatch, reset_settings):
         return 'mock answer'
 
     monkeypatch.setattr('routes.public.chat_completion', fake_completion)
+    monkeypatch.setattr('routes.public.generate_chat_session_title', lambda messages: 'hello')
     r = client.post('/api/chat', json={'content': 'hello'})
     assert r.status_code == 200
     body = r.get_json()
     assert body['content'] == 'mock answer'
     assert '<p>mock answer</p>' in body['html']
+
+
+def test_public_chat_mock_success_generates_session_title(client, monkeypatch, reset_settings):
+    _enable_public_chat(client.application)
+    _login_visitor(client)
+
+    def fake_completion(messages, client_ip, extra_system_context=''):
+        return 'mock answer'
+
+    captured = {}
+
+    def fake_generate_title(messages):
+        captured['messages'] = messages
+        assert len(messages) == 2
+        assert messages[0]['role'] == 'user'
+        assert messages[1]['role'] == 'assistant'
+        assert messages[0]['content'] == 'hello'
+        assert messages[1]['content'] == 'mock answer'
+        return '怎么给会话起标题'
+
+    monkeypatch.setattr('routes.public.chat_completion', fake_completion)
+    monkeypatch.setattr('routes.public.generate_chat_session_title', fake_generate_title)
+    r = client.post('/api/chat', json={'content': 'hello'})
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body['session']['title'] == '怎么给会话起标题'
+    assert captured['messages'][0]['content'] == 'hello'
+    sessions = client.get('/api/chat/sessions').get_json()['sessions']
+    assert sessions[0]['title'] == '怎么给会话起标题'
+
+
+def test_public_chat_title_generation_failure_does_not_block_chat(client, monkeypatch, reset_settings):
+    _enable_public_chat(client.application)
+    _login_visitor(client)
+
+    def fake_completion(messages, client_ip, extra_system_context=''):
+        return 'mock answer'
+
+    def fake_generate_title(messages):
+        raise ChatAPIError('AI 接口返回格式无法解析')
+
+    monkeypatch.setattr('routes.public.chat_completion', fake_completion)
+    monkeypatch.setattr('routes.public.generate_chat_session_title', fake_generate_title)
+    r = client.post('/api/chat', json={'content': 'hello'})
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body['session']['title'] == 'hello'
 
 
 def test_public_chat_api_error_returns_json(client, monkeypatch, reset_settings):
