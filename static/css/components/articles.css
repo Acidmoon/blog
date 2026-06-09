@@ -6,6 +6,28 @@
   gap: 20px;
   margin-bottom: 40px;
 }
+/* 首页文章卡片区独立滚动 */
+.home-layout .article-list {
+  max-height: calc(100vh - 330px);
+  overflow-y: auto;
+  margin-bottom: 0;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 107, 79, 0.22) transparent;
+}
+.home-layout .article-list::-webkit-scrollbar {
+  width: 5px;
+}
+.home-layout .article-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.home-layout .article-list::-webkit-scrollbar-thumb {
+  background: rgba(58, 107, 79, 0.22);
+  border-radius: 3px;
+}
+.home-layout .article-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(58, 107, 79, 0.35);
+}
 .article-card {
   position: relative;
   padding: 24px 28px;

@@ -18,7 +18,7 @@ QUOTE_CACHE_PATH = DATA_DIR / 'quote_cache.json'
 SITE_TITLE = '水浇岭的博客'
 SITE_SUBTITLE = '写点有意思的东西'
 ARTICLES_PER_PAGE = 10
-ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-05-24-visitor2')
+ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-06-10-scroll')
 
 AI_POLISH_API_BASE = os.environ.get('AI_POLISH_API_BASE', 'https://www.waterhill.cyou/v1').rstrip('/')
 AI_POLISH_API_KEY = os.environ.get('AI_POLISH_API_KEY', '')

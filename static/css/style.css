@@ -102,6 +102,11 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 ::selection { background: var(--selection-bg); }
+/* 首页隐藏页面滚动条，文章卡片区独立滚动 */
+html:has(.home-layout) {
+  overflow: hidden;
+  height: 100%;
+}
 body {
   font-family: var(--font-sans);
   background: var(--bg-base);
