@@ -1,7 +1,7 @@
 /* home-widgets.css */
 /* ── Tag Filter ──────────────────────────────────────── */
 .tag-filter-section {
-  margin: 36px 0 32px;
+  margin: 24px 0 24px;
   text-align: center;
 }
 .tag-filter-label {
@@ -50,7 +50,7 @@
 /* home-widgets.css */
 /* ── Daily Quote Line ──────────────────────────────── */
 .quote-line {
-  margin: 28px 0 20px;
+  margin: 14px 0 14px;
   color: var(--text-secondary);
   font-size: 0.95rem;
   line-height: 1.6;
