@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{% if article %}{% if not article.published %}草稿：{% endif %}编辑文章{% else %}写新文章{% endif %} · {{ config.SITE_TITLE }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)">
+{% endblock %}
 {% block content %}
-<main class="admin-page">
+<main class="admin-page admin-page--editor">
   <div class="admin-form editor-page">
-    <h2 class="serif">
+    <h2 class="serif editor-heading">
       {% if article %}
         {% if not article.published %}<span class="draft-badge">草稿</span>{% endif %}
         ✏️ 编辑文章
@@ -11,56 +15,78 @@
         📝 写新文章
       {% endif %}
     </h2>
-    <form method="post">
-      <div class="form-group">
-        <label for="title">标题</label>
-        <input type="text" id="title" name="title" value="{{ article.title if article else '' }}" placeholder="输入文章标题" required>
-      </div>
-      <div class="form-group">
-        <label for="tags">标签（逗号分隔）</label>
-        <input type="text" id="tags" name="tags" value="{{ article.tags if article else '' }}" placeholder="技术,生活,笔记">
-      </div>
-      <div class="form-group">
-        <label for="content">内容（Markdown）</label>
-        <div class="editor-toolbar">
-          <button type="button" onclick="insertMd('**', '**')" title="粗体"><b>B</b></button>
-          <button type="button" onclick="insertMd('*', '*')" title="斜体"><i>I</i></button>
-          <button type="button" onclick="insertMd('```\n', '\n```')" title="代码块">&lt;/&gt;</button>
-          <button type="button" onclick="insertMd('[', '](url)')" title="链接">🔗</button>
-          <button type="button" onclick="insertMd('![', '](url)')" title="图片">🖼</button>
-          <button type="button" onclick="insertMd('# ', '')" title="标题">H</button>
-          <button type="button" onclick="insertMd('> ', '')" title="引用">❝</button>
-          <button type="button" onclick="insertMd('- ', '')" title="列表">•</button>
-          <button type="button" onclick="uploadImage()" title="上传图片">📤</button>
-          <span class="editor-toolbar-spacer"></span>
-          <select id="aiPolishProvider" class="editor-toolbar-select" onchange="syncPolishModels()" title="选择 AI 供应商">
-            {% for provider in ai_polish_profiles %}
-              <option value="{{ provider.id }}" {% if loop.first %}selected{% endif %} {% if not provider.configured %}disabled{% endif %}>
-                {{ provider.label }}{% if not provider.configured %}（未配置）{% endif %}
-              </option>
-            {% endfor %}
-          </select>
-          <select id="aiPolishModel" class="editor-toolbar-select" title="选择 AI 模型"></select>
-          <select id="aiPolishMode" class="editor-toolbar-select editor-toolbar-mode" onchange="syncPolishModeHint()" title="选择润色风格">
-            {% for mode in ai_polish_modes %}
-              <option value="{{ mode.id }}" data-description="{{ mode.description }}" {% if mode.default %}selected{% endif %}>{{ mode.label }}</option>
-            {% endfor %}
-          </select>
-          <label class="editor-toolbar-option" title="先按原意理顺口语稿，再执行所选 AI 润色">
-            <input type="checkbox" id="aiOrganizeFirst">
-            <span>先理顺口语稿</span>
-          </label>
-          <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="按所选风格处理正文">✨ AI润色</button>
-          <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
+    <form method="post" id="editorForm">
+      <div class="editor-meta-row">
+        <div class="form-group form-group--title">
+          <label for="title" class="sr-label">标题</label>
+          <input type="text" id="title" name="title" class="editor-title-input" value="{{ article.title if article else '' }}" placeholder="给这篇文章起个名字…" required>
         </div>
-        <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
-        <p id="aiPolishStatus" class="editor-hint">AI润色只会轻修语病、重复和口语表达，不会自动发布。</p>
+        <div class="form-group form-group--tags">
+          <label for="tagInputField" class="sr-label">标签</label>
+          <div class="tag-input-wrapper" id="tagInputWrapper">
+            <div class="tag-chips" id="tagChips"></div>
+            <input type="text" class="tag-input-field" id="tagInputField" placeholder="添加标签…" autocomplete="off">
+            <div class="tag-suggestions" id="tagSuggestions" hidden></div>
+          </div>
+          <input type="hidden" name="tags" id="tagsHidden" value="{{ article.tags if article else '' }}">
+        </div>
       </div>
+
+      <div class="editor-split" id="editorSplit">
+        <div class="editor-split__preview" id="previewPanel" hidden>
+          <div class="editor-preview-header">
+            <span>实时预览</span>
+            <span class="editor-preview-status" id="previewStatus"></span>
+          </div>
+          <div class="editor-preview-body article-body" id="previewBody">
+            <p class="preview-empty">开始写作后这里会显示实时渲染结果…</p>
+          </div>
+        </div>
+        <div class="editor-split__divider" id="editorSplitDivider" role="separator" aria-orientation="vertical" title="拖动调整左右比例（双击重置）"></div>
+        <div class="editor-split__editor" id="editorSplitEditor">
+          <div class="editor-toolbar">
+            <button type="button" onclick="insertMd('**', '**')" title="粗体"><b>B</b></button>
+            <button type="button" onclick="insertMd('*', '*')" title="斜体"><i>I</i></button>
+            <button type="button" onclick="insertMd('```\n', '\n```')" title="代码块">&lt;/&gt;</button>
+            <button type="button" onclick="insertMd('[', '](url)')" title="链接">🔗</button>
+            <button type="button" onclick="insertMd('![', '](url)')" title="图片">🖼</button>
+            <button type="button" onclick="insertMd('# ', '')" title="标题">H</button>
+            <button type="button" onclick="insertMd('> ', '')" title="引用">❝</button>
+            <button type="button" onclick="insertMd('- ', '')" title="列表">•</button>
+            <button type="button" onclick="uploadImage()" title="上传图片">📤</button>
+            <span class="editor-toolbar-spacer"></span>
+            <select id="aiPolishProvider" class="editor-toolbar-select" onchange="syncPolishModels()" title="选择 AI 供应商">
+              {% for provider in ai_polish_profiles %}
+                <option value="{{ provider.id }}" {% if loop.first %}selected{% endif %} {% if not provider.configured %}disabled{% endif %}>
+                  {{ provider.label }}{% if not provider.configured %}（未配置）{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <select id="aiPolishModel" class="editor-toolbar-select" title="选择 AI 模型"></select>
+            <select id="aiPolishMode" class="editor-toolbar-select editor-toolbar-mode" onchange="syncPolishModeHint()" title="选择润色风格">
+              {% for mode in ai_polish_modes %}
+                <option value="{{ mode.id }}" data-description="{{ mode.description }}" {% if mode.default %}selected{% endif %}>{{ mode.label }}</option>
+              {% endfor %}
+            </select>
+            <label class="editor-toolbar-option" title="先按原意理顺口语稿，再执行所选 AI 润色">
+              <input type="checkbox" id="aiOrganizeFirst">
+              <span>先理顺口语稿</span>
+            </label>
+            <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="按所选风格处理正文">✨ AI润色</button>
+            <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
+          </div>
+          <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
+        </div>
+      </div>
+      <p id="aiPolishStatus" class="editor-hint">AI润色只会轻修语病、重复和口语表达，不会自动发布。</p>
+
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">{% if article and not article.published %}💾 保存草稿{% elif article %}💾 保存修改{% else %}💾 保存草稿{% endif %}</button>
         {% if article and not article.published %}
         <button type="button" class="btn btn-publish" onclick="if(confirm('确定发布这篇文章？发布后将在首页显示。')){var f=document.createElement('form');f.method='post';f.action='/admin/publish/{{ article.slug }}';document.body.appendChild(f);f.submit()}">🚀 发布</button>
         {% endif %}
+        <button type="button" id="togglePreview" class="btn btn-secondary" title="切换右侧实时预览">👁 预览</button>
+        <button type="button" id="zenModeBtn" class="btn btn-secondary" title="进入专注写作模式 (Esc 退出)">🧘 专注</button>
         <a href="/admin" class="btn btn-secondary">取消</a>
         {% if article %}
         <a href="/admin/wechat-export/{{ article.slug }}" class="btn btn-secondary">导出公众号</a>
@@ -68,12 +94,14 @@
       </div>
     </form>
   </div>
+  <button type="button" class="zen-exit-btn" id="zenExitBtn" title="退出专注模式 (Esc)">退出专注</button>
 </main>
 {% endblock %}
 {% block scripts %}
 <script>
 const AI_POLISH_PROFILES = {{ ai_polish_profiles|tojson }};
 const AI_POLISH_MODES = {{ ai_polish_modes|tojson }};
+const ALL_TAGS = {{ all_tags|tojson }};
 
 function syncPolishModels() {
   const providerSelect = document.getElementById('aiPolishProvider');
@@ -116,6 +144,278 @@ function syncPolishModeHint() {
   }
 }
 
+/* ── Tag chips + autocomplete ─────────────────────────── */
+(function initTagInput() {
+  const wrapper = document.getElementById('tagInputWrapper');
+  const chipsEl = document.getElementById('tagChips');
+  const input = document.getElementById('tagInputField');
+  const hidden = document.getElementById('tagsHidden');
+  const suggestionsEl = document.getElementById('tagSuggestions');
+  if (!wrapper || !chipsEl || !input || !hidden || !suggestionsEl) return;
+
+  let tags = (hidden.value || '').split(',').map(s => s.trim()).filter(Boolean);
+  let activeIndex = -1;
+
+  function syncHidden() {
+    hidden.value = tags.join(',');
+  }
+
+  function renderChips() {
+    chipsEl.innerHTML = '';
+    tags.forEach((tag, idx) => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = '<span>' + escapeHtml(tag) + '</span><button type="button" class="tag-chip-remove" aria-label="移除">×</button>';
+      chip.querySelector('.tag-chip-remove').addEventListener('click', () => {
+        tags.splice(idx, 1);
+        renderChips();
+        syncHidden();
+        renderSuggestions();
+        input.focus();
+      });
+      chipsEl.appendChild(chip);
+    });
+    syncHidden();
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function addTag(tag) {
+    tag = tag.trim();
+    if (!tag) return;
+    if (tags.includes(tag)) return;
+    tags.push(tag);
+    renderChips();
+  }
+
+  function renderSuggestions() {
+    const q = input.value.trim().toLowerCase();
+    const matches = ALL_TAGS.filter(t => !tags.includes(t) && (!q || t.toLowerCase().includes(q))).slice(0, 8);
+    if (!matches.length) {
+      suggestionsEl.hidden = true;
+      suggestionsEl.innerHTML = '';
+      activeIndex = -1;
+      return;
+    }
+    suggestionsEl.innerHTML = '';
+    matches.forEach((tag, idx) => {
+      const item = document.createElement('div');
+      item.className = 'tag-suggestion-item' + (idx === activeIndex ? ' active' : '');
+      item.textContent = tag;
+      item.addEventListener('mousedown', e => {
+        e.preventDefault();
+        addTag(tag);
+        input.value = '';
+        renderSuggestions();
+        input.focus();
+      });
+      suggestionsEl.appendChild(item);
+    });
+    suggestionsEl.hidden = false;
+  }
+
+  input.addEventListener('input', () => {
+    activeIndex = -1;
+    renderSuggestions();
+  });
+
+  input.addEventListener('focus', renderSuggestions);
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => { suggestionsEl.hidden = true; }, 120);
+    if (input.value.trim()) {
+      addTag(input.value);
+      input.value = '';
+    }
+  });
+
+  input.addEventListener('keydown', e => {
+    const visibleItems = suggestionsEl.querySelectorAll('.tag-suggestion-item');
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (activeIndex >= 0 && visibleItems[activeIndex]) {
+        addTag(visibleItems[activeIndex].textContent);
+      } else if (input.value.trim()) {
+        addTag(input.value);
+      }
+      input.value = '';
+      renderSuggestions();
+    } else if (e.key === 'Backspace' && !input.value && tags.length) {
+      tags.pop();
+      renderChips();
+      renderSuggestions();
+    } else if (e.key === 'ArrowDown' && visibleItems.length) {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % visibleItems.length;
+      renderSuggestions();
+    } else if (e.key === 'ArrowUp' && visibleItems.length) {
+      e.preventDefault();
+      activeIndex = activeIndex <= 0 ? visibleItems.length - 1 : activeIndex - 1;
+      renderSuggestions();
+    } else if (e.key === 'Escape') {
+      suggestionsEl.hidden = true;
+      activeIndex = -1;
+    }
+  });
+
+  document.getElementById('editorForm').addEventListener('submit', () => {
+    if (input.value.trim()) addTag(input.value);
+    syncHidden();
+  });
+
+  wrapper.addEventListener('click', e => {
+    if (e.target === wrapper || e.target === chipsEl) input.focus();
+  });
+
+  renderChips();
+})();
+
+/* ── Live Preview + draggable divider ───────────────── */
+(function initLivePreview() {
+  const toggleBtn = document.getElementById('togglePreview');
+  const split = document.getElementById('editorSplit');
+  const editor = document.getElementById('editorSplitEditor');
+  const divider = document.getElementById('editorSplitDivider');
+  const panel = document.getElementById('previewPanel');
+  const body = document.getElementById('previewBody');
+  const status = document.getElementById('previewStatus');
+  const ta = document.getElementById('content');
+  const page = document.querySelector('.admin-page--editor');
+  if (!toggleBtn || !split || !panel || !body || !ta) return;
+
+  let active = false;
+  let timer = null;
+  let inflight = null;
+
+  // --split-ratio is the width fraction of the LEFT (preview) pane.
+  function applyRatio(r) {
+    r = Math.max(0.2, Math.min(0.8, r));
+    split.style.setProperty('--split-ratio', (r * 100).toFixed(2) + '%');
+    try { localStorage.setItem('editor-preview-ratio', String(r)); } catch (_) {}
+  }
+  function resetRatio() {
+    split.style.removeProperty('--split-ratio');
+    try { localStorage.removeItem('editor-preview-ratio'); } catch (_) {}
+  }
+  function restoreRatio() {
+    let r = null;
+    try { r = parseFloat(localStorage.getItem('editor-preview-ratio')); } catch (_) {}
+    if (r && r > 0.2 && r < 0.8) applyRatio(r);
+    else resetRatio();
+  }
+
+  function setActive(next) {
+    active = next;
+    split.classList.toggle('editor-split--active', active);
+    if (page) page.classList.toggle('admin-page--split-active', active);
+    panel.hidden = !active;
+    if (divider) divider.hidden = !active;
+    toggleBtn.textContent = active ? '👁 隐藏预览' : '👁 预览';
+    try { localStorage.setItem('editor-preview-on', active ? '1' : '0'); } catch (_) {}
+    if (active) {
+      restoreRatio();
+      update(true);
+    } else {
+      resetRatio();
+    }
+  }
+
+  if (divider) {
+    let dragging = false;
+    divider.addEventListener('mousedown', e => {
+      if (!active) return;
+      dragging = true;
+      split.classList.add('editor-split--dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const rect = split.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      applyRatio((e.clientX - rect.left) / rect.width);
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      split.classList.remove('editor-split--dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+    divider.addEventListener('dblclick', resetRatio);
+  }
+
+  function update(immediate) {
+    const content = ta.value;
+    if (!content.trim()) {
+      body.innerHTML = '<p class="preview-empty">开始写作后这里会显示实时渲染结果…</p>';
+      status.textContent = '';
+      return;
+    }
+    if (status) status.textContent = '渲染中…';
+    if (inflight) inflight.abort?.();
+    const ctrl = new AbortController();
+    inflight = ctrl;
+    fetch('/admin/api/preview', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content}),
+      signal: ctrl.signal,
+    })
+      .then(r => r.json())
+      .then(data => {
+        body.innerHTML = data.html || '';
+        if (window.hljs) body.querySelectorAll('pre code').forEach(el => window.hljs.highlightElement(el));
+        if (window.MathJax && /(\$|\\\(|\\\[)/.test(content)) {
+          window.MathJax.typesetPromise([body]).catch(() => {});
+        }
+        if (status) status.textContent = '';
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError' && status) status.textContent = '渲染失败';
+      });
+  }
+
+  toggleBtn.addEventListener('click', () => setActive(!active));
+
+  ta.addEventListener('input', () => {
+    if (!active) return;
+    clearTimeout(timer);
+    timer = setTimeout(update, 400);
+  });
+
+  let saved = '0';
+  try { saved = localStorage.getItem('editor-preview-on') || '0'; } catch (_) {}
+  if (saved === '1') setActive(true);
+})();
+
+/* ── Zen mode ─────────────────────────────────────────── */
+(function initZenMode() {
+  const btn = document.getElementById('zenModeBtn');
+  const exitBtn = document.getElementById('zenExitBtn');
+  const ta = document.getElementById('content');
+  if (!btn || !exitBtn || !ta) return;
+
+  function enter() {
+    document.body.classList.add('zen-mode');
+    ta.focus();
+  }
+  function exit() {
+    document.body.classList.remove('zen-mode');
+  }
+
+  btn.addEventListener('click', enter);
+  exitBtn.addEventListener('click', exit);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.body.classList.contains('zen-mode')) {
+      exit();
+    }
+  });
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   syncPolishModels();
   document.getElementById('aiOrganizeFirst')?.addEventListener('change', syncPolishModeHint);
@@ -132,6 +432,7 @@ function insertMd(before, after) {
   ta.focus();
   const pos = start + before.length + selected.length + after.length;
   ta.selectionStart = ta.selectionEnd = pos;
+  ta.dispatchEvent(new Event('input'));
 }
 function uploadImage() {
   document.getElementById('imageInput').click();
@@ -145,7 +446,7 @@ async function polishContent() {
   const organizeFirst = document.getElementById('aiOrganizeFirst')?.checked || false;
   const modeInfo = getSelectedPolishMode();
   const title = document.getElementById('title').value;
-  const tags = document.getElementById('tags').value;
+  const tags = document.getElementById('tagsHidden').value;
   const ta = document.getElementById('content');
   const original = ta.value.trim();
   if (!original) {
@@ -172,6 +473,7 @@ async function polishContent() {
     if (!resp.ok) throw new Error(data.error || '润色失败');
     ta.value = data.content || previous;
     ta.focus();
+    ta.dispatchEvent(new Event('input'));
     status.textContent = '已完成：' + (organizeFirst ? '先理顺口语稿 → ' : '') + (modeInfo ? modeInfo.label : 'AI润色') + '。建议你再快速看一遍，确认没有改偏。';
   } catch (e) {
     ta.value = previous;
@@ -200,10 +502,16 @@ function handleUpload(input) {
         ta.focus();
         const newPos = pos + md.length;
         ta.selectionStart = ta.selectionEnd = newPos;
+        ta.dispatchEvent(new Event('input'));
       }
     })
     .catch(e => alert('上传失败: ' + e.message));
   input.value = '';
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<script>
+window.MathJax = { tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 {% endblock %}

@@ -1,8 +1,9 @@
-"""AI polish API endpoint — separate blueprint to keep admin.py lean."""
+"""AI polish & preview API endpoints — separate blueprint to keep admin.py lean."""
 
 from flask import Blueprint, jsonify, request
 
 from services.ai_polish import polish_content
+from services.articles import render_md
 from services.auth import login_required
 
 ai_bp = Blueprint('admin_ai', __name__, url_prefix='/admin')
@@ -38,3 +39,12 @@ def ai_polish():
     except SystemExit:
         return jsonify({'error': 'AI 接口请求超时或连接中断'}), 504
     return jsonify({'content': polished})
+
+
+@ai_bp.route('/api/preview', methods=['POST'])
+@login_required
+def preview_markdown():
+    data = request.get_json(silent=True) or {}
+    content = (data.get('content') or '').strip()
+    html = render_md(content) if content else ''
+    return jsonify({'html': html})

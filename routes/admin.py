@@ -16,6 +16,7 @@ from services.articles import (
     get_article_meta,
     list_admin_articles,
     list_all_tags,
+    list_all_tags_admin,
     list_drafts,
     publish_article as svc_publish_article,
     read_article_file,
@@ -112,6 +113,7 @@ def _edit_template(article=None):
     return render_template(
         'admin/edit.html',
         article=article,
+        all_tags=list_all_tags_admin(),
         ai_polish_profiles=get_public_polish_profiles(),
         ai_polish_modes=get_public_polish_modes(),
     )
