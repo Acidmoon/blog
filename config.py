@@ -6,6 +6,8 @@ DATA_DIR = BASE_DIR / 'data'
 
 SECRET_KEY = os.environ.get('BLOG_SECRET_KEY', 'change-this-to-a-random-secret-key')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or os.environ.get('BLOG_ADMIN_PASSWORD', 'admin123')
+# 走统一登录/注册弹窗时，这个用户名 + ADMIN_PASSWORD 即可取得管理员权限
+ADMIN_USERNAME = (os.environ.get('ADMIN_USERNAME') or 'Acidmoon').strip().lower()
 
 DATABASE = str(DATA_DIR / 'blog.db')
 _default_articles_dir = DATA_DIR / 'articles' if (DATA_DIR / 'articles').exists() else BASE_DIR / 'articles'
@@ -18,7 +20,7 @@ QUOTE_CACHE_PATH = DATA_DIR / 'quote_cache.json'
 SITE_TITLE = '水浇岭的博客'
 SITE_SUBTITLE = '写点有意思的东西'
 ARTICLES_PER_PAGE = 10
-ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-06-15-editor2')
+ASSET_VERSION = os.environ.get('ASSET_VERSION', '2026-06-15-auth')
 
 AI_POLISH_API_BASE = os.environ.get('AI_POLISH_API_BASE', 'https://www.waterhill.cyou/v1').rstrip('/')
 AI_POLISH_API_KEY = os.environ.get('AI_POLISH_API_KEY', '')

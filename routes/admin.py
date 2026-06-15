@@ -3,7 +3,7 @@ import sqlite3
 import uuid
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 
 import config
 from models import get_db
@@ -25,6 +25,13 @@ from services.articles import (
 )
 from services.activity_heatmap import _count_words
 from services.auth import login_required
+from services.visitor_auth import (
+    VisitorAuthError,
+    authenticate_admin,
+    clear_visitor_cookie,
+    revoke_current_visitor_token,
+    set_visitor_cookie,
+)
 from services.home_layout_admin import handle_layout
 from services.wechat_export import build_digest, render_wechat_html
 
@@ -39,17 +46,25 @@ def inject_admin_nav():
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form.get('password') == config.ADMIN_PASSWORD:
+        try:
+            visitor, token, expires_at = authenticate_admin(request.form.get('password', ''))
+        except VisitorAuthError:
+            flash('密码错误', 'error')
+        else:
             session['logged_in'] = True
-            return redirect(url_for('admin.dashboard'))
-        flash('密码错误', 'error')
+            response = make_response(redirect(url_for('admin.dashboard')))
+            set_visitor_cookie(response, token, expires_at)
+            return response
     return render_template('admin/login.html')
 
 
 @bp.route('/logout')
 def logout():
     session.pop('logged_in', None)
-    return redirect(url_for('public.index'))
+    revoke_current_visitor_token()
+    response = make_response(redirect(url_for('public.index')))
+    clear_visitor_cookie(response)
+    return response
 
 
 @bp.route('')

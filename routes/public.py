@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, abort, flash, jsonify, make_response, redirect, render_template, request, send_from_directory, session, url_for
 
 import config
 from services.activity_heatmap import build_month_activity_heatmap
@@ -18,6 +18,17 @@ from services.ai_chat import (
     render_chat_markdown,
 )
 from services.articles import _count_words, get_article_meta, list_all_tags, list_published_articles, read_article_file, render_md
+from services.comments import (
+    CommentError,
+    add_comment,
+    count_comments,
+    count_likes,
+    delete_comment,
+    get_comment,
+    has_liked,
+    list_comments,
+    toggle_like,
+)
 from services.chat_sessions import (
     ChatFileUploadError,
     ChatSessionError,
@@ -39,9 +50,14 @@ from services.home_modules import build_home_sections
 from services.search import search_articles
 from services.visitor_auth import (
     VisitorAuthError,
+    authenticate_admin,
     clear_visitor_cookie,
     current_visitor,
+    is_admin_username,
+    issue_visitor_token,
+    login_existing_visitor,
     login_visitor,
+    register_visitor,
     revoke_current_visitor_token,
     set_visitor_cookie,
 )
@@ -64,12 +80,16 @@ def login():
         return redirect(request.args.get('next') or url_for('public.index'))
     error = ''
     if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
         next_url = request.form.get('next') or url_for('public.index')
         try:
-            visitor, token, expires_at = login_visitor(
-                request.form.get('username', ''),
-                request.form.get('password', ''),
-            )
+            if is_admin_username(username):
+                # 管理员用户名为保留名：密码必须等于管理密码
+                visitor, token, expires_at = authenticate_admin(password)
+                session['logged_in'] = True
+            else:
+                visitor, token, expires_at = login_visitor(username, password)
         except VisitorAuthError as exc:
             error = str(exc)
         else:
@@ -83,6 +103,7 @@ def login():
 @bp.route('/logout')
 def logout():
     revoke_current_visitor_token()
+    session.pop('logged_in', None)  # 同时退出管理员权限，避免“退出后仍是管理员”
     response = make_response(redirect(url_for('public.login')))
     clear_visitor_cookie(response)
     return response
@@ -159,7 +180,20 @@ def article(slug):
         abort(404)
     meta['current_word_count'] = _count_words(content)
     html = render_md(content)
-    return render_template('article.html', article=meta, content=html)
+    visitor = current_visitor()
+    comments = list_comments(meta['id'], page=1)
+    likes = {
+        'count': count_likes(meta['id']),
+        'liked': has_liked(meta['id'], visitor['id'] if visitor else None, _client_ip()),
+    }
+    return render_template(
+        'article.html',
+        article=meta,
+        content=html,
+        comments=comments,
+        likes=likes,
+        visitor=visitor,
+    )
 
 
 @bp.route('/chat')
@@ -342,3 +376,115 @@ def api_home_sections():
         'hero': hero,
         'html': full_html,
     })
+
+
+# ── Comments & Likes ────────────────────────────────────────────
+
+def _comment_view(comment: dict, visitor: dict | None) -> dict:
+    """Shape a comment dict for JSON, adding deletability for the current user."""
+    is_admin = bool(session.get('logged_in'))
+    can_delete = is_admin or (visitor is not None and visitor['id'] == comment['user_id'])
+    return {
+        'id': comment['id'],
+        'username': comment['username'],
+        'content': comment['content'],
+        'created_at': comment['created_at'],
+        'can_delete': can_delete,
+    }
+
+
+@bp.route('/api/article/<slug>/comments', methods=['GET'])
+def api_list_comments(slug):
+    meta = get_article_meta(slug)
+    if not meta:
+        return jsonify({'error': '文章不存在'}), 404
+    page = request.args.get('page', 1, type=int)
+    visitor = current_visitor()
+    result = list_comments(meta['id'], page=page)
+    return jsonify({
+        'comments': [_comment_view(c, visitor) for c in result['comments']],
+        'page': result['page'],
+        'per_page': result['per_page'],
+        'total': result['total'],
+        'total_pages': result['total_pages'],
+    })
+
+
+@bp.route('/api/article/<slug>/comments', methods=['POST'])
+def api_add_comment(slug):
+    meta = get_article_meta(slug)
+    if not meta:
+        return jsonify({'error': '文章不存在'}), 404
+    visitor = current_visitor()
+    if not visitor:
+        return jsonify({'error': '请先登录'}), 401
+    data = request.get_json(silent=True) or {}
+    try:
+        comment = add_comment(meta['id'], visitor['id'], data.get('content', ''))
+    except CommentError as exc:
+        return jsonify({'error': str(exc)}), 400
+    return jsonify({
+        'comment': _comment_view(comment, visitor),
+        'total': count_comments(meta['id']),
+    })
+
+
+@bp.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+def api_delete_comment(comment_id):
+    comment = get_comment(comment_id)
+    if not comment:
+        return jsonify({'error': '评论不存在'}), 404
+    visitor = current_visitor()
+    is_admin = bool(session.get('logged_in'))
+    is_author = visitor is not None and visitor['id'] == comment['user_id']
+    if not (is_admin or is_author):
+        return jsonify({'error': '无权删除该评论'}), 403
+    delete_comment(comment_id)
+    return jsonify({'ok': True, 'total': count_comments(comment['article_id'])})
+
+
+@bp.route('/api/article/<slug>/like', methods=['POST'])
+def api_toggle_like(slug):
+    meta = get_article_meta(slug)
+    if not meta:
+        return jsonify({'error': '文章不存在'}), 404
+    visitor = current_visitor()
+    result = toggle_like(
+        meta['id'],
+        visitor['id'] if visitor else None,
+        _client_ip(),
+    )
+    return jsonify(result)
+
+
+# ── Inline auth (register / login from modal) ───────────────────
+
+@bp.route('/api/auth/<action>', methods=['POST'])
+def api_auth(action):
+    if action not in {'register', 'login'}:
+        return jsonify({'error': '未知操作'}), 404
+    data = request.get_json(silent=True) or {}
+    username = data.get('username', '')
+    password = data.get('password', '')
+    is_admin = False
+    try:
+        # 保留的管理员用户名：无论点登录还是注册，都必须用管理密码校验。
+        if is_admin_username(username):
+            visitor, token, expires_at = authenticate_admin(password)
+            is_admin = True
+        elif action == 'register':
+            visitor, token, expires_at = register_visitor(username, password)
+        else:
+            visitor, token, expires_at = login_existing_visitor(username, password)
+    except VisitorAuthError as exc:
+        return jsonify({'error': str(exc)}), 400
+    if is_admin:
+        session['logged_in'] = True
+    response = make_response(jsonify({
+        'ok': True,
+        'username': visitor['username'],
+        'is_admin': is_admin,
+        'redirect': url_for('admin.dashboard') if is_admin else None,
+    }))
+    set_visitor_cookie(response, token, expires_at)
+    return response

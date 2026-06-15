@@ -53,6 +53,8 @@ def create_app():
             return None
         if endpoint in {'public.login', 'public.logout', 'admin.login', 'admin.logout'}:
             return None
+        if path.startswith('/api/auth/'):
+            return None
         if path.startswith('/admin'):
             return None
         if current_visitor():

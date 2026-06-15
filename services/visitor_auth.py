@@ -12,12 +12,15 @@ from functools import wraps
 from flask import g, redirect, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import config
 from models import get_db
 from services.access_settings import get_access_settings, is_visitor_login_enabled
 
 
 VISITOR_COOKIE_NAME = 'visitor_token'
-VISITOR_CREDENTIAL_RE = re.compile(r'^[A-Za-z0-9]{1,12}$')
+VISITOR_USERNAME_RE = re.compile(r'^[A-Za-z0-9]{1,12}$')
+# 密码已哈希存储，不限制字符；仅设一个宽松上限防止超长输入拖慢哈希
+MAX_PASSWORD_LENGTH = 128
 
 
 class VisitorAuthError(ValueError):
@@ -30,12 +33,15 @@ def normalize_username(username: str) -> str:
 
 def validate_visitor_credentials(username: str, password: str) -> tuple[str, str]:
     normalized_username = normalize_username(username)
-    normalized_password = str(password or '').strip()
-    if not VISITOR_CREDENTIAL_RE.fullmatch(normalized_username):
+    # 密码原样保留（含特殊字符、空格、大小写），不做 strip 或字符限制
+    raw_password = str(password or '')
+    if not VISITOR_USERNAME_RE.fullmatch(normalized_username):
         raise VisitorAuthError('用户名只能使用英文字母和数字，长度 1-12 位')
-    if not VISITOR_CREDENTIAL_RE.fullmatch(normalized_password):
-        raise VisitorAuthError('密码只能使用英文字母和数字，长度 1-12 位')
-    return normalized_username, normalized_password
+    if not raw_password:
+        raise VisitorAuthError('密码不能为空')
+    if len(raw_password) > MAX_PASSWORD_LENGTH:
+        raise VisitorAuthError(f'密码太长了，最多 {MAX_PASSWORD_LENGTH} 位')
+    return normalized_username, raw_password
 
 
 def _hash_token(raw_token: str) -> str:
@@ -195,6 +201,89 @@ def visitor_required(f):
 def login_visitor(username: str, password: str) -> tuple[dict, str, float]:
     visitor = authenticate_or_create_visitor(username, password, _client_ip())
     token, expires_at = issue_visitor_token(visitor['id'], _client_ip())
+    return visitor, token, expires_at
+
+
+def register_visitor(username: str, password: str) -> tuple[dict, str, float]:
+    """Explicit sign-up: fail if the username is already taken."""
+    if is_admin_username(username):
+        raise VisitorAuthError('该用户名为系统保留，请换一个')
+    username, password = validate_visitor_credentials(username, password)
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT 1 FROM visitor_users WHERE username=?",
+        (username,),
+    ).fetchone()
+    if existing:
+        raise VisitorAuthError('该用户名已被注册，请直接登录或换一个')
+    client_ip = _client_ip()
+    visitor = authenticate_or_create_visitor(username, password, client_ip)
+    token, expires_at = issue_visitor_token(visitor['id'], client_ip)
+    return visitor, token, expires_at
+
+
+def login_existing_visitor(username: str, password: str) -> tuple[dict, str, float]:
+    """Explicit sign-in: fail if the username does not exist."""
+    username, password = validate_visitor_credentials(username, password)
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT 1 FROM visitor_users WHERE username=?",
+        (username,),
+    ).fetchone()
+    if not existing:
+        raise VisitorAuthError('用户名不存在，请先注册')
+    client_ip = _client_ip()
+    visitor = authenticate_or_create_visitor(username, password, client_ip)
+    token, expires_at = issue_visitor_token(visitor['id'], client_ip)
+    return visitor, token, expires_at
+
+
+def is_admin_username(username: str) -> bool:
+    """The admin username is reserved; logging in as it requires the admin password."""
+    return normalize_username(username) == config.ADMIN_USERNAME
+
+
+def _ensure_admin_visitor(client_ip: str = '') -> dict:
+    """Create or fetch the admin's visitor_users row so the admin shares one
+    identity for comments/likes. The stored password hash is kept in sync with
+    the current ADMIN_PASSWORD so a changed admin password still authenticates."""
+    conn = get_db()
+    now = _now_text()
+    row = conn.execute(
+        "SELECT * FROM visitor_users WHERE username=?",
+        (config.ADMIN_USERNAME,),
+    ).fetchone()
+    password_hash = generate_password_hash(config.ADMIN_PASSWORD)
+    if row:
+        conn.execute(
+            "UPDATE visitor_users SET password_hash=?, last_ip=?, last_seen_at=? WHERE id=?",
+            (password_hash, client_ip, now, row['id']),
+        )
+        conn.commit()
+        return {'id': row['id'], 'username': config.ADMIN_USERNAME}
+    cur = conn.execute(
+        """
+        INSERT INTO visitor_users (username, password_hash, created_at, last_ip, last_seen_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (config.ADMIN_USERNAME, password_hash, now, client_ip, now),
+    )
+    conn.commit()
+    return {'id': cur.lastrowid, 'username': config.ADMIN_USERNAME}
+
+
+def authenticate_admin(password: str) -> tuple[dict, str, float]:
+    """Authenticate the reserved admin username against ADMIN_PASSWORD.
+
+    Raises VisitorAuthError if the password is wrong. On success, syncs the
+    admin's visitor_users row and issues a visitor token. The caller is
+    responsible for granting the Flask admin session.
+    """
+    if password != config.ADMIN_PASSWORD:
+        raise VisitorAuthError('管理密码错误')
+    client_ip = _client_ip()
+    visitor = _ensure_admin_visitor(client_ip)
+    token, expires_at = issue_visitor_token(visitor['id'], client_ip)
     return visitor, token, expires_at
 
 

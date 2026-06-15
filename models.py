@@ -115,6 +115,27 @@ def init_db():
             FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_chat_files_session ON chat_files(session_id);
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES visitor_users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_comments_article_created ON comments(article_id, created_at DESC, id DESC);
+        CREATE TABLE IF NOT EXISTS article_likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_id INTEGER NOT NULL,
+            user_id INTEGER,
+            ip TEXT DEFAULT '',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES visitor_users(id) ON DELETE CASCADE
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_article_likes_user ON article_likes(article_id, user_id) WHERE user_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_article_likes_ip ON article_likes(article_id, ip) WHERE user_id IS NULL;
     """)
     # Migration: add word_count column if missing (existing DB)
     try:

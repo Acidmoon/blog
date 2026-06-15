@@ -1,0 +1,355 @@
+/* social.css — likes, comments, inline auth modal, nav auth buttons */
+
+/* ── Nav auth buttons (search 右侧 · 首页链接 左侧) ───────── */
+.nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.nav-auth-btn {
+  font-size: 0.84rem;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  font-family: inherit;
+}
+.nav-auth-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-light);
+}
+.nav-auth-btn--ghost:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.nav-auth-btn--solid {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+.nav-auth-btn--solid:hover {
+  background: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+}
+.nav-user {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  padding: 0 4px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Like bar ──────────────────────────────────────────── */
+.article-social {
+  margin-top: 56px;
+}
+.like-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border-light);
+}
+.like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 22px;
+  border-radius: 24px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.like-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+.like-btn .like-heart {
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+.like-btn.liked {
+  border-color: #d65a6a;
+  color: #d65a6a;
+  background: rgba(214, 90, 106, 0.06);
+}
+.like-btn.liked .like-heart {
+  color: #d65a6a;
+}
+.like-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 1ch;
+}
+.like-hint {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+}
+@keyframes likePop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+.like-btn.like-pop .like-heart {
+  animation: likePop 0.4s ease;
+}
+
+/* ── Comments ──────────────────────────────────────────── */
+.comments {
+  margin-top: 36px;
+}
+.comments-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 22px;
+}
+.comments-total {
+  color: var(--accent-primary);
+  font-size: 1rem;
+  margin-left: 2px;
+}
+
+/* compose box — 与博客输入风格一致 */
+.comment-compose {
+  margin-bottom: 28px;
+}
+.comment-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.comment-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(58, 107, 79, 0.12);
+}
+.comment-input[readonly] {
+  cursor: pointer;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+}
+.comment-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 10px;
+}
+.comment-compose-hint {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin-right: auto;
+}
+.comment-submit {
+  padding: 8px 22px;
+  font-size: 0.88rem;
+}
+
+/* comment list */
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.comment-item {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border-light);
+  animation: commentFadeIn 0.4s ease-out;
+}
+.comment-item:last-child {
+  border-bottom: none;
+}
+@keyframes commentFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.comment-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.comment-author {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--accent-primary);
+}
+.comment-time {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+.comment-delete {
+  margin-left: auto;
+  font-size: 0.76rem;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.comment-delete:hover {
+  color: #c0392b;
+  border-color: #c0392b;
+}
+.comment-body {
+  font-size: 0.96rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.comment-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+.comment-pagination .page-link {
+  cursor: pointer;
+  background: var(--bg-card);
+}
+.comment-pagination .page-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-light);
+  color: var(--text-tertiary);
+}
+.comment-empty {
+  text-align: center;
+  padding: 36px 0;
+  color: var(--text-tertiary);
+  font-size: 0.92rem;
+}
+
+/* ── Auth modal (login / register) ─────────────────────── */
+.auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+.auth-modal[hidden] {
+  display: none;
+}
+.auth-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(250, 246, 240, 0.7), rgba(250, 246, 240, 0.45)),
+    rgba(12, 17, 23, 0.28);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+[data-theme="dark"] .auth-modal-backdrop {
+  background: rgba(12, 17, 23, 0.74);
+}
+.auth-modal-dialog {
+  position: relative;
+  width: min(100%, 420px);
+  padding: 30px 30px 32px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-hover);
+  animation: authDialogIn 0.3s ease-out;
+}
+@keyframes authDialogIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.auth-modal-x {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.auth-modal-x:hover {
+  background: var(--overlay);
+  color: var(--text-primary);
+}
+.auth-modal-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  margin-bottom: 16px;
+}
+.auth-tab {
+  padding: 7px 22px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.auth-tab.active {
+  background: var(--bg-card);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-soft);
+}
+.auth-modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+}
+.auth-modal-error {
+  margin-bottom: 16px;
+}
+.auth-modal-dialog .form-group {
+  margin-bottom: 16px;
+}
+.auth-modal-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+@media (max-width: 760px) {
+  .nav-auth-btn { padding: 5px 11px; font-size: 0.8rem; }
+  .nav-user { max-width: 70px; }
+  .like-hint { display: none; }
+}

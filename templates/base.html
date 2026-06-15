@@ -40,18 +40,19 @@
           <button class="search-submit" type="submit">搜索</button>
         </form>
       </div>
+      <div class="nav-auth">
+        {% if current_visitor is defined and current_visitor() %}
+        <span class="nav-user" title="已登录">{{ current_visitor().username }}</span>
+        <a href="/logout" class="nav-auth-btn nav-auth-btn--ghost">退出</a>
+        {% else %}
+        <button type="button" class="nav-auth-btn nav-auth-btn--ghost" data-auth-open="login">登录</button>
+        <button type="button" class="nav-auth-btn nav-auth-btn--solid" data-auth-open="register">注册</button>
+        {% endif %}
+      </div>
       <div class="nav-links">
         <a href="/">首页</a>
         {% if public_chat_enabled is defined and public_chat_enabled() %}
         <a href="/chat">AI 对话</a>
-        {% endif %}
-        {% if visitor_login_enabled is defined and visitor_login_enabled() %}
-        {% if current_visitor is defined and current_visitor() %}
-        <span class="nav-user">{{ current_visitor().username }}</span>
-        <a href="/logout">退出</a>
-        {% else %}
-        <a href="/login">登录</a>
-        {% endif %}
         {% endif %}
         {% if session.logged_in %}
           {% for item in admin_nav %}
@@ -94,6 +95,138 @@
   </footer>
   {% endblock %}
 
+  <!-- Auth Modal (login / register) -->
+  <div class="auth-modal" id="authModal" hidden>
+    <div class="auth-modal-backdrop" data-auth-close></div>
+    <div class="auth-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <button type="button" class="auth-modal-x" id="authModalClose" aria-label="关闭">&times;</button>
+      <div class="auth-modal-tabs">
+        <button type="button" class="auth-tab active" data-auth-tab="login">登录</button>
+        <button type="button" class="auth-tab" data-auth-tab="register">注册</button>
+      </div>
+      <p class="auth-modal-desc" id="authModalDesc">登录后即可发表评论。</p>
+      <div class="auth-modal-error flash error" id="authModalError" hidden></div>
+      <form id="authModalForm">
+        <div class="form-group">
+          <label for="authUsername">用户名</label>
+          <input id="authUsername" name="username" autocomplete="username" maxlength="12" pattern="[A-Za-z0-9]{1,12}" placeholder="字母或数字，1-12 位" required>
+        </div>
+        <div class="form-group">
+          <label for="authPassword">密码</label>
+          <input id="authPassword" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="设置一个密码" required>
+        </div>
+        <button type="submit" class="btn btn-primary auth-modal-submit" id="authModalSubmit">登录</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  /* ── Auth modal (login / register) — shared across pages ───────── */
+  (function initAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (!modal) return;
+    const form = document.getElementById('authModalForm');
+    const tabs = modal.querySelectorAll('.auth-tab');
+    const desc = document.getElementById('authModalDesc');
+    const errBox = document.getElementById('authModalError');
+    const submit = document.getElementById('authModalSubmit');
+    const userInput = document.getElementById('authUsername');
+    const passInput = document.getElementById('authPassword');
+    let mode = 'login';
+    let afterSuccess = null;
+
+    function setMode(next) {
+      mode = next === 'register' ? 'register' : 'login';
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.authTab === mode));
+      submit.textContent = mode === 'register' ? '注册并登录' : '登录';
+      desc.textContent = mode === 'register'
+        ? '注册一个新账号，立即就能评论。'
+        : '登录后即可发表评论。';
+      hideError();
+    }
+    function showError(msg) {
+      errBox.textContent = msg;
+      errBox.hidden = false;
+    }
+    function hideError() {
+      errBox.hidden = true;
+      errBox.textContent = '';
+    }
+    function open(opts) {
+      opts = opts || {};
+      afterSuccess = opts.onSuccess || null;
+      setMode(opts.mode || 'login');
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => userInput.focus(), 30);
+    }
+    function close() {
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      form.reset();
+      hideError();
+      afterSuccess = null;
+    }
+
+    // Expose a tiny global API so other scripts can trigger the modal.
+    window.AuthModal = { open, close };
+
+    tabs.forEach(t => t.addEventListener('click', () => setMode(t.dataset.authTab)));
+    modal.querySelectorAll('[data-auth-close]').forEach(el => el.addEventListener('click', close));
+    document.getElementById('authModalClose').addEventListener('click', close);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !modal.hidden) close();
+    });
+
+    // Nav buttons: data-auth-open="login|register" opens the matching tab.
+    // Other triggers: data-auth-trigger (e.g. comment box) open login + reload.
+    document.addEventListener('click', e => {
+      const opener = e.target.closest('[data-auth-open]');
+      if (opener) {
+        e.preventDefault();
+        open({ mode: opener.dataset.authOpen || 'login' });
+        return;
+      }
+      const trigger = e.target.closest('[data-auth-trigger]');
+      if (trigger) {
+        e.preventDefault();
+        open({ mode: trigger.dataset.authMode || 'login' });
+      }
+    });
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      hideError();
+      const username = userInput.value.trim();
+      const password = passInput.value;
+      if (!username || !password) {
+        showError('请输入用户名和密码');
+        return;
+      }
+      submit.disabled = true;
+      const prevText = submit.textContent;
+      submit.textContent = '处理中…';
+      try {
+        const resp = await fetch('/api/auth/' + mode, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || '操作失败');
+        const cb = afterSuccess;
+        close();
+        if (data.redirect) location.href = data.redirect;
+        else if (cb) cb(data);
+        else location.reload();
+      } catch (err) {
+        showError(err.message);
+        submit.disabled = false;
+        submit.textContent = prevText;
+      }
+    });
+  })();
+  </script>
   <script src="{{ url_for('static', filename='js/main.js') }}?v={{ config.ASSET_VERSION }}"></script>
   <script>if(location.pathname!=='/')document.getElementById('navBack').style.display='';</script>
   {% block scripts %}{% endblock %}

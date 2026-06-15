@@ -8,6 +8,7 @@
 @import url("components/admin.css");
 @import url("components/search.css");
 @import url("components/chat.css?v=2026-05-24-chat8");
+@import url("components/social.css?v=2026-06-15-social1");
 
 /* ── Font loading: prevent FOIT flash with size-adjust fallback ─── */
 @font-face {
