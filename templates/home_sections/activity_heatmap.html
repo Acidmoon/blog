@@ -59,15 +59,17 @@
 <script>
 (function(){
   var aw = document.currentScript.previousElementSibling;
-  // Ensure we have the .aw section, not the parent rail
   if (aw && !aw.classList.contains('aw')) {
     aw = aw.querySelector('.aw');
   }
   if (!aw) return;
 
+  var loading = false;
   window.awNavMonth = function(y, m) {
-    var btns = aw.querySelectorAll('.aw__nav');
-    btns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.5'; });
+    if (loading) return;
+    loading = true;
+
+    aw.classList.add('aw--loading');
 
     fetch('/api/heatmap?year=' + encodeURIComponent(y) + '&month=' + encodeURIComponent(m))
       .then(function(r){ return r.text(); })
@@ -76,13 +78,19 @@
         tmp.innerHTML = html;
         var newAw = tmp.querySelector('.aw');
         if (newAw && aw.parentNode) {
+          newAw.classList.add('aw--fadein');
           aw.parentNode.replaceChild(newAw, aw);
           aw = newAw;
+          requestAnimationFrame(function() {
+            aw.classList.remove('aw--fadein');
+          });
         }
+        loading = false;
       })
       .catch(function(err){
         console.error('Heatmap nav failed:', err);
-        btns.forEach(function(b){ b.disabled = false; b.style.opacity = ''; });
+        aw.classList.remove('aw--loading');
+        loading = false;
       });
   };
 })();

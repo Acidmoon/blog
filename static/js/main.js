@@ -372,6 +372,63 @@ function initArticleTOC() {
   }
 }
 
+/* ── Homepage AJAX Navigation (tag/page switch without reload) ── */
+function initHomeAjaxNav() {
+  var homeLayout = document.querySelector('.home-layout');
+  if (!homeLayout) return;
+
+  var mainContainer = homeLayout.querySelector('.home-sections');
+  var heroTitle = document.querySelector('.hero-title');
+  var heroSubtitle = document.querySelector('.hero-subtitle');
+  var heroLabel = document.querySelector('.hero-label');
+
+  function navigate(url) {
+    var params = new URL(url, location.origin).searchParams;
+    var apiUrl = '/api/home-sections?' + params.toString();
+
+    mainContainer.style.opacity = '0.5';
+    mainContainer.style.transition = 'opacity 0.15s';
+
+    fetch(apiUrl)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        mainContainer.innerHTML = data.html;
+        mainContainer.style.opacity = '1';
+
+        if (data.hero) {
+          if (heroTitle) heroTitle.textContent = data.hero.title || '';
+          if (heroSubtitle) heroSubtitle.textContent = data.hero.subtitle || '';
+          if (heroLabel) heroLabel.textContent = data.hero.label || '';
+        }
+
+        history.pushState(null, '', url);
+        initCardClick();
+        bindHomeLinks();
+
+        var articleList = mainContainer.querySelector('.article-list');
+        if (articleList) articleList.scrollTop = 0;
+      })
+      .catch(function() {
+        location.href = url;
+      });
+  }
+
+  function bindHomeLinks() {
+    mainContainer.querySelectorAll('.tag-filter a, .pagination .page-link').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        navigate(this.getAttribute('href'));
+      });
+    });
+  }
+
+  bindHomeLinks();
+
+  window.addEventListener('popstate', function() {
+    navigate(location.href);
+  });
+}
+
 /* ── Initialize ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
@@ -385,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initArticleTOC();
   initSearch();
   initWaterRipple();
+  initHomeAjaxNav();
 });
 
 })();

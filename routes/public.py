@@ -299,3 +299,46 @@ def api_heatmap():
     month = request.args.get("month", type=int)
     data = build_month_activity_heatmap(year=year, month=month)
     return render_template('home_sections/activity_heatmap.html', activity_heatmap=data)
+
+
+@bp.route('/api/home-sections')
+def api_home_sections():
+    """Return HTML fragments for tag/page switching without full reload."""
+    page = request.args.get('page', 1, type=int)
+    tag = request.args.get('tag', '').strip()
+    articles, total = list_published_articles(page=page, tag=tag)
+    layout = load_home_layout()
+    all_tags = list_all_tags()
+    all_home_sections = build_home_sections(
+        layout,
+        articles=articles,
+        page=page,
+        total=total,
+        current_tag=tag,
+        all_tags=all_tags,
+    )
+    sidebar_ids: set[str] = {"activity_heatmap"}
+    home_sections = [section for section in all_home_sections if section.get("id") not in sidebar_ids]
+    hero = resolve_hero(layout.get("hero"), tag)
+
+    full_html = ''.join(
+        render_template(
+            section['template'],
+            section_id=section['id'],
+            section_name=section['name'],
+            articles=section['context'].get('articles'),
+            page=section['context'].get('page'),
+            total=section['context'].get('total'),
+            per_page=section['context'].get('per_page'),
+            total_pages=section['context'].get('total_pages'),
+            current_tag=section['context'].get('current_tag'),
+            all_tags=section['context'].get('all_tags'),
+            daily_quote=section['context'].get('daily_quote'),
+        )
+        for section in home_sections
+    )
+
+    return jsonify({
+        'hero': hero,
+        'html': full_html,
+    })

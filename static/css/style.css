@@ -9,6 +9,24 @@
 @import url("components/search.css");
 @import url("components/chat.css?v=2026-05-24-chat8");
 
+/* ── Font loading: prevent FOIT flash with size-adjust fallback ─── */
+@font-face {
+  font-family: 'Noto Sans SC Fallback';
+  src: local('PingFang SC'), local('Microsoft YaHei'), local('sans-serif');
+  size-adjust: 100%;
+  ascent-override: 95%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Noto Serif SC Fallback';
+  src: local('STSong'), local('Songti SC'), local('Georgia');
+  size-adjust: 100%;
+  ascent-override: 95%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
 /* ── Theme Tokens ───────────────────────────────────── */
 :root {
   --hue-bg: 35;
@@ -53,9 +71,9 @@
 
   /* Typography stacks: keep CJK + Latin on compatible metrics so mixed
      Chinese/English/numbers don't look vertically jagged. */
-  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Inter",
+  --font-sans: "Noto Sans SC", "Noto Sans SC Fallback", "PingFang SC", "Microsoft YaHei", "Inter",
                -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Noto Serif SC", "Source Han Serif SC", "STSong",
+  --font-serif: "Noto Serif SC", "Noto Serif SC Fallback", "Source Han Serif SC", "STSong",
                 "Songti SC", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code",
                "Source Code Pro", Consolas, monospace;
@@ -114,6 +132,8 @@ body {
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
   transition: background 0.4s ease, color 0.3s ease;
   padding-top: 60px;
   position: relative;
@@ -152,7 +172,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 /* ── Left Rail (heatmap fills the left side) ───────────── */
 .left-rail {
-  position: absolute;
+  position: fixed;
   top: 60px;
   left: 0;
   width: calc((100vw - 740px) / 2 - 28px);
@@ -189,7 +209,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 /* Collapse left rail on narrow screens */
-@media (max-width: 850px) {
+@media (max-width: 1100px) {
   .left-rail {
     position: static;
     width: 100%;
