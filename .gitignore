@@ -6,3 +6,4 @@ data/blog.db
 data/articles/
 data/images/
 data/quote_cache.json
+.codegraph/
