@@ -14,20 +14,6 @@ from module_loader import REGISTRY
 from models import get_db
 from services.access_settings import get_access_settings
 from services.admin_modules import build_admin_nav, build_admin_nav_groups
-from services.ai_chat import (
-    ChatAPIError,
-    ChatRateLimitError,
-    ChatTimeoutError,
-    ChatValidationError,
-    MAX_CHAT_MESSAGES,
-    MAX_USER_MESSAGE_CHARS,
-    check_rate_limit,
-    get_public_chat_settings,
-    reset_rate_limits,
-    render_chat_markdown,
-    save_public_chat_settings,
-    validate_chat_messages,
-)
 from services.articles import (
     create_article_draft,
     delete_article as svc_delete_article,
@@ -40,34 +26,44 @@ from services.site_settings import delete_settings, get_setting, set_settings
 
 
 TABLES_TO_SNAPSHOT = [
-    'public_chat_ip_auth',
     'visitor_users',
     'visitor_tokens',
-    'chat_sessions',
-    'chat_messages',
-    'chat_files',
 ]
 TABLE_DELETE_ORDER = [
-    'chat_files',
-    'chat_messages',
-    'chat_sessions',
     'visitor_tokens',
     'visitor_users',
-    'public_chat_ip_auth',
 ]
 TABLE_INSERT_ORDER = [
-    'public_chat_ip_auth',
     'visitor_users',
     'visitor_tokens',
+]
+OPTIONAL_LEGACY_DELETE_TABLES = [
+    'chat_files',
+    'chat_messages',
+    'chat_sessions',
+    'public_chat_ip_auth',
+]
+OPTIONAL_LEGACY_INSERT_TABLES = [
+    'public_chat_ip_auth',
     'chat_sessions',
     'chat_messages',
     'chat_files',
 ]
+
+
+def _table_exists(db, table):
+    row = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return row is not None
 
 
 def _snapshot_tables(db):
     snapshots = {}
-    for table in TABLES_TO_SNAPSHOT:
+    for table in TABLES_TO_SNAPSHOT + OPTIONAL_LEGACY_INSERT_TABLES:
+        if not _table_exists(db, table):
+            continue
         rows = db.execute(f"SELECT * FROM {table}").fetchall()
         snapshots[table] = [dict(row) for row in rows]
     return snapshots
@@ -89,59 +85,35 @@ def _restore_table(db, table, rows):
 @pytest.fixture
 def reset_settings(app):
     keys = [
-        'public_chat_enabled',
-        'public_chat_api_base',
-        'public_chat_api_key',
-        'public_chat_model',
-        'public_chat_system_prompt',
-        'public_chat_rate_limit_minute',
-        'public_chat_rate_limit_day',
         'public_site_login_required',
         'visitor_login_enabled',
         'visitor_login_days',
-        'chat_file_upload_enabled',
-        'chat_file_max_mb',
-        'chat_user_storage_mb',
-        'chat_session_file_limit',
-        'chat_file_retention_days',
     ]
     with app.app_context():
         original = {key: get_setting(key, None) for key in keys}
         db = get_db()
         original_tables = _snapshot_tables(db)
-        for table in TABLE_DELETE_ORDER:
-            db.execute(f"DELETE FROM {table}")
+        for table in OPTIONAL_LEGACY_DELETE_TABLES + TABLE_DELETE_ORDER:
+            if _table_exists(db, table):
+                db.execute(f"DELETE FROM {table}")
         set_settings({
-            'public_chat_enabled': '0',
-            'public_chat_api_base': 'https://www.waterhill.cyou/v1',
-            'public_chat_api_key': '',
-            'public_chat_model': 'gpt-5.5',
-            'public_chat_system_prompt': 'test prompt',
-            'public_chat_rate_limit_minute': '5',
-            'public_chat_rate_limit_day': '100',
             'public_site_login_required': '0',
             'visitor_login_enabled': '0',
             'visitor_login_days': '7',
-            'chat_file_upload_enabled': '0',
-            'chat_file_max_mb': '10',
-            'chat_user_storage_mb': '100',
-            'chat_session_file_limit': '5',
-            'chat_file_retention_days': '30',
         })
         db.commit()
-        reset_rate_limits()
         reset_auth_rate_limits()
     yield
     with app.app_context():
         set_settings({key: value for key, value in original.items() if value is not None})
         delete_settings([key for key, value in original.items() if value is None])
         db = get_db()
-        for table in TABLE_DELETE_ORDER:
-            db.execute(f"DELETE FROM {table}")
-        for table in TABLE_INSERT_ORDER:
-            _restore_table(db, table, original_tables[table])
+        for table in OPTIONAL_LEGACY_DELETE_TABLES + TABLE_DELETE_ORDER:
+            if _table_exists(db, table):
+                db.execute(f"DELETE FROM {table}")
+        for table in TABLE_INSERT_ORDER + OPTIONAL_LEGACY_INSERT_TABLES:
+            _restore_table(db, table, original_tables.get(table, []))
         db.commit()
-        reset_rate_limits()
         reset_auth_rate_limits()
 
 
@@ -155,15 +127,6 @@ def _visitor_login(client, username='alice1', password='abc123', next_url='/', a
 
 def _visitor_register(client, username='alice1', password='abc123', next_url='/'):
     return _visitor_login(client, username=username, password=password, next_url=next_url, action='register')
-
-
-def _enable_public_chat(app):
-    with app.app_context():
-        set_settings({
-            'public_chat_enabled': '1',
-            'public_chat_api_key': 'test-key',
-            'public_chat_api_base': 'https://www.waterhill.cyou/v1',
-        })
 
 
 def _login_visitor(client, username='alice1', password='abc123'):
@@ -281,17 +244,31 @@ def test_secure_cookie_attributes_for_auth(client, reset_settings, monkeypatch):
 
 
 def test_expired_visitor_token_is_rejected_and_deleted(client, reset_settings):
+    slug = None
+    with client.application.app_context():
+        article = create_article_draft(
+            f'过期登录测试 {uuid.uuid4().hex[:8]}',
+            '测试',
+            '需要登录评论',
+        )
+        slug = article['slug']
+        publish_article(slug)
     _login_visitor(client, username='expire1', password='abc123')
     with client.application.app_context():
         db = get_db()
         db.execute("UPDATE visitor_tokens SET expires_at=0")
         db.commit()
-    r = client.get('/chat', follow_redirects=False)
-    assert r.status_code in (302, 303)
-    assert '/login' in r.location
-    with client.application.app_context():
-        db = get_db()
-        assert db.execute("SELECT COUNT(*) AS c FROM visitor_tokens").fetchone()['c'] == 0
+    try:
+        r = client.post(f'/api/article/{slug}/comments', json={'content': '过期登录评论'})
+        assert r.status_code == 401
+        assert r.get_json()['error'] == '请先登录'
+        with client.application.app_context():
+            db = get_db()
+            assert db.execute("SELECT COUNT(*) AS c FROM visitor_tokens").fetchone()['c'] == 0
+    finally:
+        if slug:
+            with client.application.app_context():
+                svc_delete_article(slug)
 
 
 def test_visitor_last_seen_update_is_throttled(client, reset_settings):
@@ -392,7 +369,7 @@ def test_all_core_modules_registered():
 
 def test_admin_nav_groups_keep_flat_nav_compatible():
     groups = build_admin_nav_groups()
-    assert [group['id'] for group in groups] == ['content', 'home', 'ai', 'access', 'system']
+    assert [group['id'] for group in groups] == ['content', 'home', 'access', 'system']
     flat = [item for group in groups for item in group['items']]
     assert build_admin_nav() == flat
 
@@ -407,188 +384,16 @@ def test_feature_scripts_are_served(client, reset_settings):
     for path in [
         '/static/js/auth-modal.js',
         '/static/js/article-social.js',
-        '/static/js/chat.js',
         '/static/js/editor.js',
     ]:
         r = client.get(path)
         assert r.status_code == 200
         assert 'function' in r.data.decode('utf-8')
 
-
-def test_public_chat_page_requires_login(client, reset_settings):
-    _enable_public_chat(client.application)
-    r = client.get('/chat')
-    assert r.status_code in (302, 303)
-
-
-def test_chat_page_contains_rail_toggle_and_history_shell(client, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-    r = client.get('/chat')
-    assert r.status_code == 200
-    html = r.data.decode('utf-8')
-    assert 'chatRailToggle' in html
-    assert 'chatSessionList' in html
-    assert 'chatRailDrawer' in html
-
-
-def test_public_chat_api_requires_login(client, reset_settings):
-    _enable_public_chat(client.application)
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 401
-
-
-def test_public_chat_disabled_returns_403(client, reset_settings):
-    _login_visitor(client)
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 403
-
-
-def test_public_chat_mock_success(client, monkeypatch, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-
-    def fake_completion(messages, client_ip, extra_system_context=''):
-        assert messages[-1]['role'] == 'user'
-        assert extra_system_context == ''
-        return 'mock answer'
-
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', fake_completion)
-    monkeypatch.setattr('services.chat_orchestrator.generate_chat_session_title', lambda messages: 'hello')
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 200
-    body = r.get_json()
-    assert body['content'] == 'mock answer'
-    assert '<p>mock answer</p>' in body['html']
-
-
-def test_public_chat_mock_success_generates_session_title(client, monkeypatch, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-
-    def fake_completion(messages, client_ip, extra_system_context=''):
-        return 'mock answer'
-
-    captured = {}
-
-    def fake_generate_title(messages):
-        captured['messages'] = messages
-        assert len(messages) == 2
-        assert messages[0]['role'] == 'user'
-        assert messages[1]['role'] == 'assistant'
-        assert messages[0]['content'] == 'hello'
-        assert messages[1]['content'] == 'mock answer'
-        return '怎么给会话起标题'
-
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', fake_completion)
-    monkeypatch.setattr('services.chat_orchestrator.generate_chat_session_title', fake_generate_title)
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 200
-    body = r.get_json()
-    assert body['session']['title'] == '怎么给会话起标题'
-    assert captured['messages'][0]['content'] == 'hello'
-    sessions = client.get('/api/chat/sessions').get_json()['sessions']
-    assert sessions[0]['title'] == '怎么给会话起标题'
-
-
-def test_public_chat_title_generation_failure_does_not_block_chat(client, monkeypatch, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-
-    def fake_completion(messages, client_ip, extra_system_context=''):
-        return 'mock answer'
-
-    def fake_generate_title(messages):
-        raise ChatAPIError('AI 接口返回格式无法解析')
-
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', fake_completion)
-    monkeypatch.setattr('services.chat_orchestrator.generate_chat_session_title', fake_generate_title)
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 200
-    body = r.get_json()
-    assert body['session']['title'] == 'hello'
-
-
-def test_public_chat_api_error_returns_json(client, monkeypatch, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-
-    def fake_completion(messages, client_ip, extra_system_context=''):
-        raise ChatAPIError('AI 接口返回格式无法解析')
-
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', fake_completion)
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 502
-    assert r.get_json()['error'] == 'AI 接口返回格式无法解析'
-
-
-def test_public_chat_timeout_returns_json(client, monkeypatch, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-
-    def fake_completion(messages, client_ip, extra_system_context=''):
-        raise ChatTimeoutError('AI 接口请求超时')
-
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', fake_completion)
-    r = client.post('/api/chat', json={'content': 'hello'})
-    assert r.status_code == 504
-    assert r.get_json()['error'] == 'AI 接口请求超时'
-
-
-def test_chat_session_is_owned_by_visitor(client, reset_settings, monkeypatch):
-    _enable_public_chat(client.application)
-    _login_visitor(client, username='alice1', password='abc123')
-    r = client.post('/api/chat/sessions', json={'title': 'A'})
-    session_id = r.get_json()['session']['id']
-    client.get('/logout')
-    _login_visitor(client, username='bob1', password='abc123')
-    r2 = client.get(f'/api/chat/sessions/{session_id}/messages')
-    assert r2.status_code == 404
-
-
-def test_chat_upload_disabled_by_default(client, reset_settings):
-    _login_visitor(client)
-    r = client.post('/api/chat/sessions', json={'title': 'A'})
-    session_id = r.get_json()['session']['id']
-    r2 = client.post(f'/api/chat/sessions/{session_id}/files', data={})
-    assert r2.status_code == 400 or r2.status_code == 404
-
-
-def test_chat_upload_enabled_shows_file_control(client, reset_settings):
-    _enable_public_chat(client.application)
-    with client.application.app_context():
-        set_settings({'chat_file_upload_enabled': '1'})
-    _login_visitor(client)
-    r = client.get('/chat')
-    assert r.status_code == 200
-    assert 'chatFileInput' in r.data.decode('utf-8')
-
-
-def test_chat_session_delete_works_for_owner(client, reset_settings):
-    _enable_public_chat(client.application)
-    _login_visitor(client)
-    r = client.post('/api/chat/sessions', json={'title': 'A'})
-    session_id = r.get_json()['session']['id']
-    r2 = client.delete(f'/api/chat/sessions/{session_id}')
-    assert r2.status_code == 200
-    r3 = client.get(f'/api/chat/sessions/{session_id}/messages')
-    assert r3.status_code == 404
-
-
-def test_site_settings_defaults_and_api_key_preserved(app, reset_settings):
-    with app.app_context():
-        settings = get_public_chat_settings()
-        assert settings['model'] == 'gpt-5.5'
-        set_settings({'public_chat_api_key': 'old-key'})
-        save_public_chat_settings({
-            'api_base': 'https://example.com/v1',
-            'api_key': '',
-            'model': 'gpt-5.5',
-            'system_prompt': 'hello',
-            'rate_limit_minute': '3',
-            'rate_limit_day': '9',
-        })
-        assert get_setting('public_chat_api_key') == 'old-key'
+def test_public_chat_routes_are_removed(client, reset_settings):
+    assert client.get('/chat').status_code == 404
+    assert client.post('/api/chat', json={'content': 'hello'}).status_code == 404
+    assert client.get('/api/chat/sessions').status_code == 404
 
 
 def test_access_settings_defaults(app, reset_settings):
@@ -597,7 +402,6 @@ def test_access_settings_defaults(app, reset_settings):
         assert settings['public_site_login_required'] is False
         assert settings['visitor_login_enabled'] is False
         assert settings['visitor_login_days'] == 7
-        assert settings['chat_file_upload_enabled'] is False
 
 
 def test_access_settings_reads_legacy_visitor_login_key(app, reset_settings):
@@ -607,43 +411,15 @@ def test_access_settings_reads_legacy_visitor_login_key(app, reset_settings):
         settings = get_access_settings()
         assert settings['public_site_login_required'] is True
 
-
-def test_validate_chat_messages_limits():
-    messages = [{'role': 'user', 'content': str(i)} for i in range(MAX_CHAT_MESSAGES + 3)]
-    assert len(validate_chat_messages(messages)) == MAX_CHAT_MESSAGES
-    with pytest.raises(ChatValidationError):
-        validate_chat_messages([{'role': 'system', 'content': 'bad'}])
-    with pytest.raises(ChatValidationError):
-        validate_chat_messages([{'role': 'user', 'content': 'x' * (MAX_USER_MESSAGE_CHARS + 1)}])
-
-
-def test_rate_limit_exceeded():
-    reset_rate_limits()
-    settings = {'rate_limit_minute': 1, 'rate_limit_day': 100}
-    check_rate_limit('127.0.0.1', settings, now=1000)
-    with pytest.raises(ChatRateLimitError):
-        check_rate_limit('127.0.0.1', settings, now=1001)
-
-
-def test_render_chat_markdown_sanitizes_html():
-    html = render_chat_markdown('**bold** $x^2$ <script>alert(1)</script>')
-    assert '<strong>bold</strong>' in html
-    assert 'arithmatex' in html
-    assert '<script>' not in html
-
-
 def test_public_pages_open_to_guests_by_default(client, reset_settings):
     for path in ['/', '/search?q=博客', '/article/这是我的博客的第一篇文章']:
         r = client.get(path)
         assert r.status_code == 200
-    r = client.get('/chat')
-    assert r.status_code in (302, 303)
-
 
 def test_public_pages_blocked_when_public_site_login_required(client, reset_settings):
     with client.application.app_context():
         set_settings({'public_site_login_required': '1'})
-    for path in ['/', '/search?q=博客', '/article/这是我的博客的第一篇文章', '/chat']:
+    for path in ['/', '/search?q=博客', '/article/这是我的博客的第一篇文章']:
         r = client.get(path)
         assert r.status_code in (302, 303)
 
@@ -654,15 +430,14 @@ def test_admin_login_open_to_guests(client, reset_settings):
 
 
 def test_nav_and_layout_pages_require_admin_login(client, reset_settings):
-    for path in ['/admin/layout', '/admin/chat-settings', '/admin/access-settings']:
+    for path in ['/admin/layout', '/admin/access-settings']:
         r = client.get(path, follow_redirects=True)
         assert '登录' in r.data.decode('utf-8')
 
 
-def test_chat_settings_page_for_logged_in_admin(login, reset_settings):
+def test_chat_settings_page_removed_for_logged_in_admin(login, reset_settings):
     r = login.get('/admin/chat-settings')
-    assert r.status_code == 200
-    assert 'AI 对话设置' in r.data.decode('utf-8')
+    assert r.status_code == 404
 
 
 def test_access_settings_page_for_logged_in_admin(login, reset_settings):

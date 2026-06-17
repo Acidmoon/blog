@@ -34,11 +34,6 @@ def build_admin_nav_groups() -> list[dict[str, Any]]:
             "items": [_nav_item(item.url, item.label) for item in admin_module_list()],
         },
         {
-            "id": "ai",
-            "label": "AI",
-            "items": [_nav_item("/admin/chat-settings", "AI 对话")],
-        },
-        {
             "id": "access",
             "label": "访问",
             "items": [_nav_item("/admin/access-settings", "访问设置")],

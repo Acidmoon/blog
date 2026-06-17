@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}账号登录 · {{ config.SITE_TITLE }}{% endblock %}
-{% block description %}登录后访问博客内容、AI 对话和后台管理{% endblock %}
+{% block description %}登录后访问博客内容、评论和后台管理{% endblock %}
 
 {% block content %}
 <main class="login-page visitor-login-page">
@@ -12,9 +12,9 @@
     </div>
     <p class="login-subtitle">
       {% if auth_mode == 'register' %}
-      创建账号后可以访问博客、评论和使用 AI 对话。
+      创建账号后可以访问博客和评论。
       {% else %}
-      登录后继续访问博客、评论、AI 对话和可用的后台功能。
+      登录后继续访问博客、评论和可用的后台功能。
       {% endif %}
     </p>
     {% if error %}

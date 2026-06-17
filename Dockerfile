@@ -21,7 +21,7 @@ COPY services ./services
 COPY static ./static
 COPY templates ./templates
 
-RUN mkdir -p /app/data/articles /app/data/chat_uploads /app/static/images
+RUN mkdir -p /app/data/articles /app/static/images
 
 EXPOSE 8082
 

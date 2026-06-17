@@ -5,7 +5,6 @@ from models import close_db, init_db
 from module_loader import load_modules
 from routes import register_blueprints
 from services.admin_modules import build_admin_nav, build_admin_nav_groups
-from services.ai_chat import is_public_chat_enabled
 from services.access_settings import is_public_site_login_required
 from services.auth import current_identity, safe_next_url
 from services.visitor_auth import current_visitor
@@ -38,7 +37,6 @@ def create_app():
         return {
             "admin_nav": build_admin_nav(),
             "admin_nav_groups": build_admin_nav_groups(),
-            "public_chat_enabled": is_public_chat_enabled,
             "public_site_login_required": is_public_site_login_required,
             "visitor_login_enabled": is_public_site_login_required,
             "current_identity": current_identity,

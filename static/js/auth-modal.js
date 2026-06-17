@@ -18,8 +18,8 @@
     submit.textContent = mode === 'register' ? '注册并登录' : '登录';
     passInput.setAttribute('autocomplete', mode === 'register' ? 'new-password' : 'current-password');
     desc.textContent = mode === 'register'
-      ? '注册账号后可以访问博客、评论和使用 AI 对话。'
-      : '登录后即可访问博客、评论、AI 对话和可用的后台功能。';
+      ? '注册账号后可以访问博客和评论。'
+      : '登录后即可访问博客、评论和可用的后台功能。';
     hideError();
   }
   function showError(msg) {

@@ -2,7 +2,6 @@ from flask import Blueprint, abort, flash, jsonify, make_response, redirect, ren
 
 from services.admin_modules import build_admin_module_context, build_admin_nav, build_admin_nav_groups, get_admin_module
 from services.access_settings import get_access_settings, save_access_settings
-from services.ai_chat import get_public_chat_admin_settings, save_public_chat_settings
 from services.ai_polish import get_public_polish_modes, get_public_polish_profiles
 from services.articles import (
     create_article_draft,
@@ -77,20 +76,6 @@ def dashboard():
 @admin_required
 def module_index():
     return render_template('admin/modules.html')
-
-
-@bp.route('/chat-settings', methods=['GET', 'POST'])
-@admin_required
-def chat_settings():
-    if request.method == 'POST':
-        try:
-            save_public_chat_settings(request.form)
-        except ValueError as exc:
-            flash(str(exc), 'error')
-        else:
-            flash('AI 对话设置已保存', 'success')
-            return redirect(url_for('admin.chat_settings'))
-    return render_template('admin/chat_settings.html', settings=get_public_chat_admin_settings())
 
 
 @bp.route('/access-settings', methods=['GET', 'POST'])

@@ -15,13 +15,11 @@
 │   ├── public.py          # public Blueprint 聚合入口，保持 endpoint 兼容
 │   ├── public_pages.py    # 首页、文章详情、搜索、静态资源路由
 │   ├── public_auth.py     # 访客登录、退出、弹窗认证 API
-│   ├── public_chat.py     # 公开 AI 对话页面和 API
 │   ├── public_social.py   # 文章评论、点赞 API
 │   ├── home_api.py        # 首页 AJAX 片段 API
 │   └── admin.py           # 后台页面入口，业务命令委托 services
 ├── services/              # 可复用业务逻辑
 │   ├── articles.py        # 文章文件、Markdown、标签、文章列表
-│   ├── chat_orchestrator.py # 公开聊天发送编排
 │   ├── media_uploads.py   # 后台媒体上传校验与保存
 │   ├── search.py          # 搜索和高亮
 │   ├── home_layout.py     # 首页一言配置、hitokoto、缓存
