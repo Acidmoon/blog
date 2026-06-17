@@ -1,0 +1,99 @@
+{# ────────────────────────────────────────────────────────────
+   icons.html — 全站图标宏
+
+   风格规范（与导航栏现有 inline SVG 一致）：
+     viewBox="0 0 24 24"  fill="none"  stroke="currentColor"
+     stroke-linecap="round"  stroke-linejoin="round"
+
+   用法：
+     {% from "macros/icons.html" import icon_calendar %}
+     {{ icon_calendar(16) }}          # 指定尺寸
+     {{ icon_calendar() }}            # 默认 18px
+
+   主题图标（月亮/太阳）成对渲染，靠 CSS 按 html[data-theme] 切换，
+   不依赖 JS 写 textContent。
+   ──────────────────────────────────────────────────────────── #}
+
+
+{# ── 通用：用 size 参数控制尺寸，默认 18 ── #}
+{% macro _svg(size, path_inner, svg_class='') -%}
+<svg class="{{ svg_class }}" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {{ path_inner|safe }}
+</svg>
+{%- endmacro %}
+
+
+{# ── 方向类 ── #}
+
+{% macro icon_back(size=18) -%}
+{{ _svg(size, '<polyline points="15 18 9 12 15 6"/>') }}
+{%- endmacro %}
+
+{% macro icon_chevron_left(size=18) -%}
+{{ _svg(size, '<polyline points="15 18 9 12 15 6"/>') }}
+{%- endmacro %}
+
+{% macro icon_chevron_right(size=18) -%}
+{{ _svg(size, '<polyline points="9 18 15 12 9 6"/>') }}
+{%- endmacro %}
+
+{% macro icon_send(size=18) -%}
+{{ _svg(size, '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>') }}
+{%- endmacro %}
+
+
+{# ── 内容/功能类 ── #}
+
+{% macro icon_search(size=18) -%}
+{{ _svg(size, '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>') }}
+{%- endmacro %}
+
+{% macro icon_calendar(size=18) -%}
+{{ _svg(size, '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>') }}
+{%- endmacro %}
+
+{% macro icon_edit(size=18) -%}
+{{ _svg(size, '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>') }}
+{%- endmacro %}
+
+{% macro icon_fire(size=18) -%}
+{{ _svg(size, '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>') }}
+{%- endmacro %}
+
+{% macro icon_mountain(size=18) -%}
+{{ _svg(size, '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>') }}
+{%- endmacro %}
+
+{% macro icon_heart(size=18, filled=true) -%}
+{{ _svg(size, '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"' ~ (' fill="currentColor"' if filled else '') ~ '/>') }}
+{%- endmacro %}
+
+
+{# ── 主题切换：月亮 + 太阳成对，靠 CSS 切换 ── #}
+{# html[data-theme="light"] 显示月亮（点击切到暗），反之显示太阳 ─ #}
+
+{% macro icon_moon(size=18) -%}
+<svg class="theme-icon theme-icon--moon" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+</svg>
+{%- endmacro %}
+
+{% macro icon_sun(size=18) -%}
+<svg class="theme-icon theme-icon--sun" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <circle cx="12" cy="12" r="5"/>
+  <line x1="12" y1="1" x2="12" y2="3"/>
+  <line x1="12" y1="21" x2="12" y2="23"/>
+  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+  <line x1="1" y1="12" x2="3" y2="12"/>
+  <line x1="21" y1="12" x2="23" y2="12"/>
+  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+</svg>
+{%- endmacro %}

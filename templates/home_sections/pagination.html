@@ -1,14 +1,15 @@
+{% from "macros/icons.html" import icon_chevron_left, icon_chevron_right %}
 {% if total_pages > 1 %}
 <nav class="pagination" role="navigation" aria-label="分页" data-home-section="pagination">
   {% if page > 1 %}
   <a href="?page={{ page-1 }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="page-link" aria-label="上一页">
-    ← 上一页
+    {{ icon_chevron_left(16) }} 上一页
   </a>
   {% endif %}
   <span class="page-info" aria-current="page">{{ page }} / {{ total_pages }}</span>
   {% if page < total_pages %}
   <a href="?page={{ page+1 }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="page-link" aria-label="下一页">
-    下一页 →
+    下一页 {{ icon_chevron_right(16) }}
   </a>
   {% endif %}
 </nav>

@@ -212,6 +212,11 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* Collapse left rail on narrow screens */
 @media (max-width: 1100px) {
+  /* 解除首页 app-shell 整页锁定，恢复窄屏的自然流淌滚动 */
+  html:has(.home-layout) {
+    overflow: auto;
+    height: auto;
+  }
   .left-rail {
     position: static;
     width: 100%;
@@ -244,9 +249,9 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 .water-ripple--ring {
-  border: 1.5px solid var(--accent-primary);
-  opacity: 0.6;
-  animation: rippleExpand 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  border: 2px solid var(--accent-primary);
+  opacity: 0.75;
+  animation: rippleExpand 0.95s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 .water-ripple--glow {
@@ -256,23 +261,49 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 .water-ripple--splash {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   background: var(--accent-primary);
-  opacity: 0.8;
-  animation: rippleSplash 0.5s ease-out forwards;
+  opacity: 0.85;
+  border-radius: 50%;
+  animation: rippleSplash 0.55s ease-out forwards;
+}
+
+/* 中央溅起的小水珠 —— JS 生成多个，各自带不同的 --dx/--dy 方向 */
+.water-ripple--drop {
+  width: 5px;
+  height: 5px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: rippleDrop 0.6s ease-out forwards;
+}
+
+@keyframes rippleDrop {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.6;
+  }
+  100% {
+    /* 水珠向斜上方抛射后回落（--dx/--dy 由 JS 注入方向） */
+    transform: translate(-50%, -50%) translate(var(--dx, 0px), calc(var(--dy, -30px) + 18px)) scale(0.3);
+    opacity: 0;
+  }
 }
 
 @keyframes rippleExpand {
   0% {
     width: 0;
     height: 0;
-    opacity: 0.6;
+    opacity: 0.75;
     transform: translate(-50%, -50%);
   }
   100% {
-    width: 80px;
-    height: 80px;
+    width: 120px;
+    height: 120px;
     opacity: 0;
     transform: translate(-50%, -50%);
   }
@@ -295,15 +326,15 @@ img { max-width: 100%; height: auto; display: block; }
 
 @keyframes rippleSplash {
   0% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0.9;
   }
-  50% {
-    transform: translate(-50%, -50%) scale(2.5);
-    opacity: 0.3;
+  40% {
+    transform: translate(-50%, -50%) scale(2.8);
+    opacity: 0.4;
   }
   100% {
-    transform: translate(-50%, -50%) scale(0.3);
+    transform: translate(-50%, -50%) scale(0.2);
     opacity: 0;
   }
 }
@@ -319,3 +350,44 @@ img { max-width: 100%; height: auto; display: block; }
 [data-theme="dark"] .water-ripple--splash {
   background: var(--accent-secondary);
 }
+[data-theme="dark"] .water-ripple--drop {
+  background: var(--accent-secondary);
+}
+
+
+/* ═══ Theme Toggle Icons ═══════════════════════════════════
+ *  主题切换按钮：月亮 + 太阳成对渲染，按 html[data-theme] 切换可见。
+ *  不再依赖 JS 写 textContent。
+ * ════════════════════════════════════════════════════════ */
+.theme-toggle .theme-icon { display: none; }
+/* 默认浅色：显示月亮（提示“点这里切到暗”） */
+html:not([data-theme="dark"]) .theme-toggle .theme-icon--moon { display: inline-block; }
+html[data-theme="dark"] .theme-toggle .theme-icon--sun { display: inline-block; }
+
+
+/* ═══ Reduced Motion ══════════════════════════════════════
+ *  尊重系统级“减弱动态效果”设置：禁用所有装饰性动画。
+ * ════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  body { transition: none; }
+  a { transition: none; }
+  /* 关闭入场动画 */
+  .hero-label, .hero-title, .hero-subtitle,
+  .article-card:not(:first-child) {
+    opacity: 1;
+    animation: none !important;
+  }
+  /* 关闭装饰性粒子 / 涟漪 / 水珠 */
+  .mist-particle { display: none; }
+  .water-ripple--ring,
+  .water-ripple--glow,
+  .water-ripple--splash,
+  .water-ripple--drop {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* 关闭卡片悬停位移 / glow */
+  .article-card:hover { transform: none; box-shadow: var(--shadow-soft); }
+}
+

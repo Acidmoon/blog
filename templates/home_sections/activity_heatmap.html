@@ -1,3 +1,4 @@
+{% from "macros/icons.html" import icon_edit, icon_fire, icon_calendar, icon_chevron_left, icon_chevron_right %}
 <section class="aw" aria-label="月度活动热力图"
          data-aw-year="{{ activity_heatmap.year }}"
          data-aw-month="{{ activity_heatmap.month }}"
@@ -6,25 +7,25 @@
          data-aw-hasnext="{{ '1' if activity_heatmap.has_next else '0' }}">
   <header class="aw__hd">
     <button class="aw__nav aw__nav--prev" aria-label="上个月"
-            onclick="awNavMonth('{{ activity_heatmap.prev_year }}','{{ activity_heatmap.prev_month }}')">◀</button>
+            onclick="awNavMonth('{{ activity_heatmap.prev_year }}','{{ activity_heatmap.prev_month }}')">{{ icon_chevron_left(16) }}</button>
     <div class="aw__title-block">
       <span class="aw__title serif">{{ activity_heatmap.year }}年{{ activity_heatmap.month_display }}</span>
       <span class="aw__eyebrow">文章活动热力图</span>
     </div>
     {% if activity_heatmap.has_next %}
     <button class="aw__nav aw__nav--next" aria-label="下个月"
-            onclick="awNavMonth('{{ activity_heatmap.next_year }}','{{ activity_heatmap.next_month }}')">▶</button>
+            onclick="awNavMonth('{{ activity_heatmap.next_year }}','{{ activity_heatmap.next_month }}')">{{ icon_chevron_right(16) }}</button>
     {% else %}
-    <span class="aw__nav aw__nav--disabled">▶</span>
+    <span class="aw__nav aw__nav--disabled">{{ icon_chevron_right(16) }}</span>
     {% endif %}
   </header>
 
   <div class="aw__body">
     <div class="aw__main">
       <div class="aw__stats">
-        <span class="aw__stat">📝 本月 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
-        <span class="aw__stat">🔥 <strong>{{ activity_heatmap.total }}</strong> 次活动</span>
-        <span class="aw__stat">📅 今年还剩 <strong>{{ activity_heatmap.days_remaining }}</strong> 天</span>
+        <span class="aw__stat">{{ icon_edit(14) }} 本月 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
+        <span class="aw__stat">{{ icon_fire(14) }} <strong>{{ activity_heatmap.total }}</strong> 次活动</span>
+        <span class="aw__stat">{{ icon_calendar(14) }} 今年还剩 <strong>{{ activity_heatmap.days_remaining }}</strong> 天</span>
       </div>
 
       <div class="aw__grid">

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/icons.html" import icon_send %}
 {% block title %}AI 对话 · {{ config.SITE_TITLE }}{% endblock %}
 {% block description %}和水浇岭博客的访客 AI 对话{% endblock %}
 
@@ -55,7 +56,7 @@
         <div class="chat-bottom">
           <form class="chat-composer" id="chatForm">
             <textarea id="chatInput" rows="1" maxlength="4000" placeholder="写下一个问题，Enter 直接发送，Shift+Enter 换行"></textarea>
-            <button type="submit" class="chat-send" id="chatSendBtn" aria-label="发送">↗</button>
+            <button type="submit" class="chat-send" id="chatSendBtn" aria-label="发送">{{ icon_send(18) }}</button>
           </form>
           <div class="chat-tools">
             {% if chat_upload_enabled %}

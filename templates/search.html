@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/icons.html" import icon_chevron_left, icon_chevron_right, icon_search %}
 {% block title %}搜索「{{ query }}」 · {{ config.SITE_TITLE }}{% endblock %}
 {% block description %}搜索「{{ query }}」的结果{% endblock %}
 
@@ -8,7 +9,7 @@
 
   <!-- Search Header -->
   <div class="search-header">
-    <a href="/" class="search-back-link">← 返回首页</a>
+    <a href="/" class="search-back-link">{{ icon_chevron_left(16) }} 返回首页</a>
     <h1 class="search-title serif">
       搜索<span class="search-query">「{{ query }}」</span>
     </h1>
@@ -49,7 +50,7 @@
     </article>
     {% else %}
     <div class="empty-state">
-      <div class="empty-state-icon">🔍</div>
+      <div class="empty-state-icon">{{ icon_search(48) }}</div>
       <p>没有找到与「{{ query }}」相关的文章</p>
       <p class="empty-state-hint">试试其他关键词，或返回<a href="/">首页</a>浏览全部文章</p>
     </div>
@@ -61,13 +62,13 @@
   <nav class="pagination" role="navigation" aria-label="分页">
     {% if page > 1 %}
     <a href="/search?q={{ query }}&page={{ page-1 }}" class="page-link" aria-label="上一页">
-      ← 上一页
+      {{ icon_chevron_left(16) }} 上一页
     </a>
     {% endif %}
     <span class="page-info" aria-current="page">{{ page }} / {{ total_pages }}</span>
     {% if page < total_pages %}
     <a href="/search?q={{ query }}&page={{ page+1 }}" class="page-link" aria-label="下一页">
-      下一页 →
+      下一页 {{ icon_chevron_right(16) }}
     </a>
     {% endif %}
   </nav>

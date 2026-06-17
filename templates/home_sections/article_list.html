@@ -1,6 +1,7 @@
+{% from "macros/icons.html" import icon_mountain, icon_calendar %}
 <div class="article-list" data-home-section="article_list">
   {% for article in articles %}
-  <article class="article-card" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
+  <article class="article-card">
     <h2 class="article-title serif">
       <a href="/article/{{ article.slug }}">{{ article.title }}</a>
     </h2>
@@ -9,7 +10,7 @@
       {% set yn = article.created_at[:4] %}
       {% set mn = article.created_at[5:7]|int %}
       {% set dn = article.created_at[8:10]|int %}
-      <time>{{ yn }}年{{ mn }}月{{ dn }}日 {{ article.created_at[11:19] }}</time>
+      <time>{{ icon_calendar(14) }} {{ yn }}年{{ mn }}月{{ dn }}日 {{ article.created_at[11:19] }}</time>
       {% if article.current_word_count %}
       · <span class="article-words">{{ article.current_word_count }} 字</span>
       {% endif %}
@@ -27,7 +28,7 @@
   </article>
   {% else %}
   <div class="empty-state">
-    <div class="empty-state-icon">🏔️</div>
+    <div class="empty-state-icon">{{ icon_mountain(48) }}</div>
     <p>还没有文章，等水浇岭来浇灌吧</p>
   </div>
   {% endfor %}
