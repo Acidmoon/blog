@@ -99,6 +99,7 @@ def _create_visitor(username: str, password: str, client_ip: str = '') -> dict:
         'id': cur.lastrowid,
         'username': username,
         'password_hash': password_hash,
+        'is_admin': False,
         'created_at': now,
         'last_ip': client_ip,
         'last_seen_at': now,
@@ -117,12 +118,24 @@ def _authenticate_existing_visitor(username: str, password: str, client_ip: str 
     now = _now_text()
     if not check_password_hash(row['password_hash'], password):
         raise VisitorAuthError('密码错误，请重新输入')
+    is_configured_admin = is_admin_username(username)
     conn.execute(
-        "UPDATE visitor_users SET last_ip=?, last_seen_at=? WHERE id=?",
-        (client_ip, now, row['id']),
+        "UPDATE visitor_users SET is_admin=?, last_ip=?, last_seen_at=? WHERE id=?",
+        (1 if is_configured_admin else int(row['is_admin']), client_ip, now, row['id']),
     )
     conn.commit()
-    return dict(row)
+    visitor = dict(row)
+    visitor['is_admin'] = bool(is_configured_admin or visitor.get('is_admin'))
+    return visitor
+
+
+def _visitor_exists(username: str) -> bool:
+    conn = get_db()
+    row = conn.execute(
+        "SELECT 1 FROM visitor_users WHERE username=?",
+        (username,),
+    ).fetchone()
+    return row is not None
 
 
 def authenticate_or_create_visitor(username: str, password: str, client_ip: str = '') -> dict:
@@ -189,6 +202,7 @@ def get_visitor_from_token(raw_token: str | None, now: float | None = None) -> d
             vt.expires_at,
             vu.id AS user_id,
             vu.username AS username,
+            vu.is_admin AS is_admin,
             vu.created_at AS created_at,
             vu.last_ip AS last_ip,
             vu.last_seen_at AS last_seen_at
@@ -219,6 +233,7 @@ def get_visitor_from_token(raw_token: str | None, now: float | None = None) -> d
     return {
         'id': row['user_id'],
         'username': row['username'],
+        'is_admin': bool(row['is_admin']),
         'created_at': row['created_at'],
         'last_ip': row['last_ip'],
         'last_seen_at': row['last_seen_at'],
@@ -278,11 +293,17 @@ def register_visitor(username: str, password: str) -> tuple[dict, str, float]:
 
 def login_existing_visitor(username: str, password: str) -> tuple[dict, str, float]:
     """Explicit sign-in: fail if the username does not exist."""
-    if is_admin_username(username):
-        raise VisitorAuthError('请使用管理员入口登录')
     username, password = validate_visitor_credentials(username, password)
     client_ip = _client_ip()
-    visitor = _authenticate_existing_visitor(username, password, client_ip)
+    try:
+        visitor = _authenticate_existing_visitor(username, password, client_ip)
+    except VisitorAuthError as exc:
+        if is_admin_username(username):
+            try:
+                return authenticate_admin(username, password)
+            except VisitorAuthError:
+                pass
+        raise exc
     token, expires_at = issue_visitor_token(visitor['id'], client_ip)
     return visitor, token, expires_at
 
@@ -305,29 +326,38 @@ def _ensure_admin_visitor(client_ip: str = '') -> dict:
     password_hash = generate_password_hash(config.ADMIN_PASSWORD)
     if row:
         conn.execute(
-            "UPDATE visitor_users SET password_hash=?, last_ip=?, last_seen_at=? WHERE id=?",
+            "UPDATE visitor_users SET password_hash=?, is_admin=1, last_ip=?, last_seen_at=? WHERE id=?",
             (password_hash, client_ip, now, row['id']),
         )
         conn.commit()
-        return {'id': row['id'], 'username': config.ADMIN_USERNAME}
+        return {'id': row['id'], 'username': config.ADMIN_USERNAME, 'is_admin': True}
     cur = conn.execute(
         """
-        INSERT INTO visitor_users (username, password_hash, created_at, last_ip, last_seen_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO visitor_users (username, password_hash, is_admin, created_at, last_ip, last_seen_at)
+        VALUES (?, ?, 1, ?, ?, ?)
         """,
         (config.ADMIN_USERNAME, password_hash, now, client_ip, now),
     )
     conn.commit()
-    return {'id': cur.lastrowid, 'username': config.ADMIN_USERNAME}
+    return {'id': cur.lastrowid, 'username': config.ADMIN_USERNAME, 'is_admin': True}
 
 
-def authenticate_admin(password: str) -> tuple[dict, str, float]:
-    """Authenticate the reserved admin username against ADMIN_PASSWORD.
+def ensure_configured_admin_user(client_ip: str = '') -> dict:
+    """Ensure the configured admin account exists and has admin privileges."""
+    return _ensure_admin_visitor(client_ip)
+
+
+def authenticate_admin(username: str, password: str | None = None) -> tuple[dict, str, float]:
+    """Authenticate the configured admin account.
 
     Raises VisitorAuthError if the password is wrong. On success, syncs the
-    admin's visitor_users row and issues a visitor token. The caller is
-    responsible for granting the Flask admin session.
+    admin's visitor_users row and issues a visitor token.
     """
+    if password is None:
+        password = username
+        username = config.ADMIN_USERNAME
+    if not is_admin_username(username):
+        raise VisitorAuthError('管理员用户名错误')
     if not secrets.compare_digest(str(password or ''), str(config.ADMIN_PASSWORD or '')):
         raise VisitorAuthError('管理密码错误')
     client_ip = _client_ip()

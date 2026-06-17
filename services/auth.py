@@ -129,9 +129,10 @@ def current_identity() -> AuthIdentity:
 
     visitor = current_visitor()
     admin_session_active = is_admin_authenticated()
+    is_admin_user = bool(visitor and visitor.get('is_admin'))
     identity = AuthIdentity(
         visitor=visitor,
-        is_admin=admin_session_active,
+        is_admin=admin_session_active and is_admin_user,
         admin_session_active=admin_session_active,
     )
     g.auth_identity = identity
@@ -141,12 +142,12 @@ def current_identity() -> AuthIdentity:
 def admin_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if is_admin_authenticated():
+        if current_identity().is_admin:
             return f(*args, **kwargs)
         if request.path.startswith('/admin/api/') or request.is_json:
             return jsonify({'error': '请先登录管理员账号'}), 401
         next_url = safe_next_url(request.full_path.rstrip('?'), url_for('admin.dashboard'))
-        return redirect(url_for('admin.login', next=next_url))
+        return redirect(url_for('public.login', next=next_url))
 
     return wrapper
 

@@ -173,7 +173,7 @@ def _login_visitor(client, username='alice1', password='abc123'):
 
 
 def _admin_login(client):
-    r = client.post('/admin/login', data={'password': 'admin123'}, follow_redirects=False)
+    r = _visitor_login(client, username='Acidmoon', password='admin123', next_url='/admin')
     assert r.status_code in (302, 303)
     return client
 
@@ -195,7 +195,7 @@ def test_login_page_returns_200(client, reset_settings):
     r = client.get('/login')
     assert r.status_code == 200
     html = r.data.decode('utf-8')
-    assert '访客账号' in html
+    assert '账号登录' in html
     assert '注册' in html
     assert 'current-password' in html
     assert client.get('/login?mode=register').status_code == 200
@@ -266,7 +266,7 @@ def test_secure_cookie_attributes_for_auth(client, reset_settings, monkeypatch):
     original_session_cookie_secure = client.application.config['SESSION_COOKIE_SECURE']
     client.application.config['SESSION_COOKIE_SECURE'] = True
     try:
-        r = client.post('/admin/login', data={'password': 'admin123'}, follow_redirects=False)
+        r = _visitor_login(client, username='Acidmoon', password='admin123', next_url='/admin')
         cookies = r.headers.getlist('Set-Cookie')
         visitor_cookie = next(cookie for cookie in cookies if cookie.startswith('visitor_token='))
         session_cookie = next(cookie for cookie in cookies if cookie.startswith('session='))
@@ -326,23 +326,49 @@ def test_admin_routes_still_require_admin_login(client, reset_settings):
     assert '登录' in r.data.decode('utf-8')
 
 
+def test_acidmoon_user_is_admin(client, reset_settings):
+    _admin_login(client)
+    r = client.get('/admin')
+    assert r.status_code == 200
+    assert '后台' in r.data.decode('utf-8')
+
+
+def test_config_admin_password_resets_existing_acidmoon(client, reset_settings):
+    _visitor_register(client, username='Acidmoon', password='oldpass')
+    client.get('/logout')
+    _admin_login(client)
+    r = client.get('/admin')
+    assert r.status_code == 200
+    assert '后台' in r.data.decode('utf-8')
+
+
+def test_regular_user_cannot_access_admin(client, reset_settings):
+    _visitor_register(client, username='user1', password='abc123')
+    r = client.get('/admin', follow_redirects=False)
+    assert r.status_code in (302, 303)
+    assert '/login' in r.location
+    r = _visitor_login(client, username='user1', password='abc123', next_url='/admin')
+    assert r.status_code == 403
+    assert '当前账号没有管理员权限' in r.data.decode('utf-8')
+
+
 def test_admin_login_next_url_rejects_external_redirect(client, reset_settings):
     r = client.post(
-        '/admin/login',
-        data={'password': 'admin123', 'next': 'https://evil.example/'},
+        '/login',
+        data={'username': 'Acidmoon', 'password': 'admin123', 'next': 'https://evil.example/', 'action': 'login'},
         follow_redirects=False,
     )
     assert r.status_code in (302, 303)
-    assert r.location == '/admin'
+    assert r.location == '/'
 
 
-def test_admin_login_rate_limited_by_ip(client, reset_settings, monkeypatch):
-    monkeypatch.setattr(config, 'ADMIN_LOGIN_MAX_ATTEMPTS', 2)
-    monkeypatch.setattr(config, 'ADMIN_LOGIN_WINDOW_SECONDS', 900)
+def test_unified_login_rate_limited_by_ip(client, reset_settings, monkeypatch):
+    monkeypatch.setattr(config, 'VISITOR_AUTH_MAX_ATTEMPTS', 2)
+    monkeypatch.setattr(config, 'VISITOR_AUTH_WINDOW_SECONDS', 900)
     for _ in range(2):
-        r = client.post('/admin/login', data={'password': 'wrong'}, follow_redirects=False)
+        r = _visitor_login(client, username='Acidmoon', password='wrong', next_url='/admin')
         assert r.status_code == 200
-    r = client.post('/admin/login', data={'password': 'wrong'}, follow_redirects=False)
+    r = _visitor_login(client, username='Acidmoon', password='wrong', next_url='/admin')
     assert r.status_code == 429
     assert '操作过于频繁' in r.data.decode('utf-8')
 
@@ -354,7 +380,7 @@ def test_admin_session_expires(client, reset_settings, monkeypatch):
         sess['admin_login_at'] = time.time() - 10
     r = client.get('/admin', follow_redirects=False)
     assert r.status_code in (302, 303)
-    assert '/admin/login' in r.location
+    assert '/login' in r.location
 
 
 def test_all_core_modules_registered():

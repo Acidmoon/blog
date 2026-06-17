@@ -19,5 +19,5 @@ def client(app):
 @pytest.fixture
 def login(client):
     """Log in and return the client with an active session."""
-    client.post('/admin/login', data={'password': 'admin123'})
+    client.post('/login', data={'username': 'Acidmoon', 'password': 'admin123', 'next': '/admin', 'action': 'login'})
     return client

@@ -68,6 +68,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             last_ip TEXT DEFAULT '',
             last_seen_at TEXT DEFAULT ''
@@ -142,5 +143,13 @@ def init_db():
         conn.execute("ALTER TABLE articles ADD COLUMN word_count INTEGER DEFAULT 0")
     except Exception:
         pass  # column already exists
+    try:
+        conn.execute("ALTER TABLE visitor_users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass  # column already exists
+    conn.execute(
+        "UPDATE visitor_users SET is_admin=1 WHERE username=?",
+        (config.ADMIN_USERNAME,),
+    )
     conn.commit()
     conn.close()

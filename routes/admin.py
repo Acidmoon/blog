@@ -1,6 +1,5 @@
 from flask import Blueprint, abort, flash, jsonify, make_response, redirect, render_template, request, url_for
 
-import config
 from services.admin_modules import build_admin_module_context, build_admin_nav, build_admin_nav_groups, get_admin_module
 from services.access_settings import get_access_settings, save_access_settings
 from services.ai_chat import get_public_chat_admin_settings, save_public_chat_settings
@@ -17,23 +16,15 @@ from services.articles import (
     update_article as svc_update_article,
 )
 from services.auth import (
-    AuthRateLimitError,
     admin_required,
-    check_auth_rate_limit,
     clear_admin_session,
     current_identity,
-    mark_admin_authenticated,
-    record_auth_failure,
-    record_auth_success,
     safe_next_url,
 )
 from services.media_uploads import MediaUploadError, save_admin_image
 from services.visitor_auth import (
-    VisitorAuthError,
-    authenticate_admin,
     clear_visitor_cookie,
     revoke_current_visitor_token,
-    set_visitor_cookie,
 )
 from services.home_layout_admin import handle_layout
 from services.wechat_export import build_digest, render_wechat_html
@@ -52,32 +43,17 @@ def inject_admin_nav():
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     next_url = safe_next_url(request.values.get('next'), url_for('admin.dashboard'))
-    if request.method == 'GET' and current_identity().is_admin:
+    if current_identity().is_admin:
         return redirect(next_url)
     if request.method == 'POST':
-        scope = 'admin_login'
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
-        try:
-            check_auth_rate_limit(
-                scope,
-                ip,
-                config.ADMIN_LOGIN_MAX_ATTEMPTS,
-                config.ADMIN_LOGIN_WINDOW_SECONDS,
-            )
-            visitor, token, expires_at = authenticate_admin(request.form.get('password', ''))
-        except AuthRateLimitError as exc:
-            flash(str(exc), 'error')
-            return render_template('admin/login.html', next_url=next_url), 429
-        except VisitorAuthError:
-            record_auth_failure(scope, ip, config.ADMIN_LOGIN_WINDOW_SECONDS)
-            flash('密码错误', 'error')
-        else:
-            record_auth_success(scope, ip)
-            mark_admin_authenticated()
-            response = make_response(redirect(next_url))
-            set_visitor_cookie(response, token, expires_at)
-            return response
-    return render_template('admin/login.html', next_url=next_url)
+        return redirect(url_for('public.login', next=next_url))
+    return render_template(
+        'login.html',
+        error='',
+        next_url=next_url,
+        auth_mode='login',
+        admin_context=True,
+    )
 
 
 @bp.route('/logout')

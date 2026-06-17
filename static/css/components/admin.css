@@ -726,16 +726,6 @@ body.zen-mode .zen-exit-btn {
   margin: 8px 0 20px;
   color: var(--text-secondary);
 }
-.admin-login-link {
-  display: inline-flex;
-  margin-top: 18px;
-  color: var(--text-tertiary);
-  font-size: 0.86rem;
-  text-decoration: none;
-}
-.admin-login-link:hover {
-  color: var(--accent-primary);
-}
 .login-card h2 {
   text-align: center;
   margin-bottom: 28px;
