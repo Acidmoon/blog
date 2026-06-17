@@ -4,9 +4,10 @@ import config
 from models import close_db, init_db
 from module_loader import load_modules
 from routes import register_blueprints
-from services.admin_modules import build_admin_nav
+from services.admin_modules import build_admin_nav, build_admin_nav_groups
 from services.ai_chat import is_public_chat_enabled
-from services.access_settings import is_visitor_login_enabled
+from services.access_settings import is_public_site_login_required
+from services.auth import current_identity, safe_next_url
 from services.visitor_auth import current_visitor
 
 
@@ -36,8 +37,11 @@ def create_app():
     def inject_global_admin_nav():
         return {
             "admin_nav": build_admin_nav(),
+            "admin_nav_groups": build_admin_nav_groups(),
             "public_chat_enabled": is_public_chat_enabled,
-            "visitor_login_enabled": is_visitor_login_enabled,
+            "public_site_login_required": is_public_site_login_required,
+            "visitor_login_enabled": is_public_site_login_required,
+            "current_identity": current_identity,
             "current_visitor": current_visitor,
         }
 
@@ -45,7 +49,7 @@ def create_app():
 
     @app.before_request
     def require_visitor_for_public_site():
-        if not is_visitor_login_enabled():
+        if not is_public_site_login_required():
             return None
         endpoint = request.endpoint or ''
         path = request.path or ''
@@ -61,7 +65,8 @@ def create_app():
             return None
         if path.startswith('/api/'):
             return jsonify({'error': '请先登录'}), 401
-        return redirect(url_for('public.login', next=request.full_path.rstrip('?')))
+        next_url = safe_next_url(request.full_path.rstrip('?'), url_for('public.index'))
+        return redirect(url_for('public.login', next=next_url))
 
     return app
 

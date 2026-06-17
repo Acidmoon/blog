@@ -1,4 +1,5 @@
 import re
+import sqlite3
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -62,6 +63,73 @@ def delete_article_file(slug):
     path = Path(config.ARTICLES_DIR) / f"{slug}.md"
     if path.exists():
         path.unlink()
+
+
+def create_article_draft(title: str, tags: str, content: str) -> dict:
+    """Create a draft article and its markdown file as one service operation."""
+    title = str(title or '').strip()
+    tags = str(tags or '').strip()
+    content = str(content or '').strip()
+    if not title or not content:
+        raise ValueError('标题和内容不能为空')
+
+    base_slug = slugify(title)
+    now = datetime.now().isoformat()
+    word_count = _count_words(content)
+    conn = get_db()
+    slug = base_slug
+    for attempt in range(8):
+        try:
+            conn.execute(
+                """
+                INSERT INTO articles (slug, title, tags, created_at, updated_at, published, word_count)
+                VALUES (?, ?, ?, ?, ?, 0, ?)
+                """,
+                (slug, title, tags, now, now, word_count),
+            )
+            conn.commit()
+            break
+        except sqlite3.IntegrityError:
+            if attempt == 7:
+                raise
+            slug = f"{base_slug}-{uuid.uuid4().hex[:4]}"
+    try:
+        write_article_file(slug, content)
+    except Exception:
+        conn.execute("DELETE FROM articles WHERE slug=?", (slug,))
+        conn.commit()
+        raise
+    return get_article_meta(slug, published_only=False)
+
+
+def update_article(slug: str, title: str, tags: str, content: str) -> dict:
+    """Update article metadata and markdown content."""
+    article = get_article_meta(slug, published_only=False)
+    if not article:
+        raise LookupError('文章不存在')
+    title = str(title or '').strip()
+    tags = str(tags or '').strip()
+    content = str(content or '').strip()
+    if not title or not content:
+        raise ValueError('标题和内容不能为空')
+
+    now = datetime.now().isoformat()
+    conn = get_db()
+    conn.execute(
+        "UPDATE articles SET title=?, tags=?, updated_at=?, word_count=? WHERE slug=?",
+        (title, tags, now, _count_words(content), slug),
+    )
+    conn.commit()
+    write_article_file(slug, content)
+    return get_article_meta(slug, published_only=False)
+
+
+def delete_article(slug: str) -> None:
+    """Delete an article row and its markdown file."""
+    conn = get_db()
+    conn.execute("DELETE FROM articles WHERE slug=?", (slug,))
+    conn.commit()
+    delete_article_file(slug)
 
 
 def list_all_tags():

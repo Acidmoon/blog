@@ -36,6 +36,7 @@ class AdminModuleDefinition:
     order: int = 100
     template: str | None = None
     build_context: Callable[[], dict[str, Any]] | None = None
+    handler: Callable[[], Any] | None = None
 
 
 @dataclass
@@ -100,6 +101,7 @@ def _coerce_admin_module(raw: Any) -> AdminModuleDefinition:
         order=int(raw.get("order", 100) or 100),
         template=raw.get("template"),
         build_context=raw.get("build_context"),
+        handler=raw.get("handler"),
     )
 
 

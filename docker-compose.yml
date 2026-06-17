@@ -1,40 +1,45 @@
-version: '3'
+name: waterhill-blog
+
 services:
   blog:
-    build: .
+    image: waterhill-blog:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
     container_name: waterhill-blog
-    restart: always
-    command: ["gunicorn", "-w", "2", "-t", "120", "--reload", "-b", "0.0.0.0:8082", "app:app"]
+    restart: unless-stopped
+    init: true
     ports:
-      - "8082:8082"
+      - "${BLOG_PORT:-8082}:8082"
     environment:
-      - TZ=Asia/Shanghai
-      - BLOG_SECRET_KEY=${BLOG_SECRET_KEY:-change-me}
-      - ADMIN_PASSWORD=132456758Dzy
-      - AI_POLISH_API_BASE=https://www.waterhill.cyou/v1
-      - AI_POLISH_API_KEY=${AI_POLISH_API_KEY:-}
-      - AI_POLISH_MODEL=gpt-5.5
-      - AI_POLISH_MODELS=gpt-5.5,gpt-5.4,gpt-4.1
-      - AI_POLISH_MIMO_API_BASE=https://www.waterhill.cyou/v1
-      - AI_POLISH_MIMO_API_KEY=${AI_POLISH_MIMO_API_KEY:-}
-      - AI_POLISH_MIMO_MODEL=mimo-v2.5-pro
-      - AI_POLISH_MIMO_MODELS=mimo-v2.5-pro
-      - AI_POLISH_DEEPSEEK_API_BASE=https://api.deepseek.com/v1
-      - AI_POLISH_DEEPSEEK_API_KEY=${AI_POLISH_DEEPSEEK_API_KEY:-}
-      - AI_POLISH_DEEPSEEK_MODEL=deepseek-v4-flash
-      - AI_POLISH_DEEPSEEK_MODELS=deepseek-v4-pro,deepseek-v4-flash
+      TZ: ${TZ:-Asia/Shanghai}
+      PORT: 8082
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+      BLOG_SECRET_KEY: ${BLOG_SECRET_KEY:?set BLOG_SECRET_KEY in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Acidmoon}
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
+      ADMIN_SESSION_MAX_AGE_SECONDS: ${ADMIN_SESSION_MAX_AGE_SECONDS:-43200}
+      ARTICLES_DIR: /app/data/articles
+      ASSET_VERSION: ${ASSET_VERSION:-2026-06-17-architecture-refactor}
+      AI_CHAT_TIMEOUT: ${AI_CHAT_TIMEOUT:-90}
+      AI_POLISH_TIMEOUT: ${AI_POLISH_TIMEOUT:-60}
+      AI_POLISH_API_BASE: ${AI_POLISH_API_BASE:-https://www.waterhill.cyou/v1}
+      AI_POLISH_API_KEY: ${AI_POLISH_API_KEY:-}
+      AI_POLISH_MODEL: ${AI_POLISH_MODEL:-gpt-5.5}
+      AI_POLISH_MODELS: ${AI_POLISH_MODELS:-gpt-5.5,gpt-5.4,gpt-4.1}
+      AI_POLISH_MIMO_API_BASE: ${AI_POLISH_MIMO_API_BASE:-https://www.waterhill.cyou/v1}
+      AI_POLISH_MIMO_API_KEY: ${AI_POLISH_MIMO_API_KEY:-}
+      AI_POLISH_MIMO_MODEL: ${AI_POLISH_MIMO_MODEL:-mimo-v2.5-pro}
+      AI_POLISH_MIMO_MODELS: ${AI_POLISH_MIMO_MODELS:-mimo-v2.5-pro}
+      AI_POLISH_DEEPSEEK_API_BASE: ${AI_POLISH_DEEPSEEK_API_BASE:-https://api.deepseek.com/v1}
+      AI_POLISH_DEEPSEEK_API_KEY: ${AI_POLISH_DEEPSEEK_API_KEY:-}
+      AI_POLISH_DEEPSEEK_MODEL: ${AI_POLISH_DEEPSEEK_MODEL:-deepseek-v4-flash}
+      AI_POLISH_DEEPSEEK_MODELS: ${AI_POLISH_DEEPSEEK_MODELS:-deepseek-v4-pro,deepseek-v4-flash}
     volumes:
+      - ./data:/app/data
+      - ./data/images:/app/static/images
+      - ./home_layout.json:/app/home_layout.json
       - /etc/localtime:/etc/localtime:ro
-      - /root/blog/data/articles:/app/articles
-      - /root/blog/data/images:/app/static/images
-      - /root/blog/data:/app/data
-      - /root/blog/templates:/app/templates
-      - /root/blog/static/css:/app/static/css
-      - /root/blog/static/js:/app/static/js
-      - /root/blog/home_layout.json:/app/home_layout.json
-      - /root/blog/config.py:/app/config.py
-      - /root/blog/app.py:/app/app.py
-      - /root/blog/routes:/app/routes
-      - /root/blog/services:/app/services
-      - /root/blog/models.py:/app/models.py
-      - /root/blog/modules:/app/modules

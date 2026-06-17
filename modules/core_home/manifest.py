@@ -1,4 +1,5 @@
 from module_loader import AdminModuleDefinition
+from services.home_layout_admin import handle_layout
 
 MODULE = {
     "id": "core_home",
@@ -11,6 +12,7 @@ MODULE = {
             description="管理首页 Hero 区域、每日一言与模块顺序",
             icon="📜",
             order=20,
+            handler=handle_layout,
         ),
     ],
     "home_sections": [],

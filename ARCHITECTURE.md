@@ -12,10 +12,17 @@
 ├── module_loader.py       # 自定义模块发现、manifest 解析、Blueprint/section 注册
 ├── modules/               # 可插拔模块目录，每个子目录可提供 manifest.py
 ├── routes/                # 页面和接口入口
-│   ├── public.py          # 首页、文章详情、搜索、静态资源路由
-│   └── admin.py           # 登录、文章 CRUD、上传、一言配置
+│   ├── public.py          # public Blueprint 聚合入口，保持 endpoint 兼容
+│   ├── public_pages.py    # 首页、文章详情、搜索、静态资源路由
+│   ├── public_auth.py     # 访客登录、退出、弹窗认证 API
+│   ├── public_chat.py     # 公开 AI 对话页面和 API
+│   ├── public_social.py   # 文章评论、点赞 API
+│   ├── home_api.py        # 首页 AJAX 片段 API
+│   └── admin.py           # 后台页面入口，业务命令委托 services
 ├── services/              # 可复用业务逻辑
 │   ├── articles.py        # 文章文件、Markdown、标签、文章列表
+│   ├── chat_orchestrator.py # 公开聊天发送编排
+│   ├── media_uploads.py   # 后台媒体上传校验与保存
 │   ├── search.py          # 搜索和高亮
 │   ├── home_layout.py     # 首页一言配置、hitokoto、缓存
 │   └── home_modules.py    # 首页模块注册、排序、渲染上下文
@@ -68,6 +75,8 @@ modules/
 ```
 
 `module_loader.REGISTRY` 会保存已加载模块和首页 section。`services/home_modules.py` 从这个 registry 读取 section，负责排序、上下文构建和传给首页模板。
+
+后台模块可以通过 `AdminModuleDefinition.handler` 声明自己的请求处理函数；核心后台路由不应再根据模块 ID 写特殊分支。
 
 ## 首页模块渲染约定
 

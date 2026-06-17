@@ -4,13 +4,13 @@ from flask import Blueprint, jsonify, request
 
 from services.ai_polish import polish_content
 from services.articles import render_md
-from services.auth import login_required
+from services.auth import admin_required
 
 ai_bp = Blueprint('admin_ai', __name__, url_prefix='/admin')
 
 
 @ai_bp.route('/api/ai/polish', methods=['POST'])
-@login_required
+@admin_required
 def ai_polish():
     data = request.get_json(silent=True) or {}
     title = (data.get('title') or '').strip()
@@ -42,7 +42,7 @@ def ai_polish():
 
 
 @ai_bp.route('/api/preview', methods=['POST'])
-@login_required
+@admin_required
 def preview_markdown():
     data = request.get_json(silent=True) or {}
     content = (data.get('content') or '').strip()

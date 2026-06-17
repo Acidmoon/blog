@@ -14,7 +14,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import config
 from models import get_db
-from services.access_settings import get_access_settings, is_visitor_login_enabled
+from services.access_settings import get_access_settings, is_public_site_login_required
 
 
 VISITOR_COOKIE_NAME = 'visitor_token'
@@ -56,25 +56,37 @@ def _client_ip() -> str:
     return request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
 
 
-def authenticate_or_create_visitor(username: str, password: str, client_ip: str = '') -> dict:
-    username, password = validate_visitor_credentials(username, password)
-    conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM visitor_users WHERE username=?",
-        (username,),
-    ).fetchone()
-    now = _now_text()
-    if row:
-        if not check_password_hash(row['password_hash'], password):
-            raise VisitorAuthError('密码错误，请重新输入')
-        conn.execute(
-            "UPDATE visitor_users SET last_ip=?, last_seen_at=? WHERE id=?",
-            (client_ip, now, row['id']),
-        )
-        conn.commit()
-        return dict(row)
+def _parse_seen_at(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value)).timestamp()
+    except ValueError:
+        return None
 
+
+def _row_get(row, key: str, default=None):
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return default
+
+
+def _should_touch_activity(row: dict, client_ip: str, now_ts: float) -> bool:
+    if client_ip and client_ip != (_row_get(row, 'last_ip') or ''):
+        return True
+    last_seen_ts = _parse_seen_at(_row_get(row, 'last_seen_at'))
+    if last_seen_ts is None:
+        return True
+    return now_ts - last_seen_ts >= config.VISITOR_LAST_SEEN_WRITE_INTERVAL_SECONDS
+
+
+def _create_visitor(username: str, password: str, client_ip: str = '') -> dict:
     password_hash = generate_password_hash(password)
+    now = _now_text()
+    conn = get_db()
     cur = conn.execute(
         """
         INSERT INTO visitor_users (username, password_hash, created_at, last_ip, last_seen_at)
@@ -93,6 +105,38 @@ def authenticate_or_create_visitor(username: str, password: str, client_ip: str 
     }
 
 
+def _authenticate_existing_visitor(username: str, password: str, client_ip: str = '') -> dict:
+    username, password = validate_visitor_credentials(username, password)
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM visitor_users WHERE username=?",
+        (username,),
+    ).fetchone()
+    if not row:
+        raise VisitorAuthError('用户名不存在，请先注册')
+    now = _now_text()
+    if not check_password_hash(row['password_hash'], password):
+        raise VisitorAuthError('密码错误，请重新输入')
+    conn.execute(
+        "UPDATE visitor_users SET last_ip=?, last_seen_at=? WHERE id=?",
+        (client_ip, now, row['id']),
+    )
+    conn.commit()
+    return dict(row)
+
+
+def authenticate_or_create_visitor(username: str, password: str, client_ip: str = '') -> dict:
+    """Backward-compatible name for explicit visitor sign-in."""
+    return _authenticate_existing_visitor(username, password, client_ip)
+
+
+def purge_expired_visitor_tokens(now: float | None = None) -> None:
+    now_ts = time.time() if now is None else now
+    conn = get_db()
+    conn.execute("DELETE FROM visitor_tokens WHERE expires_at<=?", (now_ts,))
+    conn.commit()
+
+
 def issue_visitor_token(user_id: int, client_ip: str = '', now: float | None = None, days: int | None = None) -> tuple[str, float]:
     now_ts = time.time() if now is None else now
     if days is None:
@@ -101,6 +145,7 @@ def issue_visitor_token(user_id: int, client_ip: str = '', now: float | None = N
     raw_token = secrets.token_urlsafe(32)
     token_hash = _hash_token(raw_token)
     now_text = _now_text()
+    purge_expired_visitor_tokens(now_ts)
     conn = get_db()
     conn.execute(
         """
@@ -120,13 +165,15 @@ def set_visitor_cookie(response, token: str, expires_at: float):
         token,
         max_age=max_age,
         httponly=True,
+        secure=config.COOKIE_SECURE,
         samesite='Lax',
+        path='/',
     )
     return response
 
 
 def clear_visitor_cookie(response):
-    response.delete_cookie(VISITOR_COOKIE_NAME, samesite='Lax')
+    response.delete_cookie(VISITOR_COOKIE_NAME, path='/', samesite='Lax')
     return response
 
 
@@ -157,17 +204,18 @@ def get_visitor_from_token(raw_token: str | None, now: float | None = None) -> d
         conn.execute("DELETE FROM visitor_tokens WHERE id=?", (row['token_id'],))
         conn.commit()
         return None
-    now_text = _now_text()
     client_ip = _client_ip()
-    conn.execute(
-        "UPDATE visitor_tokens SET last_seen_at=?, last_ip=? WHERE id=?",
-        (now_text, client_ip, row['token_id']),
-    )
-    conn.execute(
-        "UPDATE visitor_users SET last_seen_at=?, last_ip=? WHERE id=?",
-        (now_text, client_ip, row['user_id']),
-    )
-    conn.commit()
+    if _should_touch_activity(row, client_ip, now_ts):
+        now_text = _now_text()
+        conn.execute(
+            "UPDATE visitor_tokens SET last_seen_at=?, last_ip=? WHERE id=?",
+            (now_text, client_ip, row['token_id']),
+        )
+        conn.execute(
+            "UPDATE visitor_users SET last_seen_at=?, last_ip=? WHERE id=?",
+            (now_text, client_ip, row['user_id']),
+        )
+        conn.commit()
     return {
         'id': row['user_id'],
         'username': row['username'],
@@ -181,6 +229,11 @@ def current_visitor() -> dict | None:
     if hasattr(g, 'visitor_user'):
         return g.visitor_user
     visitor = get_visitor_from_token(request.cookies.get(VISITOR_COOKIE_NAME))
+    if visitor is None:
+        from services.auth import is_admin_authenticated
+
+        if is_admin_authenticated():
+            visitor = _ensure_admin_visitor(_client_ip())
     g.visitor_user = visitor
     return visitor
 
@@ -188,20 +241,21 @@ def current_visitor() -> dict | None:
 def visitor_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not is_visitor_login_enabled():
+        if not is_public_site_login_required():
             return f(*args, **kwargs)
         if not current_visitor():
             if request.path.startswith('/api/'):
                 return {'error': '请先登录'}, 401
-            return redirect(url_for('public.login', next=request.full_path.rstrip('?')))
+            from services.auth import safe_next_url
+
+            next_url = safe_next_url(request.full_path.rstrip('?'), url_for('public.index'))
+            return redirect(url_for('public.login', next=next_url))
         return f(*args, **kwargs)
     return wrapper
 
 
 def login_visitor(username: str, password: str) -> tuple[dict, str, float]:
-    visitor = authenticate_or_create_visitor(username, password, _client_ip())
-    token, expires_at = issue_visitor_token(visitor['id'], _client_ip())
-    return visitor, token, expires_at
+    return login_existing_visitor(username, password)
 
 
 def register_visitor(username: str, password: str) -> tuple[dict, str, float]:
@@ -217,23 +271,18 @@ def register_visitor(username: str, password: str) -> tuple[dict, str, float]:
     if existing:
         raise VisitorAuthError('该用户名已被注册，请直接登录或换一个')
     client_ip = _client_ip()
-    visitor = authenticate_or_create_visitor(username, password, client_ip)
+    visitor = _create_visitor(username, password, client_ip)
     token, expires_at = issue_visitor_token(visitor['id'], client_ip)
     return visitor, token, expires_at
 
 
 def login_existing_visitor(username: str, password: str) -> tuple[dict, str, float]:
     """Explicit sign-in: fail if the username does not exist."""
+    if is_admin_username(username):
+        raise VisitorAuthError('请使用管理员入口登录')
     username, password = validate_visitor_credentials(username, password)
-    conn = get_db()
-    existing = conn.execute(
-        "SELECT 1 FROM visitor_users WHERE username=?",
-        (username,),
-    ).fetchone()
-    if not existing:
-        raise VisitorAuthError('用户名不存在，请先注册')
     client_ip = _client_ip()
-    visitor = authenticate_or_create_visitor(username, password, client_ip)
+    visitor = _authenticate_existing_visitor(username, password, client_ip)
     token, expires_at = issue_visitor_token(visitor['id'], client_ip)
     return visitor, token, expires_at
 
@@ -279,7 +328,7 @@ def authenticate_admin(password: str) -> tuple[dict, str, float]:
     admin's visitor_users row and issues a visitor token. The caller is
     responsible for granting the Flask admin session.
     """
-    if password != config.ADMIN_PASSWORD:
+    if not secrets.compare_digest(str(password or ''), str(config.ADMIN_PASSWORD or '')):
         raise VisitorAuthError('管理密码错误')
     client_ip = _client_ip()
     visitor = _ensure_admin_visitor(client_ip)

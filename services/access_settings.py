@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from services.site_settings import get_settings, set_settings
+from services.site_settings import get_setting, get_settings, set_settings
 
+
+PUBLIC_SITE_LOGIN_REQUIRED_KEY = 'public_site_login_required'
+LEGACY_VISITOR_LOGIN_ENABLED_KEY = 'visitor_login_enabled'
+PUBLIC_SITE_LOGIN_REQUIRED_DEFAULT = '0'
 
 ACCESS_SETTING_DEFAULTS = {
-    'visitor_login_enabled': '1',
     'visitor_login_days': '7',
     'chat_file_upload_enabled': '0',
     'chat_file_max_mb': '10',
@@ -30,10 +33,22 @@ def _as_positive_int(value: str, default: int) -> int:
     return max(1, number)
 
 
+def _public_site_login_required_value() -> str:
+    value = get_setting(PUBLIC_SITE_LOGIN_REQUIRED_KEY, None)
+    if value is not None:
+        return value
+    legacy_value = get_setting(LEGACY_VISITOR_LOGIN_ENABLED_KEY, None)
+    if legacy_value is not None:
+        return legacy_value
+    return PUBLIC_SITE_LOGIN_REQUIRED_DEFAULT
+
+
 def get_access_settings() -> dict:
     raw = get_settings(ACCESS_SETTING_DEFAULTS)
+    public_site_login_required = _as_bool(_public_site_login_required_value())
     return {
-        'visitor_login_enabled': _as_bool(raw['visitor_login_enabled']),
+        'public_site_login_required': public_site_login_required,
+        'visitor_login_enabled': public_site_login_required,
         'visitor_login_days': _as_positive_int(raw['visitor_login_days'], 7),
         'chat_file_upload_enabled': _as_bool(raw['chat_file_upload_enabled']),
         'chat_file_max_mb': _as_positive_int(raw['chat_file_max_mb'], 10),
@@ -43,12 +58,19 @@ def get_access_settings() -> dict:
     }
 
 
+def is_public_site_login_required() -> bool:
+    return bool(get_access_settings()['public_site_login_required'])
+
+
 def is_visitor_login_enabled() -> bool:
-    return bool(get_access_settings()['visitor_login_enabled'])
+    return is_public_site_login_required()
 
 
 def save_access_settings(form: Mapping[str, str]) -> None:
-    visitor_login_enabled = str(form.get('visitor_login_enabled') or '').lower() in {'1', 'true', 'yes', 'on'}
+    public_site_login_required = (
+        str(form.get(PUBLIC_SITE_LOGIN_REQUIRED_KEY) or form.get(LEGACY_VISITOR_LOGIN_ENABLED_KEY) or '').lower()
+        in {'1', 'true', 'yes', 'on'}
+    )
     chat_file_upload_enabled = str(form.get('chat_file_upload_enabled') or '').lower() in {'1', 'true', 'yes', 'on'}
 
     fields = {
@@ -69,7 +91,8 @@ def save_access_settings(form: Mapping[str, str]) -> None:
         parsed[key] = value
 
     set_settings({
-        'visitor_login_enabled': '1' if visitor_login_enabled else '0',
+        PUBLIC_SITE_LOGIN_REQUIRED_KEY: '1' if public_site_login_required else '0',
+        LEGACY_VISITOR_LOGIN_ENABLED_KEY: '1' if public_site_login_required else '0',
         'visitor_login_days': str(parsed['visitor_login_days']),
         'chat_file_upload_enabled': '1' if chat_file_upload_enabled else '0',
         'chat_file_max_mb': str(parsed['chat_file_max_mb']),

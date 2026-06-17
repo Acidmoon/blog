@@ -159,6 +159,14 @@
   border-color: var(--accent-primary);
   color: var(--accent-primary);
 }
+.btn:focus-visible,
+.btn-sm:focus-visible,
+.editor-toolbar button:focus-visible,
+.editor-toolbar-select:focus-visible,
+.editor-toolbar-option:focus-within {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
 .btn-sm {
   display: inline-flex;
   align-items: center;
@@ -700,9 +708,33 @@ body.zen-mode .zen-exit-btn {
   width: min(100%, 520px);
   border-radius: 8px;
 }
+.visitor-login-card h1 {
+  margin-bottom: 14px;
+  text-align: center;
+}
+.login-tabs {
+  display: flex;
+  width: 100%;
+  margin-bottom: 18px;
+}
+.login-tabs .auth-tab {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+}
 .login-subtitle {
   margin: 8px 0 20px;
   color: var(--text-secondary);
+}
+.admin-login-link {
+  display: inline-flex;
+  margin-top: 18px;
+  color: var(--text-tertiary);
+  font-size: 0.86rem;
+  text-decoration: none;
+}
+.admin-login-link:hover {
+  color: var(--accent-primary);
 }
 .login-card h2 {
   text-align: center;

@@ -5,24 +5,35 @@
 {% block content %}
 <main class="login-page visitor-login-page">
   <form method="post" class="login-card visitor-login-card">
-    <h1 class="serif">访客登录</h1>
-    <p class="login-subtitle">输入用户名和密码进入博客。</p>
+    <h1 class="serif">访客账号</h1>
+    <div class="auth-modal-tabs login-tabs" role="tablist" aria-label="访客账号">
+      <a class="auth-tab {% if auth_mode != 'register' %}active{% endif %}" href="{{ url_for('public.login', mode='login', next=next_url) }}">登录</a>
+      <a class="auth-tab {% if auth_mode == 'register' %}active{% endif %}" href="{{ url_for('public.login', mode='register', next=next_url) }}">注册</a>
+    </div>
+    <p class="login-subtitle">
+      {% if auth_mode == 'register' %}
+      创建账号后可以访问博客、评论和使用 AI 对话。
+      {% else %}
+      登录后继续访问博客、评论和 AI 对话。
+      {% endif %}
+    </p>
     {% if error %}
     <div class="flash error">{{ error }}</div>
     {% endif %}
     <input type="hidden" name="next" value="{{ next_url }}">
+    <input type="hidden" name="action" value="{{ auth_mode }}">
     <div class="form-group">
       <label for="username">用户名</label>
       <input id="username" name="username" autocomplete="username" maxlength="12" pattern="[A-Za-z0-9]{1,12}" required>
     </div>
     <div class="form-group">
       <label for="password">密码</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+      <input id="password" name="password" type="password" autocomplete="{{ 'new-password' if auth_mode == 'register' else 'current-password' }}" maxlength="128" required>
     </div>
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary">登录</button>
-      <a href="/admin/login" class="btn btn-secondary">管理员入口</a>
+      <button type="submit" class="btn btn-primary">{{ '注册并登录' if auth_mode == 'register' else '登录' }}</button>
     </div>
+    <a href="/admin/login" class="admin-login-link">管理员入口</a>
   </form>
 </main>
 {% endblock %}

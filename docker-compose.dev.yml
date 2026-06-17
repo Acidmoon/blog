@@ -1,0 +1,21 @@
+services:
+  blog:
+    command:
+      - gunicorn
+      - --workers
+      - "${WEB_CONCURRENCY:-2}"
+      - --timeout
+      - "${GUNICORN_TIMEOUT:-120}"
+      - --reload
+      - --access-logfile
+      - "-"
+      - --error-logfile
+      - "-"
+      - --bind
+      - 0.0.0.0:8082
+      - app:app
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./data/images:/app/static/images
+      - /etc/localtime:/etc/localtime:ro
