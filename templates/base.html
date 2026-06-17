@@ -67,7 +67,7 @@
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-  <div class="container" style="padding-top: 20px;">
+  <div class="flash-stack" role="status" aria-live="polite" aria-atomic="true">
     {% for category, msg in messages %}
     <div class="flash {{ category }}">{{ msg }}</div>
     {% endfor %}

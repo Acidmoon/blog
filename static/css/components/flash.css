@@ -1,0 +1,71 @@
+/* flash.css */
+/* ── Flash / Toast Messages ─────────────────────────── */
+.flash {
+  padding: 12px 18px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 0.88rem;
+  position: relative;
+  animation: flashDropIn 0.3s ease-out;
+}
+@keyframes flashDropIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.flash.success {
+  background: var(--flash-success-bg);
+  color: var(--flash-success-text);
+  border: 1px solid var(--flash-success-text);
+}
+.flash.error {
+  background: var(--flash-error-bg);
+  color: var(--flash-error-text);
+  border: 1px solid var(--flash-error-text);
+}
+
+.flash-stack {
+  position: fixed;
+  top: calc(60px + env(safe-area-inset-top, 0px) + 14px);
+  left: 50%;
+  z-index: 12000;
+  display: grid;
+  gap: 10px;
+  width: min(520px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.flash-stack .flash {
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(44, 53, 57, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  pointer-events: auto;
+  animation: flashToastIn 0.22s ease-out both;
+}
+.flash-stack .flash.success {
+  animation:
+    flashToastIn 0.22s ease-out both,
+    flashToastOut 0.26s ease 4.2s forwards;
+}
+@keyframes flashToastIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes flashToastOut {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+@media (max-width: 640px) {
+  .flash-stack {
+    top: calc(60px + env(safe-area-inset-top, 0px) + 10px);
+    width: calc(100vw - 24px);
+  }
+  .flash-stack .flash {
+    font-size: 0.84rem;
+  }
+}
