@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "macros/icons.html" import icon_chevron_left, icon_chevron_right, icon_heart, icon_calendar %}
 {% block title %}{{ article.title }} · {{ config.SITE_TITLE }}{% endblock %}
 {% block description %}{{ article.title }}{% endblock %}
 
@@ -29,7 +28,7 @@
           {% set yn = article.created_at[:4] %}
           {% set mn = article.created_at[5:7]|int %}
           {% set dn = article.created_at[8:10]|int %}
-          <time>{{ icon_calendar(14) }} {{ yn }}年{{ mn }}月{{ dn }}日 {{ article.created_at[11:19] }}</time>
+          <time>{{ yn }}年{{ mn }}月{{ dn }}日 {{ article.created_at[11:19] }}</time>
           {% if article.current_word_count %}
           · <span class="article-words">{{ article.current_word_count }} 字</span>
           {% endif %}
@@ -54,7 +53,7 @@
       </div>
 
       <footer class="article-footer">
-        <a href="/" class="back-link">{{ icon_chevron_left(16) }} 返回首页</a>
+        <a href="/" class="back-link">← 返回首页</a>
         {% if article.tags %}
         <div class="article-tags">
           {% for t in article.tags.split(',') if t.strip() %}
@@ -72,7 +71,7 @@
       <div class="like-bar">
         <button type="button" class="like-btn {% if likes.liked %}liked{% endif %}" id="likeBtn"
                 aria-pressed="{{ 'true' if likes.liked else 'false' }}">
-          <span class="like-heart" aria-hidden="true">{{ icon_heart(18) }}</span>
+          <span class="like-heart" aria-hidden="true">♥</span>
           <span class="like-count" id="likeCount">{{ likes.count }}</span>
         </button>
         <span class="like-hint">喜欢这篇文章就点个赞</span>
@@ -108,9 +107,9 @@
         <div class="comment-list" id="commentList"></div>
 
         <div class="comment-pagination" id="commentPagination" hidden>
-          <button type="button" class="page-link" id="commentPrev">{{ icon_chevron_left(16) }} 上一页</button>
+          <button type="button" class="page-link" id="commentPrev">← 上一页</button>
           <span class="page-info" id="commentPageInfo"></span>
-          <button type="button" class="page-link" id="commentNext">下一页 {{ icon_chevron_right(16) }}</button>
+          <button type="button" class="page-link" id="commentNext">下一页 →</button>
         </div>
 
         <div class="comment-empty" id="commentEmpty" hidden>

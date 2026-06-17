@@ -106,9 +106,10 @@
   align-items: center;
   gap: 4px;
 }
-.article-meta time > svg {
-  flex-shrink: 0;
-  vertical-align: middle;
+.article-meta time::before {
+  content: '📅';
+  font-size: 0.78rem;
+  opacity: 0.7;
 }
 .article-tags {
   display: inline-flex;
@@ -178,24 +179,5 @@
   color: var(--text-tertiary);
   font-size: 0.85rem;
   padding: 0 8px;
-}
-
-
-/* ── Narrow screen: release the app-shell inner scroll ────
- * 桌面端首页文章列表是独立内滚框（max-height + overflow:auto）。
- * ≤1100px 时左侧热图已回流到正常文档流，文章列表若仍困在
- * 小滚动框里会形成"断层"，这里解除内滚，让窄屏恢复整页流淌。
- * ───────────────────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .home-layout .article-list {
-    max-height: none;
-    overflow-y: visible;
-    margin-bottom: 40px;
-    padding-right: 0;
-    scrollbar-width: auto;
-    scrollbar-color: auto;
-  }
-  .home-layout .article-list::-webkit-scrollbar { width: auto; }
-  .home-layout .article-list::-webkit-scrollbar-thumb { background: auto; }
 }
 

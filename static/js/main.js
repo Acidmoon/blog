@@ -70,10 +70,10 @@ function initThemeToggle() {
   const html = document.documentElement;
 
   // Restore saved theme
-  // 按钮图标（月亮/太阳）由 CSS 按 html[data-theme] 切换，这里只管状态
   const saved = localStorage.getItem(key);
   if (saved) {
     html.setAttribute('data-theme', saved);
+    if (toggle) toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
   }
 
   if (toggle) {
@@ -84,6 +84,7 @@ function initThemeToggle() {
       // Smooth transition class
       html.classList.add('theme-transitioning');
       localStorage.setItem(key, next);
+      toggle.textContent = next === 'dark' ? '☀️' : '🌙';
       setTimeout(() => html.classList.remove('theme-transitioning'), 400);
     });
   }
@@ -218,33 +219,16 @@ function initCardClick() {
         return;
       }
       // 点的是卡片空白区域 → 跳转到文章
-      // 稍作延迟，让点击涟漪特效有机会播完再离开本页
-      var href = titleLink.getAttribute('href');
-      setTimeout(function() { window.location = href; }, 180);
+      window.location = titleLink.getAttribute('href');
     });
   });
 }
 
-/* ── Water Ripple Click Effect ───────────────────────
- * 雨滴入水·涟漪扩散 + 中央溅起水珠。
- * reduced-motion 下不生成水珠（CSS 会把动画压到 ~0）。
- * ──────────────────────────────────────────────────── */
+/* ── Water Ripple Click Effect ─────────────────────── */
 function initWaterRipple() {
-  // 尊重系统级“减弱动态效果”：完全跳过装饰特效
-  var reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  if (reduceQuery.matches) return;
-
   var container = document.createElement('div');
   container.className = 'water-ripple-container';
   document.body.appendChild(container);
-
-  // 溅起水珠的方向：左右两侧各两颗，向上抛射
-  var dropVectors = [
-    { dx: -14, dy: -30 },
-    { dx: 14,  dy: -30 },
-    { dx: -22, dy: -22 },
-    { dx: 22,  dy: -22 },
-  ];
 
   document.addEventListener('click', function(e) {
     // 跳过可交互元素 — 不干扰链接、按钮、输入框等
@@ -288,24 +272,8 @@ function initWaterRipple() {
     splash.style.top  = y + 'px';
     container.appendChild(splash);
     splash.addEventListener('animationend', function() { splash.remove(); });
-
-    // 中央溅起的小水珠 —— 多颗向斜上方抛射
-    for (var i = 0; i < dropVectors.length; i++) {
-      var drop = document.createElement('div');
-      drop.className = 'water-ripple water-ripple--drop';
-      drop.style.left = x + 'px';
-      drop.style.top  = y + 'px';
-      drop.style.setProperty('--dx', dropVectors[i].dx + 'px');
-      drop.style.setProperty('--dy', dropVectors[i].dy + 'px');
-      drop.style.animationDelay = (0.04 * i) + 's';
-      (function(node) {
-        node.addEventListener('animationend', function() { node.remove(); });
-      })(drop);
-      container.appendChild(drop);
-    }
   });
 }
-
 
 /* ── Article TOC ──────────────────────────────────── */
 function initArticleTOC() {

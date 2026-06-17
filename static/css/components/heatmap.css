@@ -111,18 +111,6 @@
   color: var(--text-secondary);
   flex-wrap: wrap;
 }
-.aw__stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.aw__stat svg {
-  flex-shrink: 0;
-  opacity: 0.85;
-}
-.aw__nav svg {
-  pointer-events: none;
-}
 .aw__stat strong {
   color: var(--accent-primary);
   font-weight: 650;

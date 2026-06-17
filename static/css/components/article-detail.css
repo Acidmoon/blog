@@ -26,10 +26,7 @@
   margin-bottom: 16px;
   color: var(--text-primary);
 }
-.article-header .article-meta time > svg {
-  vertical-align: middle;
-  margin-right: 4px;
-}
+.article-header .article-meta time::before { content: '📅 '; }
 .article-header .edit-link {
   font-size: 0.82rem;
   padding: 4px 12px;

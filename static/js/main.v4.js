@@ -70,10 +70,10 @@ function initThemeToggle() {
   const html = document.documentElement;
 
   // Restore saved theme
-  // 按钮图标（月亮/太阳）由 CSS 按 html[data-theme] 切换，这里只管状态
   const saved = localStorage.getItem(key);
   if (saved) {
     html.setAttribute('data-theme', saved);
+    if (toggle) toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
   }
 
   if (toggle) {
@@ -84,6 +84,7 @@ function initThemeToggle() {
       // Smooth transition class
       html.classList.add('theme-transitioning');
       localStorage.setItem(key, next);
+      toggle.textContent = next === 'dark' ? '☀️' : '🌙';
       setTimeout(() => html.classList.remove('theme-transitioning'), 400);
     });
   }
