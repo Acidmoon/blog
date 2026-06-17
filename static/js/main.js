@@ -246,9 +246,10 @@ function initWaterRipple() {
     { dx: 22,  dy: -22 },
   ];
 
-  document.addEventListener('click', function(e) {
-    // 跳过可交互元素 — 不干扰链接、按钮、输入框等
-    var skipSelectors = 'a, button, input, textarea, select, .nav-links, .theme-toggle, .copy-btn';
+  document.addEventListener('pointerdown', function(e) {
+    if (e.button && e.button !== 0) return;
+    // 只跳过文本输入类控件；链接、按钮和卡片点击都应该有即时反馈。
+    var skipSelectors = 'input, textarea, select, [contenteditable="true"], .no-click-ripple';
     if (e.target.closest(skipSelectors)) return;
 
     var x = e.clientX;
@@ -303,7 +304,7 @@ function initWaterRipple() {
       })(drop);
       container.appendChild(drop);
     }
-  });
+  }, { capture: true, passive: true });
 }
 
 
