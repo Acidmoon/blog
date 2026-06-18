@@ -121,6 +121,45 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 ::selection { background: var(--selection-bg); }
+
+/* ── Custom Scrollbars ──────────────────────────────── */
+:root {
+  --sb-thumb: rgba(58, 107, 79, 0.18);
+  --sb-thumb-hover: rgba(58, 107, 79, 0.32);
+  --sb-track: transparent;
+  --sb-width: 5px;
+  --sb-radius: 3px;
+}
+[data-theme="dark"] {
+  --sb-thumb: rgba(74, 140, 106, 0.20);
+  --sb-thumb-hover: rgba(74, 140, 106, 0.35);
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb-thumb) var(--sb-track);
+}
+/* WebKit: page & general */
+::-webkit-scrollbar { width: var(--sb-width); height: var(--sb-width); }
+::-webkit-scrollbar-track { background: var(--sb-track); }
+::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: var(--sb-radius);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover);
+}
+/* Code block horizontal scrollbar: more subtle */
+.article-body pre::-webkit-scrollbar { height: 4px; }
+.article-body pre::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: 2px;
+}
+.article-body pre::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover);
+}
+/* TOC sidebar */
+.toc-sticky { scrollbar-width: thin; }
 /* 首页隐藏页面滚动条，文章卡片区独立滚动 */
 html:has(.home-layout) {
   overflow: hidden;
