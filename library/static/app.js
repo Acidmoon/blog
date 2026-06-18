@@ -529,6 +529,43 @@ function initKeyboard() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   SCROLL POSITION PERSISTENCE
+   ═══════════════════════════════════════════════════════ */
+const SCROLL_KEY = 'library_scroll_y';
+
+function saveScrollPos() {
+  try {
+    sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  } catch(e) {}
+}
+
+function restoreScrollPos() {
+  try {
+    const saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved) {
+      const pos = parseInt(saved, 10);
+      if (pos > 100) {
+        // Restore after render, with a small delay for layout to settle
+        requestAnimationFrame(() => {
+          window.scrollTo(0, pos);
+        });
+      }
+    }
+  } catch(e) {}
+}
+
+function initScrollPersistence() {
+  const save = debounce(saveScrollPos, 200);
+  window.addEventListener('scroll', save, { passive: true });
+  // Clear on page fully scrolled to top (user intentionally went to hero)
+  window.addEventListener('scroll', () => {
+    if (window.scrollY < 50) {
+      try { sessionStorage.removeItem(SCROLL_KEY); } catch(e) {}
+    }
+  }, { passive: true });
+}
+
+/* ═══════════════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════════════ */
 async function init() {
@@ -546,6 +583,10 @@ async function init() {
     initFilters();
     initShelfScroll();
     initKeyboard();
+    initScrollPersistence();
+
+    // Restore scroll position after everything is rendered
+    restoreScrollPos();
 
   } catch(e) {
     heroSlides.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--text-muted);">加载失败: ' + e.message + '</div>';
