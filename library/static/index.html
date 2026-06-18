@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图书馆 · 水浇岭</title>
+<link rel="stylesheet" href="/library/static/style.css?v=3">
+</head>
+<body>
+
+<!-- ═══ Top Navigation ═══ -->
+<nav class="top-bar">
+  <a href="https://blog.waterhill.cyou">← 博客</a>
+  <span class="nav-center" id="bookCount">―</span>
+  <a href="/library/admin">上传</a>
+</nav>
+
+<!-- ═══ Hero Section (full viewport) ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-slides" id="heroSlides">
+    <!-- Slides rendered by JS -->
+  </div>
+
+  <div class="hero-info" id="heroInfo">
+    <span class="hero-label">Featured</span>
+    <h1 class="hero-title" id="heroTitle"></h1>
+    <p class="hero-author" id="heroAuthor"></p>
+    <p class="hero-desc" id="heroDesc"></p>
+    <a class="hero-cta" id="heroReadBtn" href="#">
+      阅读本书 <span style="font-family:var(--font-mono);font-weight:400;margin-left:4px;">→</span>
+    </a>
+  </div>
+
+  <div class="hero-indicators" id="heroIndicators">
+    <!-- Dots rendered by JS -->
+  </div>
+
+  <div class="hero-progress">
+    <div class="hero-progress-bar" id="heroProgressBar"></div>
+  </div>
+</section>
+
+<!-- ═══ Shelf Section (horizontal carousel) ═══ -->
+<section class="shelf" id="shelf">
+  <div class="shelf-header">
+    <h3>— 藏书架</h3>
+    <div class="shelf-nav">
+      <button id="shelfPrev" aria-label="向左滚动">←</button>
+      <button id="shelfNext" aria-label="向右滚动">→</button>
+    </div>
+  </div>
+  <div class="shelf-track" id="shelfTrack">
+    <div class="shelf-loading">加载中…</div>
+  </div>
+</section>
+
+<!-- ═══ Catalog Section (filter + grid) ═══ -->
+<section class="catalog" id="catalog">
+  <div class="catalog-header">
+    <div class="catalog-filters" id="catalogFilters">
+      <button class="catalog-filter-chip active" data-format="">全部</button>
+      <button class="catalog-filter-chip" data-format="pdf">PDF</button>
+      <button class="catalog-filter-chip" data-format="epub">EPUB</button>
+      <button class="catalog-filter-chip" data-format="mobi">MOBI</button>
+      <button class="catalog-filter-chip" data-format="txt">TXT</button>
+      <button class="catalog-filter-chip" data-format="md">Markdown</button>
+    </div>
+    <input type="text" class="catalog-search" id="catalogSearch" placeholder="搜索书名、作者…">
+  </div>
+
+  <div class="catalog-stats" id="catalogStats"></div>
+
+  <div class="catalog-grid" id="catalogGrid">
+    <!-- Rendered by JS -->
+  </div>
+</section>
+
+<script src="/library/static/app.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+[package]
+name = "library"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["macros", "multipart"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs", "limit"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database
+rusqlite = { version = "0.34", features = ["bundled"] }
+
+# File upload
+axum-extra = { version = "0.10", features = ["multipart"] }
+
+# UUID for file names
+uuid = { version = "1", features = ["v4"] }
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Markdown rendering
+comrak = "0.36"
+
+# HTML templating (optional - currently using static HTML)
+# minijinja = { version = "2", features = ["json"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Mime type detection
+mime_guess = "2"
+multer = { version = "3.1.0", features = ["tokio-io"] }

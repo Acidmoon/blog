@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阅读 · 图书馆 · 水浇岭</title>
+<link rel="stylesheet" href="/library/static/style.css?v=2">
+</head>
+<body>
+
+<nav class="reader-nav">
+  <a href="/library/" class="nav-back-link">← 书架</a>
+  <span class="reader-title" id="readerTitle"></span>
+  <a class="btn btn-secondary" id="readerDownloadBtn">⬇️ 下载</a>
+</nav>
+
+<main class="reader-body" id="readerBody">
+  <div class="reader-loading">加载中…</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
+<script src="/library/static/app.js?v=2"></script>
+<script>
+// Load book content
+const params = new URLSearchParams(location.search);
+const bookId = params.get('id');
+if (bookId) {
+  loadReader(bookId);
+} else {
+  document.getElementById('readerBody').innerHTML = '<p class="reader-error">未指定图书</p>';
+}
+</script>
+</body>
+</html>

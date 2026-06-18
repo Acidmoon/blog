@@ -7,3 +7,6 @@ data/articles/
 data/images/
 data/quote_cache.json
 .codegraph/
+library/target/
+library/data/
+data/
