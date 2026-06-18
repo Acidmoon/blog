@@ -12,7 +12,7 @@
 const API = '/library/api/books';
 const STORAGE_KEY = 'library_read_progress';
 const THEMES = ['light', 'sepia', 'dark'];
-const THEME_ICONS = { light: '☀', sepia: '🌙', dark: '☽' };
+const THEME_ICONS = { light: '☀', sepia: '🌙', dark: '◐' };
 const FONT_SIZES = { sm: 'reader-font-sm', md: 'reader-font-md', lg: 'reader-font-lg' };
 
 /* ── DOM refs ── */
@@ -64,7 +64,7 @@ async function init() {
     const saved = loadProgress(book.id);
 
     // Apply saved theme
-    const theme = saved?.theme || 'light';
+    const theme = saved?.theme || 'dark';
     applyTheme(theme);
 
     // Apply saved font size
