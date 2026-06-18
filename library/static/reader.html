@@ -1,34 +1,60 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN" data-reader-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>阅读 · 图书馆 · 水浇岭</title>
-<link rel="stylesheet" href="/library/static/style.css?v=2">
+<title>阅读 · 图书馆</title>
+<link rel="stylesheet" href="/library/static/style.css?v=3">
 </head>
-<body>
+<body class="reader-body" id="readerBody">
 
-<nav class="reader-nav">
-  <a href="/library/" class="nav-back-link">← 书架</a>
-  <span class="reader-title" id="readerTitle"></span>
-  <a class="btn btn-secondary" id="readerDownloadBtn">⬇️ 下载</a>
-</nav>
+<!-- ═══ Top Bar ═══ -->
+<header class="reader-top-bar" id="readerTopBar">
+  <div class="rtb-left">
+    <a class="rtb-back" href="/library/" id="readerBackBtn">← 返回</a>
+    <span class="rtb-title" id="readerTitle">加载中…</span>
+  </div>
+  <div class="rtb-right">
+    <!-- Font size -->
+    <button class="reader-tool-btn" id="readerFontBtn" title="字体大小">Aa</button>
+    <div class="reader-font-panel" id="readerFontPanel">
+      <button class="reader-font-opt" data-size="sm">
+        <span class="rfo-label">小</span>
+        <span class="rfo-size">16px</span>
+      </button>
+      <button class="reader-font-opt active" data-size="md">
+        <span class="rfo-label">中</span>
+        <span class="rfo-size">19px</span>
+      </button>
+      <button class="reader-font-opt" data-size="lg">
+        <span class="rfo-label">大</span>
+        <span class="rfo-size">23px</span>
+      </button>
+    </div>
+    <!-- Theme toggle -->
+    <button class="reader-tool-btn" id="readerThemeBtn" title="切换主题">☀</button>
+    <!-- Download -->
+    <a class="reader-tool-btn" id="readerDownloadBtn" href="#" title="下载" download style="text-decoration:none;">↓</a>
+  </div>
+</header>
 
-<main class="reader-body" id="readerBody">
+<!-- ═══ Content Area ═══ -->
+<main class="reader-content" id="readerContent">
   <div class="reader-loading">加载中…</div>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
-<script src="/library/static/app.js?v=2"></script>
-<script>
-// Load book content
-const params = new URLSearchParams(location.search);
-const bookId = params.get('id');
-if (bookId) {
-  loadReader(bookId);
-} else {
-  document.getElementById('readerBody').innerHTML = '<p class="reader-error">未指定图书</p>';
-}
-</script>
+<!-- ═══ Bottom Bar (Progress) ═══ -->
+<footer class="reader-bottom-bar" id="readerBottomBar">
+  <div class="reader-progress-row">
+    <span class="reader-progress-text" id="readerFormat"></span>
+    <div class="reader-progress-track" id="readerProgressTrack">
+      <div class="reader-progress-fill" id="readerProgressFill"></div>
+    </div>
+    <span class="reader-progress-text" id="readerProgressText">0%</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+<script src="/library/static/reader.js?v=1"></script>
 </body>
 </html>
