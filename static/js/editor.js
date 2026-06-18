@@ -401,6 +401,37 @@
     input.value = '';
   }
 
+  /* ── Cover image upload ───────────────────────────── */
+  window.uploadCover = function(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var fd = new FormData();
+    fd.append('file', file);
+    fetch('/admin/upload', { method: 'POST', body: fd })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || '上传失败'); });
+        return r.json();
+      })
+      .then(function(data) {
+        document.getElementById('coverImageHidden').value = data.url;
+        document.getElementById('coverAltHidden').value = file.name;
+        var preview = document.getElementById('coverPreview');
+        preview.innerHTML = '<img src="' + data.url + '" alt="" class="editor-cover-img">';
+        preview.style.backgroundImage = 'url(' + data.url + ')';
+        document.getElementById('removeCoverBtn').style.display = '';
+      })
+      .catch(function(e) { alert('封面上传失败: ' + e.message); });
+    input.value = '';
+  };
+
+  window.removeCover = function() {
+    document.getElementById('coverImageHidden').value = '';
+    document.getElementById('coverAltHidden').value = '';
+    document.getElementById('coverPreview').innerHTML = '';
+    document.getElementById('coverPreview').style.backgroundImage = '';
+    document.getElementById('removeCoverBtn').style.display = 'none';
+  };
+
   window.syncPolishModels = syncPolishModels;
   window.syncPolishModeHint = syncPolishModeHint;
   window.insertMd = insertMd;

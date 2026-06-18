@@ -1,6 +1,14 @@
 <div class="article-list" data-home-section="article_list">
   {% for article in articles %}
-  <article class="article-card" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
+  <article class="article-card{% if article.cover_image %} has-cover{% endif %}" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
+    {% if article.cover_image %}
+    <div class="card-cover">
+      <a href="/article/{{ article.slug }}">
+        <img src="{{ url_for('static', filename=article.cover_image) }}" alt="" loading="lazy">
+      </a>
+    </div>
+    {% endif %}
+    <div class="card-body">
     <h2 class="article-title serif">
       <a href="/article/{{ article.slug }}">{{ article.title }}</a>
     </h2>
@@ -24,6 +32,7 @@
       </span>
       {% endif %}
     </div>
+  </div>
   </article>
   {% else %}
   <div class="empty-state">

@@ -287,8 +287,8 @@ function initArticleTOC() {
 
   if (!articleBody || !tocNav) return;
 
-  // Collect h2 and h3 with IDs
-  var headings = articleBody.querySelectorAll('h2, h3');
+  // Collect h2, h3, h4 with IDs
+  var headings = articleBody.querySelectorAll('h2, h3, h4');
 
   function _slug(text) {
     // Keep alphanumeric + CJK, replace others with nothing
@@ -317,7 +317,7 @@ function initArticleTOC() {
     }
     var html = '';
     items.forEach(function(item) {
-      var cls = 'toc-item' + (item.tag === 'h3' ? ' toc-h3' : '');
+      var cls = 'toc-item' + (item.tag === 'h3' ? ' toc-h3' : '') + (item.tag === 'h4' ? ' toc-h4' : '');
       html += '<a href="#' + item.id + '" class="' + cls + '" data-heading="' + item.id + '">' + item.text + '</a>';
     });
     return html;
@@ -326,6 +326,34 @@ function initArticleTOC() {
   var navHtml = buildNav(items);
   tocNav.innerHTML = navHtml;
   if (tocMobileNav) tocMobileNav.innerHTML = navHtml;
+
+  // Smooth scroll for all TOC links (desktop + mobile)
+  function initTocClick(container) {
+    container.addEventListener('click', function(e) {
+      var link = e.target.closest('.toc-item');
+      if (link) {
+        e.preventDefault();
+        var target = document.getElementById(link.dataset.heading);
+        if (target) {
+          var top = target.getBoundingClientRect().top + window.scrollY - 90;
+          window.scrollTo({ top: top, behavior: 'smooth' });
+        }
+      }
+    });
+  }
+  initTocClick(tocNav);
+  if (tocMobileNav) initTocClick(tocMobileNav);
+
+  // Hide TOC sidebar for short articles (< 3 headings)
+  if (items.length < 3) {
+    if (tocAside) {
+      tocAside.style.display = 'none';
+      var wrapper = tocAside.closest('.article-page-wrapper');
+      if (wrapper) wrapper.classList.add('toc-hidden');
+    }
+    if (mobileToggle) mobileToggle.style.display = 'none';
+    if (mobilePanel) mobilePanel.style.display = 'none';
+  }
 
   if (items.length < 2) {
     // Still show TOC sidebar but with empty state or single item
@@ -429,6 +457,26 @@ function initHomeAjaxNav() {
   });
 }
 
+/* ── Article Width Toggle ─────────────────────────── */
+function initWidthToggle() {
+  var wrapper = document.querySelector('.article-page-wrapper');
+  var btns = document.querySelectorAll('.width-btn');
+  if (!wrapper || !btns.length) return;
+
+  var saved = localStorage.getItem('waterhill-width') || 'regular';
+  wrapper.dataset.width = saved;
+  btns.forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.width === saved);
+    btn.addEventListener('click', function() {
+      var w = this.dataset.width;
+      wrapper.dataset.width = w;
+      localStorage.setItem('waterhill-width', w);
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+}
+
 /* ── Initialize ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
@@ -443,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSearch();
   initWaterRipple();
   initHomeAjaxNav();
+  initWidthToggle();
 });
 
 })();

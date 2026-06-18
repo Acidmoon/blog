@@ -56,6 +56,53 @@
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(58, 107, 79, 0.12);
 }
+
+/* ── Editor Cover Upload ─────────────────────────── */
+.editor-cover {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+.editor-cover-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.editor-cover-preview {
+  width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-card) center/cover no-repeat;
+  border: 1px dashed var(--border-medium);
+  margin-bottom: 10px;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.editor-cover-img {
+  max-width: 100%;
+  max-height: 200px;
+  display: block;
+}
+.editor-cover-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.editor-cover-actions .editor-hint {
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+@media (max-width: 640px) {
+  .editor-cover-actions .editor-hint { display: none; }
+}
 .form-actions {
   display: flex;
   gap: 10px;

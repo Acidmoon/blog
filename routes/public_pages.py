@@ -3,6 +3,7 @@
 from flask import abort, redirect, render_template, request, send_from_directory, url_for
 
 import config
+from models import get_db
 from routes.public_utils import client_ip
 from services.activity_heatmap import build_month_activity_heatmap
 from services.articles import (
@@ -111,6 +112,18 @@ def register_routes(bp):
             'count': count_likes(meta['id']),
             'liked': has_liked(meta['id'], visitor['id'] if visitor else None, client_ip()),
         }
+        # Previous / Next article by creation date
+        conn = get_db()
+        prev_row = conn.execute(
+            "SELECT slug, title FROM articles WHERE published=1 AND created_at < ? ORDER BY created_at DESC LIMIT 1",
+            (meta['created_at'],)
+        ).fetchone()
+        next_row = conn.execute(
+            "SELECT slug, title FROM articles WHERE published=1 AND created_at > ? ORDER BY created_at ASC LIMIT 1",
+            (meta['created_at'],)
+        ).fetchone()
+        prev_article = dict(prev_row) if prev_row else None
+        next_article = dict(next_row) if next_row else None
         return render_template(
             'article.html',
             article=meta,
@@ -118,6 +131,8 @@ def register_routes(bp):
             comments=comments,
             likes=likes,
             visitor=visitor,
+            prev_article=prev_article,
+            next_article=next_article,
         )
 
     @bp.route('/static/<path:filename>')

@@ -22,6 +22,33 @@
   <!-- Main Article -->
   <main class="article-main">
     <article class="article-full">
+      {% if article.cover_image %}
+      <section class="article-cover-hero">
+        <div class="cover-hero-image">
+          <img src="{{ url_for('static', filename=article.cover_image) }}" alt="{{ article.cover_alt }}" loading="lazy">
+          <div class="cover-hero-overlay"></div>
+        </div>
+        <div class="cover-hero-content">
+          <h1 class="article-title-lg">{{ article.title }}</h1>
+          <div class="article-meta">
+            {% set yn = article.created_at[:4] %}
+            {% set mn = article.created_at[5:7]|int %}
+            {% set dn = article.created_at[8:10]|int %}
+            <time>{{ yn }}年{{ mn }}月{{ dn }}日 {{ article.created_at[11:19] }}</time>
+            {% if article.current_word_count %}
+            · <span class="article-words">{{ article.current_word_count }} 字</span>
+            {% endif %}
+            {% if article.tags %}
+            <span class="article-tags">
+              {% for t in article.tags.split(',') if t.strip() %}
+              <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
+              {% endfor %}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% else %}
       <header class="article-header">
         <h1 class="article-title-lg">{{ article.title }}</h1>
         <div class="article-meta">
@@ -47,20 +74,64 @@
           {% endif %}
         </div>
       </header>
+      {% endif %}
+
+      <!-- Reading width controls -->
+      <div class="width-controls" id="widthControls">
+        <span class="width-label">阅读宽度</span>
+        <button class="width-btn" data-width="narrow">窄</button>
+        <button class="width-btn active" data-width="regular">中</button>
+        <button class="width-btn" data-width="wide">宽</button>
+      </div>
 
       <div class="article-body" id="articleBody">
         {{ content|safe }}
       </div>
 
       <footer class="article-footer">
-        <a href="/" class="back-link">← 返回首页</a>
-        {% if article.tags %}
-        <div class="article-tags">
-          {% for t in article.tags.split(',') if t.strip() %}
-          <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
-          {% endfor %}
+        <!-- Colophon: metadata + reading time -->
+        <div class="colophon-bio">
+          <div class="colophon-meta">
+            <span>📝 {{ article.current_word_count }} 字</span>
+            {% if article.current_word_count %}
+            · <span>阅读约 {{ (article.current_word_count / 300)|round|int }} 分钟</span>
+            {% endif %}
+            {% if article.created_at[:10] != article.updated_at[:10] %}
+            · <span>更新于 {{ article.updated_at[:4] }}年{{ article.updated_at[5:7]|int }}月{{ article.updated_at[8:10]|int }}日</span>
+            {% endif %}
+          </div>
+          {% if article.tags %}
+          <div class="colophon-tags">
+            {% for t in article.tags.split(',') if t.strip() %}
+            <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
+
+        <!-- Prev / Next navigation -->
+        <nav class="article-nav">
+          {% if prev_article %}
+          <a href="/article/{{ prev_article.slug }}" class="nav-prev">
+            <span class="nav-direction">← 上一篇</span>
+            <span class="nav-title">{{ prev_article.title }}</span>
+          </a>
+          {% else %}
+          <span class="nav-prev nav-disabled"></span>
+          {% endif %}
+          <a href="/" class="nav-home" title="返回首页">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          </a>
+          {% if next_article %}
+          <a href="/article/{{ next_article.slug }}" class="nav-next">
+            <span class="nav-direction">下一篇 →</span>
+            <span class="nav-title">{{ next_article.title }}</span>
+          </a>
+          {% else %}
+          <span class="nav-next nav-disabled"></span>
+          {% endif %}
+        </nav>
+
       </footer>
     </article>
 
@@ -151,5 +222,35 @@ MathJax = {
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script>hljs.highlightAll();</script>
+<script>
+// Code block enhancements: line numbers + language labels
+document.querySelectorAll('.article-body pre').forEach(function(pre) {
+  // ── Language label ──
+  var code = pre.querySelector('code');
+  if (code) {
+    var cls = Array.from(pre.classList).find(function(c) { return c.startsWith('language-'); });
+    if (cls) {
+      var label = document.createElement('span');
+      label.className = 'code-lang-label';
+      label.textContent = cls.replace('language-', '');
+      pre.appendChild(label);
+    }
+
+    // ── Line numbers ──
+    var html = code.innerHTML;
+    var lines = html.split('\n');
+    // Remove trailing empty line from split
+    if (lines.length > 1 && lines[lines.length - 1].trim() === '') {
+      lines.pop();
+    }
+    if (lines.length > 1) {
+      code.innerHTML = lines.map(function(line, i) {
+        return '<span class="code-line">' + line + '</span>';
+      }).join('\n');
+      pre.classList.add('has-lines');
+    }
+  }
+});
+</script>
 <script src="{{ url_for('static', filename='js/article-social.js') }}?v={{ config.ASSET_VERSION }}"></script>
 {% endblock %}

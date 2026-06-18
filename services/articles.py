@@ -65,11 +65,13 @@ def delete_article_file(slug):
         path.unlink()
 
 
-def create_article_draft(title: str, tags: str, content: str) -> dict:
+def create_article_draft(title: str, tags: str, content: str, cover_image: str = '', cover_alt: str = '') -> dict:
     """Create a draft article and its markdown file as one service operation."""
     title = str(title or '').strip()
     tags = str(tags or '').strip()
     content = str(content or '').strip()
+    cover_image = str(cover_image or '').strip()
+    cover_alt = str(cover_alt or '').strip()
     if not title or not content:
         raise ValueError('标题和内容不能为空')
 
@@ -82,10 +84,10 @@ def create_article_draft(title: str, tags: str, content: str) -> dict:
         try:
             conn.execute(
                 """
-                INSERT INTO articles (slug, title, tags, created_at, updated_at, published, word_count)
-                VALUES (?, ?, ?, ?, ?, 0, ?)
+                INSERT INTO articles (slug, title, tags, created_at, updated_at, published, word_count, cover_image, cover_alt)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
                 """,
-                (slug, title, tags, now, now, word_count),
+                (slug, title, tags, now, now, word_count, cover_image, cover_alt),
             )
             conn.commit()
             break
@@ -102,7 +104,7 @@ def create_article_draft(title: str, tags: str, content: str) -> dict:
     return get_article_meta(slug, published_only=False)
 
 
-def update_article(slug: str, title: str, tags: str, content: str) -> dict:
+def update_article(slug: str, title: str, tags: str, content: str, cover_image: str = '', cover_alt: str = '') -> dict:
     """Update article metadata and markdown content."""
     article = get_article_meta(slug, published_only=False)
     if not article:
@@ -110,14 +112,16 @@ def update_article(slug: str, title: str, tags: str, content: str) -> dict:
     title = str(title or '').strip()
     tags = str(tags or '').strip()
     content = str(content or '').strip()
+    cover_image = str(cover_image or '').strip()
+    cover_alt = str(cover_alt or '').strip()
     if not title or not content:
         raise ValueError('标题和内容不能为空')
 
     now = datetime.now().isoformat()
     conn = get_db()
     conn.execute(
-        "UPDATE articles SET title=?, tags=?, updated_at=?, word_count=? WHERE slug=?",
-        (title, tags, now, _count_words(content), slug),
+        "UPDATE articles SET title=?, tags=?, updated_at=?, word_count=?, cover_image=?, cover_alt=? WHERE slug=?",
+        (title, tags, now, _count_words(content), cover_image, cover_alt, slug),
     )
     conn.commit()
     write_article_file(slug, content)

@@ -51,7 +51,9 @@ def init_db():
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             published INTEGER DEFAULT 1,
-            word_count INTEGER DEFAULT 0
+            word_count INTEGER DEFAULT 0,
+            cover_image TEXT DEFAULT '',
+            cover_alt TEXT DEFAULT ''
         );
         CREATE INDEX IF NOT EXISTS idx_articles_created ON articles(created_at DESC);
         CREATE TABLE IF NOT EXISTS site_settings (

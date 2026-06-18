@@ -126,6 +126,8 @@ def new_article():
                 request.form.get('title', ''),
                 request.form.get('tags', ''),
                 request.form.get('content', ''),
+                request.form.get('cover_image', ''),
+                request.form.get('cover_alt', ''),
             )
         except ValueError as exc:
             flash(str(exc), 'error')
@@ -148,6 +150,8 @@ def edit_article(slug):
                 request.form.get('title', ''),
                 request.form.get('tags', ''),
                 request.form.get('content', ''),
+                request.form.get('cover_image', ''),
+                request.form.get('cover_alt', ''),
             )
         except ValueError as exc:
             flash(str(exc), 'error')

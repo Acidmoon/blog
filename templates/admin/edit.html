@@ -32,6 +32,24 @@
         </div>
       </div>
 
+      <!-- Cover image -->
+      <div class="editor-cover">
+        <label class="editor-cover-label">封面图片</label>
+        <div class="editor-cover-preview" id="coverPreview" style="{% if article and article.cover_image %}background-image: url({{ url_for('static', filename=article.cover_image) }}){% endif %}">
+          {% if article and article.cover_image %}
+          <img src="{{ url_for('static', filename=article.cover_image) }}" alt="" class="editor-cover-img">
+          {% endif %}
+        </div>
+        <div class="editor-cover-actions">
+          <input type="file" id="coverInput" accept="image/*" style="display:none" onchange="uploadCover(this)">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('coverInput').click()">选择图片</button>
+          <button type="button" class="btn btn-secondary" id="removeCoverBtn" onclick="removeCover()" {% if not article or not article.cover_image %}style="display:none"{% endif %}>移除封面</button>
+          <span class="editor-hint">建议比例 1200×630px，将显示在文章顶部和首页列表</span>
+        </div>
+        <input type="hidden" name="cover_image" id="coverImageHidden" value="{{ article.cover_image if article and article.cover_image else '' }}">
+        <input type="hidden" name="cover_alt" id="coverAltHidden" value="{{ article.cover_alt if article and article.cover_alt else '' }}">
+      </div>
+
       <div class="editor-split" id="editorSplit">
         <div class="editor-split__preview" id="previewPanel" hidden>
           <div class="editor-preview-header">
