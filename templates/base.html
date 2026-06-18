@@ -52,6 +52,7 @@
       </div>
       <div class="nav-links">
         <a href="/">首页</a>
+        <a href="/library/">📚 图书馆</a>
         {% if identity and identity.is_admin %}
           {% for item in admin_nav %}
         <a href="{{ item.url }}">{{ item.label }}</a>
