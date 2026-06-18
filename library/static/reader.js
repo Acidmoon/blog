@@ -9,7 +9,7 @@
 'use strict';
 
 /* ── CONFIG ── */
-const API = '/library/api/books';
+const API = (window.location.pathname.startsWith('/library/') ? '/library' : '') + '/api/books';
 const STORAGE_KEY = 'library_read_progress';
 const THEMES = ['light', 'sepia', 'dark'];
 const THEME_ICONS = { light: '☀', sepia: '🌙', dark: '◐' };
@@ -82,7 +82,7 @@ async function init() {
     initKeyboard();
 
     // Update back button URL
-    backBtn.href = '/library/';
+    backBtn.href = './';
 
   } catch(e) {
     content.innerHTML = '<div class="reader-error">加载失败: ' + e.message + '</div>';

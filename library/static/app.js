@@ -8,8 +8,10 @@
 
 /* ── CONFIG ── */
 const HERO_INTERVAL = 5000;  // ms between auto-rotations
-const API = '/library/api/books';
-const COVER_BASE = '/library';
+
+// Auto-detect base path (works through Nginx /library/ and direct Axum)
+const BASE = window.location.pathname.startsWith('/library/') ? '/library' : '';
+const API = BASE + '/api/books';
 
 /* ── STATE ── */
 let allBooks = [];
@@ -109,7 +111,7 @@ function createHeroSlide(book, index) {
   if (book.cover_path) {
     // Cover image
     const img = document.createElement('img');
-    img.src = COVER_BASE + book.cover_path;
+    img.src = BASE + book.cover_path;
     img.alt = book.title;
     img.loading = 'lazy';
     div.appendChild(img);
@@ -299,7 +301,7 @@ function createShelfCard(book) {
 
   if (book.cover_path) {
     const img = document.createElement('img');
-    img.src = COVER_BASE + book.cover_path;
+    img.src = BASE + book.cover_path;
     img.alt = book.title;
     img.loading = 'lazy';
     cover.appendChild(img);
@@ -381,7 +383,7 @@ function createCatalogCard(book, index) {
 
   if (book.cover_path) {
     const img = document.createElement('img');
-    img.src = COVER_BASE + book.cover_path;
+    img.src = BASE + book.cover_path;
     img.alt = book.title;
     img.loading = 'lazy';
     cover.appendChild(img);
