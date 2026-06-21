@@ -160,11 +160,7 @@ html { scroll-behavior: smooth; }
 }
 /* TOC sidebar */
 .toc-sticky { scrollbar-width: thin; }
-/* 首页隐藏页面滚动条，文章卡片区独立滚动 */
-html:has(.home-layout) {
-  overflow: hidden;
-  height: 100%;
-}
+/* 首页使用整页滚动；滚动条沿用全局样式。 */
 body {
   font-family: var(--font-sans);
   background: var(--bg-base);
@@ -200,29 +196,21 @@ img { max-width: 100%; height: auto; display: block; }
 /* ── Homepage Layout ──────────────────────────────────── */
 .home-layout {
   position: relative;
-  max-width: 740px;
-  margin: 0 auto;
-  padding: 0 24px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 clamp(16px, 4vw, 64px) 28px;
 }
 .home-layout .home-sections {
-  margin: 0;
+  width: 100%;
+  max-width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 0;
 }
-.home-sidebar {
-  /* deprecated, replaced by .left-rail */
-}
-/* ── Left Rail (heatmap fills the left side) ───────────── */
+.home-sidebar,
 .left-rail {
-  position: fixed;
-  top: 60px;
-  left: 0;
-  width: calc((100vw - 740px) / 2 - 28px);
-  padding: 85px 16px 24px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  max-height: calc(100vh - 60px);
-  box-sizing: border-box;
+  /* legacy hooks; the heatmap now lives in a top-layer dock. */
+  display: contents;
 }
 
 
@@ -232,8 +220,6 @@ img { max-width: 100%; height: auto; display: block; }
   .hero { padding: 40px 0 40px; }
   .hero-title { font-size: 2rem; }
   .hero-subtitle { font-size: 0.95rem; }
-  .article-card { padding: 18px 20px; }
-  .article-title { font-size: 1.05rem; }
   .article-title-lg { font-size: 1.5rem; }
   .article-full { padding: 10px 0 40px; }
   .article-body { font-size: 0.98rem; line-height: 1.8; }
@@ -246,20 +232,6 @@ img { max-width: 100%; height: auto; display: block; }
   .page-link { padding: 6px 14px; font-size: 0.85rem; }
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .site-footer { padding: 40px 0 28px; }
-}
-
-/* Collapse left rail on narrow screens */
-@media (max-width: 1100px) {
-  .left-rail {
-    position: static;
-    width: 100%;
-    max-width: 740px;
-    margin: 0 auto 18px;
-    padding: 0 24px;
-    max-height: none;
-    overflow-y: visible;
-    top: auto;
-  }
 }
 
 /* ═══ Water Ripple Click Effect ═══════════════════════════

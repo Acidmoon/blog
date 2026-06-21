@@ -18,15 +18,60 @@
 </section>
 
 {% if sidebar_sections %}
-  <aside class="left-rail" aria-label="首页侧边栏模块">
-    {% for section in sidebar_sections %}
-      {% with section_id=section.id,
-              section_name=section.name,
-              activity_heatmap=section.context.activity_heatmap %}
-        {% include section.template %}
-      {% endwith %}
-    {% endfor %}
-  </aside>
+  {% set heatmap = sidebar_sections[0].context.activity_heatmap %}
+  <div class="heatmap-dock is-collapsed" data-heatmap-dock>
+    <button type="button" class="heatmap-dock__toggle" data-heatmap-toggle aria-expanded="false" aria-controls="heatmapDockPanel">
+      <span class="heatmap-dock__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="heatmap-dock__label">热力</span>
+      <span class="heatmap-dock__meta">{{ heatmap.month_display }}</span>
+    </button>
+    <section class="heatmap-dock__panel" id="heatmapDockPanel" aria-label="写作活动热力图" aria-hidden="true">
+      <header class="heatmap-dock__head">
+        <span class="heatmap-dock__title serif">写作年历</span>
+        <button type="button" class="heatmap-dock__close" data-heatmap-close aria-label="收起热力图">×</button>
+      </header>
+      {% for section in sidebar_sections %}
+        {% with section_id=section.id,
+                section_name=section.name,
+                activity_heatmap=section.context.activity_heatmap %}
+          {% include section.template %}
+        {% endwith %}
+      {% endfor %}
+    </section>
+  </div>
+  <script>
+  (function(){
+    var dock = document.querySelector('[data-heatmap-dock]');
+    if (!dock) return;
+    var toggle = dock.querySelector('[data-heatmap-toggle]');
+    var closeBtn = dock.querySelector('[data-heatmap-close]');
+    var panel = dock.querySelector('.heatmap-dock__panel');
+    if (!toggle || !panel) return;
+
+    function setOpen(open) {
+      dock.classList.toggle('is-open', open);
+      dock.classList.toggle('is-collapsed', !open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+      try { localStorage.setItem('waterhill-heatmap-open', open ? '1' : '0'); } catch (_) {}
+    }
+
+    var saved = '0';
+    try { saved = localStorage.getItem('waterhill-heatmap-open') || '0'; } catch (_) {}
+    setOpen(saved === '1');
+
+    toggle.addEventListener('click', function() {
+      setOpen(!dock.classList.contains('is-open'));
+    });
+    if (closeBtn) closeBtn.addEventListener('click', function() { setOpen(false); });
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && dock.classList.contains('is-open')) setOpen(false);
+    });
+    document.addEventListener('click', function(event) {
+      if (dock.classList.contains('is-open') && !dock.contains(event.target)) setOpen(false);
+    });
+  })();
+  </script>
 {% endif %}
 
 <div class="home-layout">
