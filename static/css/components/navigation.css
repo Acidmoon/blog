@@ -96,3 +96,66 @@
   background: var(--overlay);
 }
 
+/* navigation.css */
+/* ── Home Immersive Overlay Nav ───────────────────── */
+body.home-page .navbar {
+  background: linear-gradient(180deg, rgba(8, 13, 10, 0.48), rgba(8, 13, 10, 0.10));
+  border-bottom-color: rgba(255,255,255,0.14);
+  box-shadow: none;
+}
+body.home-page .nav-brand,
+body.home-page .nav-links a,
+body.home-page .nav-user {
+  color: #fff !important;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.32);
+}
+body.home-page .search-form {
+  background: rgba(8, 13, 10, 0.24);
+  border-color: rgba(255,255,255,0.22);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+body.home-page .search-input,
+body.home-page .search-submit,
+body.home-page .search-icon {
+  color: rgba(255,255,255,0.88);
+}
+body.home-page .search-input::placeholder { color: rgba(255,255,255,0.58); }
+body.home-page .theme-toggle,
+body.home-page .nav-auth-btn--ghost {
+  color: #fff;
+  border-color: rgba(255,255,255,0.24);
+  background: rgba(8, 13, 10, 0.18);
+}
+body.home-page .nav-auth-btn--solid {
+  color: #123022;
+  background: rgba(255,255,255,0.88);
+  border-color: rgba(255,255,255,0.88);
+}
+body.home-page .navbar.scrolled {
+  background: var(--nav-bg);
+  border-bottom-color: var(--border-light);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+}
+body.home-page .navbar.scrolled .nav-brand,
+body.home-page .navbar.scrolled .nav-links a,
+body.home-page .navbar.scrolled .nav-user,
+body.home-page .navbar.scrolled .search-input,
+body.home-page .navbar.scrolled .search-submit,
+body.home-page .navbar.scrolled .search-icon,
+body.home-page .navbar.scrolled .theme-toggle,
+body.home-page .navbar.scrolled .nav-auth-btn--ghost {
+  color: var(--text-primary) !important;
+  text-shadow: none;
+}
+body.home-page .navbar.scrolled .search-form {
+  background: var(--bg-card);
+  border-color: var(--border-light);
+}
+body.home-page .navbar.scrolled .search-input::placeholder { color: var(--text-tertiary); }
+body.home-page .navbar.scrolled .nav-auth-btn--solid {
+  color: #fff;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+

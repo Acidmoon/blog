@@ -48,5 +48,11 @@
     "daily_quote": true,
     "pagination": true,
     "tag_filter": true
-  }
+  },
+  "featured_articles": [
+    "happy-llm-nlp基础概念",
+    "我的世界模组开发1",
+    "how-do-you-know我们说的是一个东西",
+    "我有很多有趣的想法-ai-实现了"
+  ]
 }

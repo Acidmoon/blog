@@ -10,6 +10,7 @@ from services.articles import (
     _count_words,
     get_article_meta,
     list_all_tags,
+    list_featured_articles,
     list_published_articles,
     read_article_file,
     render_md,
@@ -78,6 +79,7 @@ def register_routes(bp):
         tag = request.args.get('tag', '').strip()
         articles, total = list_published_articles(page=page, tag=tag)
         layout = load_home_layout()
+        featured_articles = list_featured_articles(layout.get('featured_articles'), limit=5)
         all_home_sections = build_home_sections(
             layout,
             articles=articles,
@@ -93,6 +95,8 @@ def register_routes(bp):
         return render_template(
             'index.html',
             hero=hero,
+            body_class='home-page',
+            featured_articles=featured_articles,
             home_sections=home_sections,
             sidebar_sections=sidebar_sections,
         )

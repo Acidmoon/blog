@@ -3,19 +3,80 @@
 
 {% block content %}
 
-<!-- Hero Section -->
-<section class="hero">
-  <div class="mist-container"></div>
-  <div class="container hero-inner">
-    <div class="hero-label">{{ hero.label }}</div>
-    <h1 class="hero-title serif">{{ hero.title }}</h1>
-    <p class="hero-subtitle">{{ hero.subtitle }}</p>
+<section class="featured-hero" aria-label="推荐文章">
+  <div class="featured-hero__rail" data-featured-rail>
+    {% for article in featured_articles %}
+    <article class="featured-slide{% if article.cover_image %} has-cover{% else %} no-cover{% endif %}">
+      <span class="featured-slide__index">{{ '%02d'|format(loop.index) }}</span>
+      {% if article.cover_image %}
+      <a class="featured-slide__media" href="{{ url_for('public.article', slug=article.slug) }}" aria-label="阅读 {{ article.title }}">
+        <img src="{{ url_for('static', filename=article.cover_image) }}" alt="{{ article.cover_alt or article.title }}" loading="eager">
+      </a>
+      {% else %}
+      <div class="featured-slide__media" aria-hidden="true">
+        <span class="featured-slide__fallback"></span>
+      </div>
+      {% endif %}
+      <div class="featured-slide__content">
+        <p class="featured-slide__kicker">{{ hero.label }} · 推荐阅读</p>
+        <h1 class="featured-slide__title serif">
+          <a href="{{ url_for('public.article', slug=article.slug) }}">{{ article.title }}</a>
+        </h1>
+        <p class="featured-slide__summary">{{ article.summary }}</p>
+        <div class="featured-slide__meta">
+          {% if article.created_at %}<time datetime="{{ article.created_at }}">{{ article.created_at[:10] }}</time>{% endif %}
+          <span>{{ article.current_word_count }} 字</span>
+          {% if article.tags %}
+          <span class="featured-slide__tags">
+            {% for tag in article.tags.split(',') %}
+              {% if tag.strip() and loop.index <= 3 %}<span>{{ tag.strip() }}</span>{% endif %}
+            {% endfor %}
+          </span>
+          {% endif %}
+        </div>
+        <a class="featured-slide__action" href="{{ url_for('public.article', slug=article.slug) }}">阅读全文</a>
+      </div>
+    </article>
+    {% else %}
+    <article class="featured-slide featured-slide--empty no-cover">
+      <div class="featured-slide__media" aria-hidden="true">
+        <span class="featured-slide__fallback"></span>
+      </div>
+      <div class="featured-slide__content">
+        <p class="featured-slide__kicker">{{ hero.label }}</p>
+        <h1 class="featured-slide__title serif">{{ hero.title }}</h1>
+        <p class="featured-slide__summary">{{ hero.subtitle }}</p>
+      </div>
+    </article>
+    {% endfor %}
   </div>
-  <svg class="hero-wave" viewBox="0 0 1440 48" preserveAspectRatio="none">
-    <path d="M0,24 C240,48 480,0 720,24 C960,48 1200,0 1440,24 L1440,48 L0,48 Z"/>
-    <path d="M0,36 C360,12 720,48 1080,24 C1260,12 1350,36 1440,30 L1440,48 L0,48 Z" opacity="0.3"/>
-  </svg>
 </section>
+<script>
+(function(){
+  var rail = document.querySelector('[data-featured-rail]');
+  if (!rail) return;
+  var slides = rail.querySelectorAll('.featured-slide');
+  if (slides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var current = 0;
+  var timer = null;
+  var userPaused = false;
+  function go(next) {
+    current = next;
+    rail.scrollTo({ left: slides[current].offsetLeft - rail.offsetLeft, behavior: 'smooth' });
+  }
+  function start() {
+    if (!timer && !userPaused) timer = window.setInterval(function(){ go((current + 1) % slides.length); }, 7200);
+  }
+  function stop() {
+    if (timer) window.clearInterval(timer);
+    timer = null;
+  }
+  rail.addEventListener('pointerdown', function(){ userPaused = true; stop(); });
+  rail.addEventListener('mouseenter', stop);
+  rail.addEventListener('mouseleave', start);
+  start();
+})();
+</script>
 
 {% if sidebar_sections %}
   {% set heatmap = sidebar_sections[0].context.activity_heatmap %}

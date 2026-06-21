@@ -87,6 +87,91 @@ def delete_article_file(slug):
         path.unlink()
 
 
+def _plain_excerpt(markdown_text: str, limit: int = 112) -> str:
+    """Build a compact text teaser from markdown content."""
+    text = str(markdown_text or '')
+    text = re.sub(r'```.*?```', ' ', text, flags=re.S)
+    text = re.sub(r'`([^`]*)`', r'\1', text)
+    text = re.sub(r'!\[[^\]]*\]\([^)]+\)', ' ', text)
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'^[#>\-\*\+\d\.\)\s]+', '', text, flags=re.M)
+    text = re.sub(r'[*_~>#\[\]()]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip('，。,.、；;：: ') + '…'
+
+
+def _configured_featured_slugs(value) -> list[str]:
+    slugs = []
+    for item in value or []:
+        if isinstance(item, str):
+            slug = item.strip()
+        elif isinstance(item, dict):
+            slug = str(item.get('slug') or '').strip()
+        else:
+            continue
+        if slug and slug not in slugs:
+            slugs.append(slug)
+    return slugs
+
+
+def _feature_article_from_row(row, summary_limit: int = 112):
+    article = _article_from_row(row)
+    if not article:
+        return None
+    content = read_article_file(article['slug'])
+    word_count = _count_words(content) if content else 0
+    if word_count <= 0:
+        return None
+    article['current_word_count'] = word_count
+    article['summary'] = _plain_excerpt(content, summary_limit) or article.get('title', '')
+    return article
+
+
+def list_featured_articles(configured=None, limit: int = 5) -> list[dict]:
+    """Return homepage featured articles, honoring configured slugs first."""
+    limit = max(1, int(limit or 5))
+    conn = get_db()
+    result = []
+    seen = set()
+
+    for slug in _configured_featured_slugs(configured):
+        row = conn.execute(
+            "SELECT * FROM articles WHERE slug=? AND published=1",
+            (slug,),
+        ).fetchone()
+        article = _feature_article_from_row(row)
+        if not article or article['slug'] in seen:
+            continue
+        seen.add(article['slug'])
+        result.append(article)
+        if len(result) >= limit:
+            return result
+
+    rows = conn.execute(
+        """
+        SELECT * FROM articles
+        WHERE published=1 AND COALESCE(word_count, 0) > 0
+        ORDER BY
+          CASE WHEN cover_image IS NOT NULL AND TRIM(cover_image) != '' THEN 0 ELSE 1 END,
+          created_at DESC
+        LIMIT ?
+        """,
+        (limit * 3,),
+    ).fetchall()
+    for row in rows:
+        article = _feature_article_from_row(row)
+        if not article or article['slug'] in seen:
+            continue
+        seen.add(article['slug'])
+        result.append(article)
+        if len(result) >= limit:
+            break
+    return result
+
+
 def create_article_draft(title: str, tags: str, content: str, cover_image: str = '', cover_alt: str = '') -> dict:
     """Create a draft article and its markdown file as one service operation."""
     title = str(title or '').strip()
