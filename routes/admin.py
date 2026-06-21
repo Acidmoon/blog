@@ -202,7 +202,33 @@ def publish(slug):
     article = get_article_meta(slug, published_only=False)
     if not article:
         abort(404)
-    svc_publish_article(slug)
+    if request.form.get('content') is not None:
+        try:
+            article = svc_update_article(
+                slug,
+                request.form.get('title', ''),
+                request.form.get('tags', ''),
+                request.form.get('content', ''),
+                request.form.get('cover_image', ''),
+                request.form.get('cover_alt', ''),
+            )
+        except ValueError as exc:
+            flash(str(exc), 'error')
+            article['title'] = request.form.get('title', '')
+            article['tags'] = request.form.get('tags', '')
+            article['cover_image'] = request.form.get('cover_image', '')
+            article['cover_alt'] = request.form.get('cover_alt', '')
+            article['content'] = request.form.get('content', '')
+            return _edit_template(article=article)
+        except LookupError:
+            abort(404)
+
+    try:
+        svc_publish_article(slug)
+    except ValueError as exc:
+        flash(str(exc), 'error')
+        article['content'] = read_article_file(slug) or ''
+        return _edit_template(article=article)
     flash('文章已发布', 'success')
     return redirect(url_for('public.article', slug=slug))
 

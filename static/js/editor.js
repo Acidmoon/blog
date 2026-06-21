@@ -402,6 +402,14 @@
   }
 
   /* ── Cover image upload ───────────────────────────── */
+  function staticFilenameFromUrl(value) {
+    value = String(value || '').trim();
+    const marker = '/static/';
+    const markerIndex = value.indexOf(marker);
+    if (markerIndex >= 0) return value.slice(markerIndex + marker.length);
+    return value.replace(/^\/?static\//, '').replace(/^\/+/, '');
+  }
+
   window.uploadCover = function(input) {
     var file = input.files && input.files[0];
     if (!file) return;
@@ -413,7 +421,7 @@
         return r.json();
       })
       .then(function(data) {
-        document.getElementById('coverImageHidden').value = data.url;
+        document.getElementById('coverImageHidden').value = staticFilenameFromUrl(data.url);
         document.getElementById('coverAltHidden').value = file.name;
         var preview = document.getElementById('coverPreview');
         preview.innerHTML = '<img src="' + data.url + '" alt="" class="editor-cover-img">';

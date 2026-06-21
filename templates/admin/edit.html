@@ -101,7 +101,7 @@
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">{% if article and not article.published %}保存草稿{% elif article %}保存修改{% else %}保存草稿{% endif %}</button>
         {% if article and not article.published %}
-        <button type="button" class="btn btn-publish" onclick="if(confirm('确定发布这篇文章？发布后将在首页显示。')){var f=document.createElement('form');f.method='post';f.action='/admin/publish/{{ article.slug }}';document.body.appendChild(f);f.submit()}">发布</button>
+        <button type="submit" class="btn btn-publish" formaction="{{ url_for('admin.publish', slug=article.slug) }}" formmethod="post" onclick="return confirm('确定保存当前内容并发布这篇文章？发布后将在首页显示。')">保存并发布</button>
         {% endif %}
         <button type="button" id="togglePreview" class="btn btn-secondary" title="切换右侧实时预览">预览</button>
         <button type="button" id="zenModeBtn" class="btn btn-secondary" title="进入专注写作模式 (Esc 退出)">专注</button>

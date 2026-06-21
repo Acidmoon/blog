@@ -3,6 +3,7 @@ import sqlite3
 import uuid
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 import markdown as md_lib
 
@@ -22,6 +23,27 @@ def slugify(text):
     text = re.sub(r'[^\w\u4e00-\u9fff\s-]', '', text)
     text = re.sub(r'[-\s]+', '-', text)
     return text[:80] or str(uuid.uuid4())[:8]
+
+
+def _normalize_cover_image(value: str) -> str:
+    """Store static image filenames, not already-built /static/... URLs."""
+    value = str(value or '').strip()
+    if not value:
+        return ''
+    parsed = urlparse(value)
+    if parsed.scheme and parsed.netloc:
+        value = parsed.path
+    value = value.lstrip('/')
+    if value.startswith('static/'):
+        value = value[len('static/'):]
+    return value
+
+
+def _article_from_row(row):
+    article = dict(row) if row else None
+    if article and 'cover_image' in article:
+        article['cover_image'] = _normalize_cover_image(article.get('cover_image'))
+    return article
 
 
 def render_md(text):
@@ -44,7 +66,7 @@ def get_article_meta(slug, published_only=True):
         ).fetchone()
     else:
         row = conn.execute("SELECT * FROM articles WHERE slug=?", (slug,)).fetchone()
-    return dict(row) if row else None
+    return _article_from_row(row)
 
 
 def read_article_file(slug):
@@ -70,14 +92,16 @@ def create_article_draft(title: str, tags: str, content: str, cover_image: str =
     title = str(title or '').strip()
     tags = str(tags or '').strip()
     content = str(content or '').strip()
-    cover_image = str(cover_image or '').strip()
+    cover_image = _normalize_cover_image(cover_image)
     cover_alt = str(cover_alt or '').strip()
     if not title or not content:
         raise ValueError('标题和内容不能为空')
+    word_count = _count_words(content)
+    if word_count <= 0:
+        raise ValueError('正文至少需要包含文字')
 
     base_slug = slugify(title)
     now = datetime.now().isoformat()
-    word_count = _count_words(content)
     conn = get_db()
     slug = base_slug
     for attempt in range(8):
@@ -112,16 +136,19 @@ def update_article(slug: str, title: str, tags: str, content: str, cover_image: 
     title = str(title or '').strip()
     tags = str(tags or '').strip()
     content = str(content or '').strip()
-    cover_image = str(cover_image or '').strip()
+    cover_image = _normalize_cover_image(cover_image)
     cover_alt = str(cover_alt or '').strip()
     if not title or not content:
         raise ValueError('标题和内容不能为空')
+    word_count = _count_words(content)
+    if word_count <= 0:
+        raise ValueError('正文至少需要包含文字')
 
     now = datetime.now().isoformat()
     conn = get_db()
     conn.execute(
         "UPDATE articles SET title=?, tags=?, updated_at=?, word_count=?, cover_image=?, cover_alt=? WHERE slug=?",
-        (title, tags, now, _count_words(content), cover_image, cover_alt, slug),
+        (title, tags, now, word_count, cover_image, cover_alt, slug),
     )
     conn.commit()
     write_article_file(slug, content)
@@ -178,7 +205,7 @@ def list_published_articles(page=1, tag=''):
         ).fetchall()
     result = []
     for row in rows:
-        article = dict(row)
+        article = _article_from_row(row)
         content = read_article_file(article['slug'])
         article['current_word_count'] = _count_words(content) if content else 0
         result.append(article)
@@ -191,7 +218,7 @@ def list_admin_articles():
     rows = conn.execute(
         "SELECT * FROM articles WHERE published=1 ORDER BY created_at DESC"
     ).fetchall()
-    return [dict(row) for row in rows]
+    return [_article_from_row(row) for row in rows]
 
 
 def list_drafts():
@@ -200,11 +227,17 @@ def list_drafts():
     rows = conn.execute(
         "SELECT * FROM articles WHERE published=0 ORDER BY created_at DESC"
     ).fetchall()
-    return [dict(row) for row in rows]
+    return [_article_from_row(row) for row in rows]
 
 
 def publish_article(slug):
     """Set article to published=1."""
+    article = get_article_meta(slug, published_only=False)
+    if not article:
+        raise LookupError('文章不存在')
+    content = read_article_file(slug)
+    if content is None or _count_words(content) <= 0:
+        raise ValueError('正文至少需要包含文字后才能发布')
     conn = get_db()
     conn.execute("UPDATE articles SET published=1, updated_at=? WHERE slug=?", 
                  (datetime.now().isoformat(), slug))
