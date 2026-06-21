@@ -57,22 +57,50 @@
 (function(){
   var rail = document.querySelector('[data-featured-rail]');
   if (!rail) return;
-  var slides = rail.querySelectorAll('.featured-slide');
+  var realSlides = Array.prototype.slice.call(rail.querySelectorAll('.featured-slide'));
   var prev = document.querySelector('[data-featured-prev]');
   var next = document.querySelector('[data-featured-next]');
-  if (slides.length < 2) {
+  if (realSlides.length < 2) {
     if (prev) prev.hidden = true;
     if (next) next.hidden = true;
     return;
   }
+
+  var firstClone = realSlides[0].cloneNode(true);
+  var lastClone = realSlides[realSlides.length - 1].cloneNode(true);
+  firstClone.setAttribute('aria-hidden', 'true');
+  lastClone.setAttribute('aria-hidden', 'true');
+  rail.insertBefore(lastClone, realSlides[0]);
+  rail.appendChild(firstClone);
+
   var current = 0;
+  var position = 1;
   var timer = null;
+  var isAnimating = false;
   var intervalMs = 5000;
   function applyPosition() {
-    rail.style.transform = 'translate3d(' + (-current * 100) + '%, 0, 0)';
+    rail.style.transform = 'translate3d(' + (-position * 100) + '%, 0, 0)';
+  }
+  function jumpTo(index) {
+    current = index;
+    position = current + 1;
+    rail.classList.add('is-jump');
+    applyPosition();
+    rail.offsetHeight;
+    rail.classList.remove('is-jump');
   }
   function go(nextIndex) {
-    current = (nextIndex + slides.length) % slides.length;
+    if (isAnimating) return;
+    current = nextIndex;
+    if (nextIndex >= realSlides.length) {
+      position = realSlides.length + 1;
+    } else if (nextIndex < 0) {
+      position = 0;
+    } else {
+      position = nextIndex + 1;
+    }
+    isAnimating = true;
+    rail.classList.remove('is-jump');
     applyPosition();
   }
   function stop() {
@@ -83,9 +111,18 @@
     if (!timer) timer = window.setInterval(function(){ go(current + 1); }, intervalMs);
   }
   function restart() { stop(); start(); }
+  rail.addEventListener('transitionend', function(event) {
+    if (event.propertyName !== 'transform') return;
+    isAnimating = false;
+    if (current >= realSlides.length) {
+      jumpTo(0);
+    } else if (current < 0) {
+      jumpTo(realSlides.length - 1);
+    }
+  });
   if (prev) prev.addEventListener('click', function(){ go(current - 1); restart(); });
   if (next) next.addEventListener('click', function(){ go(current + 1); restart(); });
-  applyPosition();
+  jumpTo(0);
   start();
 })();
 </script>

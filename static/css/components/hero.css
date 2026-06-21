@@ -104,6 +104,7 @@
   transition: transform 680ms linear;
   will-change: transform;
 }
+.featured-hero__rail.is-jump { transition: none; }
 .featured-slide {
   position: relative;
   flex: 0 0 100%;
