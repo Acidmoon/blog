@@ -117,16 +117,18 @@ def _configured_featured_slugs(value) -> list[str]:
     return slugs
 
 
-def _feature_article_from_row(row, summary_limit: int = 112):
+def _feature_article_from_row(row, summary_limit: int = 112, allow_empty: bool = False):
     article = _article_from_row(row)
     if not article:
         return None
     content = read_article_file(article['slug'])
     word_count = _count_words(content) if content else 0
-    if word_count <= 0:
+    if word_count <= 0 and not allow_empty:
         return None
     article['current_word_count'] = word_count
-    article['summary'] = _plain_excerpt(content, summary_limit) or article.get('title', '')
+    article['summary'] = _plain_excerpt(content, summary_limit) if content else ''
+    if not article['summary']:
+        article['summary'] = '暂无摘要'
     return article
 
 
@@ -142,7 +144,7 @@ def list_featured_articles(configured=None, limit: int = 5) -> list[dict]:
             "SELECT * FROM articles WHERE slug=? AND published=1",
             (slug,),
         ).fetchone()
-        article = _feature_article_from_row(row)
+        article = _feature_article_from_row(row, allow_empty=True)
         if not article or article['slug'] in seen:
             continue
         seen.add(article['slug'])

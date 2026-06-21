@@ -1,114 +1,76 @@
 {% extends "base.html" %}
 {% block title %}首页设置 · {{ config.SITE_TITLE }}{% endblock %}
 {% block content %}
-<main class="admin-page">
-  <div class="admin-header">
-    <h2 class="serif">首页设置</h2>
-    <a href="/admin/modules" class="btn btn-secondary">← 返回模块</a>
+<main class="admin-page layout-admin-page">
+  <div class="admin-header layout-admin-header">
+    <div>
+      <h2 class="serif">首页设置</h2>
+      <p>配置首屏推荐和第二屏内容。</p>
+    </div>
+    <a href="/" class="btn btn-secondary">预览首页</a>
   </div>
 
-  <form method="post" class="layout-form">
-
-    <section class="layout-section">
-      <h3 class="layout-section-title">🏠 Hero 区域（默认）</h3>
-      <p class="layout-section-desc">首页顶部的大标题区。未选中标签或标签未配置覆盖时使用此默认值。</p>
-      <div class="hero-fields">
-        <label class="hero-field">
-          <span>标签</span>
-          <input name="hero_label" value="{{ hero_label }}" placeholder="水浇岭" class="hero-input">
-        </label>
-        <label class="hero-field">
-          <span>标题</span>
-          <input name="hero_title" value="{{ hero_title }}" placeholder="水浇岭的博客" class="hero-input">
-        </label>
-        <label class="hero-field">
-          <span>副标题</span>
-          <input name="hero_subtitle" value="{{ hero_subtitle }}" placeholder="写点有意思的东西" class="hero-input">
-        </label>
+  <form method="post" class="layout-form layout-form-clean">
+    <section class="layout-panel layout-featured-panel">
+      <div class="layout-section-head">
+        <span class="layout-section-kicker">第一屏</span>
+        <h3 class="layout-section-title">推荐文章</h3>
+        <p class="layout-section-desc">按顺序选择最多 5 篇文章。留空的位置会由最近发布的有效文章自动补齐。</p>
       </div>
-    </section>
 
-    <section class="layout-section">
-      <h3 class="layout-section-title">🏷️ 标签 Hero 覆盖</h3>
-      <p class="layout-section-desc">
-        为每个标签自定义 Hero 区域。留空则使用上方默认值。<br>
-        标签列表自动从文章数据同步，新建标签后刷新此页面即可看到。
-      </p>
-      {% if hero_tags_entries %}
-      <div class="hero-tags-list">
-        {% for entry in hero_tags_entries %}
-        <div class="hero-tag-row">
-          <input type="hidden" name="hero_tag_{{ loop.index0 }}_name" value="{{ entry.tag }}">
-          <div class="hero-tag-name" title="{{ entry.tag }}">{{ entry.tag }}</div>
-          <div class="hero-tag-fields">
-            <input name="hero_tag_{{ loop.index0 }}_label" value="{{ entry.label }}" placeholder="标签文字" class="hero-input hero-tag-input">
-            <input name="hero_tag_{{ loop.index0 }}_title" value="{{ entry.title }}" placeholder="标题" class="hero-input hero-tag-input">
-            <input name="hero_tag_{{ loop.index0 }}_subtitle" value="{{ entry.subtitle }}" placeholder="副标题" class="hero-input hero-tag-input">
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="layout-section-desc" style="color:var(--text-muted);">暂无标签。发布带标签的文章后，标签会自动出现在这里。</p>
-      {% endif %}
-    </section>
-
-    <section class="layout-section">
-      <h3 class="layout-section-title">🧩 首页模块顺序</h3>
-      <p class="layout-section-desc">
-        每行一个模块 ID。这里不是固定槽位；首页会按这个列表从上到下渲染，之后新增模块也只需要注册模块和模板，不再改首页骨架。
-      </p>
-      <div class="layout-module-list">
-        {% for item in section_help %}
-        <code>{{ item.id }}</code>
-        <span>
-          <label class="layout-module-toggle">
-            <input type="checkbox" name="section_enabled_{{ item.id }}" {% if item.enabled %}checked{% endif %}>
-            {{ item.name }}
+      <div class="featured-slot-list">
+        {% for slot in featured_slots %}
+          {% set slot_index = loop.index0 %}
+          <label class="featured-slot">
+            <span class="featured-slot-number">{{ loop.index }}</span>
+            <span class="featured-slot-body">
+              <span class="featured-slot-label">推荐位 {{ loop.index }}</span>
+              <select name="featured_article_{{ slot_index }}" class="layout-select">
+                <option value="">自动补位</option>
+                {% for article in article_options %}
+                <option value="{{ article.slug }}" {% if article.slug == slot %}selected{% endif %}>
+                  {{ article.title }}{% if article.cover_image %} · 有封面{% else %} · 无封面{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </span>
           </label>
-          <small>{{ item.template }}</small>
-        </span>
         {% endfor %}
       </div>
-      <p class="layout-section-desc">取消勾选会隐藏模块；调整下方 ID 顺序会改变渲染位置。未知 ID 会自动忽略，新注册模块会自动出现在列表里。</p>
-      <textarea name="section_order" rows="6" class="layout-textarea layout-textarea-mono">{{ section_order_text }}</textarea>
     </section>
 
-    <section class="layout-section">
-      <h3 class="layout-section-title">📜 每日一言</h3>
-      <p class="layout-section-desc">每行一句。API 不可用时，会从这里按日期轮换展示。</p>
-      <textarea name="quotes" rows="12" class="layout-textarea">{{ quotes_text }}</textarea>
+    <section class="layout-panel">
+      <div class="layout-section-head">
+        <span class="layout-section-kicker">第二屏</span>
+        <h3 class="layout-section-title">内容模块</h3>
+        <p class="layout-section-desc">关闭不需要展示的模块；显示顺序沿用系统默认顺序。</p>
+      </div>
+      <div class="layout-switch-grid">
+        {% for item in section_help %}
+        <label class="layout-switch">
+          <input type="checkbox" name="section_enabled_{{ item.id }}" {% if item.enabled %}checked{% endif %}>
+          <span>
+            <strong>{{ item.name }}</strong>
+            <small>{{ item.id }}</small>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="layout-panel">
+      <div class="layout-section-head">
+        <span class="layout-section-kicker">每日一言</span>
+        <h3 class="layout-section-title">备用语句</h3>
+        <p class="layout-section-desc">每行一句。接口不可用时，首页会从这里按日期轮换展示。</p>
+      </div>
+      <textarea name="quotes" rows="8" class="layout-textarea">{{ quotes_text }}</textarea>
     </section>
 
     <div class="layout-actions">
-      <button type="submit" class="btn btn-primary">💾 保存</button>
+      <button type="submit" class="btn btn-primary">保存设置</button>
+      <a href="/admin/modules" class="btn btn-secondary">返回模块</a>
     </div>
   </form>
 </main>
-
-<style>
-.layout-form { max-width: 660px; margin-bottom: 60px; }
-.layout-section { margin: 32px 0; }
-.layout-section-title { font-size: 1.2rem; margin-bottom: 8px; color: var(--text-primary); }
-.layout-section-desc { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px; }
-.layout-module-list { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 10px 12px; margin: 0 0 14px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-secondary); font-size: 0.9rem; }
-.layout-module-list code { color: var(--accent-primary); font-family: "JetBrains Mono", monospace; align-self: start; }
-.layout-module-list small { display: block; margin-top: 2px; color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: 0.75rem; }
-.layout-module-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); cursor: pointer; }
-.layout-module-toggle input { accent-color: var(--accent-primary); }
-.layout-textarea { width: 100%; min-height: 220px; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; line-height: 1.6; resize: vertical; font-family: "Noto Serif SC", serif; }
-.layout-textarea-mono { min-height: 120px; font-family: "JetBrains Mono", monospace; }
-.layout-textarea:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }
-.hero-fields { display: flex; flex-direction: column; gap: 14px; }
-.hero-field { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--text-secondary); }
-.hero-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); font-size: 0.95rem; font-family: \"Noto Serif SC\", serif; }
-.hero-input:focus { outline: none; border-color: var(--accent-primary); box-shadow: var(--glow-accent); }
-.hero-input::placeholder { color: var(--text-muted); opacity: 0.6; }
-.hero-tags-list { display: flex; flex-direction: column; gap: 16px; }
-.hero-tag-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-card); }
-.hero-tag-name { flex: 0 0 120px; padding-top: 10px; font-weight: 600; color: var(--accent-primary); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hero-tag-fields { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.hero-tag-input { width: 100%; }
-.layout-actions { margin-top: 32px; display: flex; gap: 12px; }
-</style>
 {% endblock %}
