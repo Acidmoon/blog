@@ -570,18 +570,13 @@
   .article-toc {
     position: fixed;
     top: 80px;
-    right: max(20px, env(safe-area-inset-right, 0px));
+    right: calc(20px + env(safe-area-inset-right, 0px));
     z-index: 40;
     display: block;
   }
   .back-to-top {
     right: 28px;
     bottom: 28px;
-  }
-}
-@media (min-width: 1280px) {
-  .article-toc {
-    right: max(28px, calc((100vw - 1180px) / 2));
   }
 }
 @media (max-width: 1023px) {
