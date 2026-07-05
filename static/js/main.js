@@ -477,6 +477,23 @@ function initWidthToggle() {
   });
 }
 
+/* ── Back to Top Button ───────────────────────────── */
+function initBackToTop() {
+  var btn = document.getElementById('backToTop');
+  if (!btn) return;
+
+  function updateVisibility() {
+    btn.classList.toggle('is-visible', window.scrollY > 360);
+  }
+
+  btn.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', updateVisibility, { passive: true });
+  window.addEventListener('resize', updateVisibility, { passive: true });
+  updateVisibility();
+}
+
 /* ── Initialize ───────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
@@ -492,6 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initWaterRipple();
   initHomeAjaxNav();
   initWidthToggle();
+  initBackToTop();
 });
 
 })();
