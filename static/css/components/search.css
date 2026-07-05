@@ -179,11 +179,11 @@
     max-width: 100%;
   }
   .nav-links {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 2px;
   }
   .nav-links a,
-  .nav-admin-menu summary { font-size: 0.78rem; padding: 4px 8px; }
+  .nav-admin-menu summary { font-size: 0.78rem; padding: 4px 6px; }
   .article-card { padding: 16px 16px; }
   .article-title { font-size: 1rem; }
   .article-list { gap: 12px; }
