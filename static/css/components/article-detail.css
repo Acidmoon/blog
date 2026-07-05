@@ -420,11 +420,9 @@
 /* ── Article Page Wrapper (TOC sidebar) ────────────── */
 .article-page-wrapper {
   display: flex;
-  gap: 48px;
   --content-width: 740px;
-  --toc-width: 220px;
   justify-content: center;
-  max-width: calc(var(--content-width) + var(--toc-width) + 48px);
+  max-width: var(--content-width);
   margin: 0 auto;
   padding: 0 24px;
   transition: max-width 0.25s ease;
@@ -445,15 +443,18 @@
   max-width: var(--content-width);
 }
 .article-toc {
-  flex: 0 0 var(--toc-width);
   display: none;
 }
 .toc-sticky {
-  position: sticky;
-  top: 80px;
+  width: 220px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
-  padding-left: 4px;
+  padding-left: 10px;
+  direction: rtl;
+  scrollbar-gutter: stable;
+}
+.toc-sticky > * {
+  direction: ltr;
 }
 .toc-title {
   font-family: "Noto Serif SC", serif;
@@ -566,10 +567,21 @@
 }
 
 @media (min-width: 1024px) {
-  .article-toc { display: block; }
+  .article-toc {
+    position: fixed;
+    top: 80px;
+    right: max(20px, env(safe-area-inset-right, 0px));
+    z-index: 40;
+    display: block;
+  }
   .back-to-top {
     right: 28px;
     bottom: 28px;
+  }
+}
+@media (min-width: 1280px) {
+  .article-toc {
+    right: max(28px, calc((100vw - 1180px) / 2));
   }
 }
 @media (max-width: 1023px) {
