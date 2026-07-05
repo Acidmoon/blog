@@ -225,7 +225,8 @@ img { max-width: 100%; height: auto; display: block; }
   .article-full { padding: 10px 0 40px; }
   .article-body { font-size: 0.98rem; line-height: 1.8; }
   .nav-inner { padding: 0 16px; }
-  .nav-links a { padding: 6px 10px; }
+  .nav-links a,
+  .nav-admin-menu summary { padding: 6px 10px; }
   .login-card { padding: 28px; margin: 0 16px; }
   .tag-filter { gap: 6px; }
   .tag { padding: 4px 14px; font-size: 0.78rem; }

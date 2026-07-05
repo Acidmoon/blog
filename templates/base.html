@@ -54,9 +54,14 @@
         <a href="/">首页</a>
         <a href="/library/">📚 图书馆</a>
         {% if identity and identity.is_admin %}
-          {% for item in admin_nav %}
-        <a href="{{ item.url }}">{{ item.label }}</a>
-          {% endfor %}
+        <details class="nav-admin-menu">
+          <summary>管理</summary>
+          <div class="nav-admin-panel">
+            <a href="/admin">文章管理</a>
+            <a href="/admin/modules/daily_quote">首页设置</a>
+            <a href="/admin/access-settings">访问设置</a>
+          </div>
+        </details>
         {% endif %}
         <button class="theme-toggle" id="themeToggle" title="切换主题" aria-label="切换主题">🌙</button>
       </div>

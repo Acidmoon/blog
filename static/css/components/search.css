@@ -182,7 +182,8 @@
     flex-wrap: wrap;
     gap: 2px;
   }
-  .nav-links a { font-size: 0.78rem; padding: 4px 8px; }
+  .nav-links a,
+  .nav-admin-menu summary { font-size: 0.78rem; padding: 4px 8px; }
   .article-card { padding: 16px 16px; }
   .article-title { font-size: 1rem; }
   .article-list { gap: 12px; }
@@ -190,4 +191,3 @@
   .search-title { font-size: 1.2rem; }
   .search-result-card { padding: 16px 18px; }
 }
-

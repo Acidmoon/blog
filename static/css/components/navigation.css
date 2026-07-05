@@ -68,16 +68,51 @@
 .nav-links {
   display: flex; align-items: center; gap: 6px;
 }
-.nav-links a {
+.nav-links a,
+.nav-admin-menu summary {
   color: var(--text-secondary);
   font-size: 0.88rem;
   padding: 6px 14px;
   border-radius: 8px;
   transition: all 0.2s;
 }
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-admin-menu summary:hover {
   color: var(--text-primary);
   background: var(--overlay);
+}
+.nav-admin-menu {
+  position: relative;
+}
+.nav-admin-menu summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.nav-admin-menu summary::-webkit-details-marker {
+  display: none;
+}
+.nav-admin-menu summary::after {
+  content: '▾';
+  margin-left: 6px;
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+}
+.nav-admin-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 132px;
+  padding: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-medium);
+}
+.nav-admin-panel a {
+  display: block;
+  white-space: nowrap;
+  padding: 8px 10px;
 }
 .theme-toggle {
   background: none;
@@ -105,6 +140,7 @@ body.home-page .navbar {
 }
 body.home-page .nav-brand,
 body.home-page .nav-links a,
+body.home-page .nav-admin-menu summary,
 body.home-page .nav-user {
   color: #fff !important;
   text-shadow: 0 2px 18px rgba(0,0,0,0.32);
@@ -139,6 +175,7 @@ body.home-page .navbar.scrolled {
 }
 body.home-page .navbar.scrolled .nav-brand,
 body.home-page .navbar.scrolled .nav-links a,
+body.home-page .navbar.scrolled .nav-admin-menu summary,
 body.home-page .navbar.scrolled .nav-user,
 body.home-page .navbar.scrolled .search-input,
 body.home-page .navbar.scrolled .search-submit,
@@ -158,4 +195,3 @@ body.home-page .navbar.scrolled .nav-auth-btn--solid {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
 }
-

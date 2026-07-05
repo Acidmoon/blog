@@ -447,14 +447,7 @@
 }
 .toc-sticky {
   width: 220px;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
   padding-left: 10px;
-  direction: rtl;
-  scrollbar-gutter: stable;
-}
-.toc-sticky > * {
-  direction: ltr;
 }
 .toc-title {
   font-family: "Noto Serif SC", serif;
