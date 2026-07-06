@@ -1,26 +1,75 @@
 {% extends "base.html" %}
 {% block title %}访问设置 · {{ config.SITE_TITLE }}{% endblock %}
 {% block content %}
-<main class="admin-page">
-  <div class="admin-header">
-    <h2 class="serif">访问设置</h2>
+<main class="admin-page access-settings-page">
+  <div class="admin-header access-settings-header">
+    <div>
+      <h2 class="serif">访问设置</h2>
+      <p>决定谁可以阅读博客，以及登录状态保留多久。</p>
+    </div>
+    <a href="/" class="btn btn-secondary">预览公开站点</a>
   </div>
 
-  <form method="post" class="admin-form access-settings-form">
-    <div class="form-group access-toggle-row">
-      <label class="access-settings-toggle">
-        <input type="checkbox" name="public_site_login_required" value="1" {% if settings.public_site_login_required %}checked{% endif %}>
-        <span>强制登录后浏览公开站点</span>
+  <form method="post" class="access-settings-form">
+    <section class="settings-panel settings-panel--primary" aria-labelledby="site-visibility-title">
+      <div class="settings-panel-head">
+        <span class="settings-kicker">谁能看</span>
+        <div>
+          <h3 id="site-visibility-title">公开站点访问</h3>
+          <p>控制首页、文章页和搜索页是否需要访客先登录。</p>
+        </div>
+      </div>
+
+      <label class="settings-choice">
+        <input
+          type="checkbox"
+          name="public_site_login_required"
+          value="1"
+          {% if settings.public_site_login_required %}checked{% endif %}
+          aria-describedby="site-visibility-help site-visibility-impact"
+        >
+        <span class="settings-choice-control" aria-hidden="true"></span>
+        <span class="settings-choice-body">
+          <strong>登录后才允许浏览公开站点</strong>
+          <small id="site-visibility-help">关闭后，任何人都可以直接阅读首页、文章和搜索结果。</small>
+        </span>
       </label>
-      <p class="form-help">关闭后，所有人都可以浏览首页、文章和搜索；评论和删除评论仍需要登录。</p>
-    </div>
 
-    <div class="form-group">
-      <label for="visitor_login_days">访客登录有效天数</label>
-      <input type="number" id="visitor_login_days" name="visitor_login_days" value="{{ settings.visitor_login_days }}" min="1" step="1" required>
-    </div>
+      <div class="settings-impact" id="site-visibility-impact">
+        <span class="settings-impact-label">影响范围</span>
+        <span>只影响公开阅读入口；发表评论和删除评论仍然需要登录。</span>
+      </div>
+    </section>
 
-    <div class="form-actions">
+    <section class="settings-panel" aria-labelledby="visitor-session-title">
+      <div class="settings-panel-head">
+        <span class="settings-kicker">登录多久</span>
+        <div>
+          <h3 id="visitor-session-title">访客会话</h3>
+          <p>设置访客登录后，浏览器保持已登录状态的天数。</p>
+        </div>
+      </div>
+
+      <div class="form-group settings-number-field">
+        <label for="visitor_login_days">访客登录有效天数</label>
+        <div class="settings-number-input">
+          <input
+            type="number"
+            id="visitor_login_days"
+            name="visitor_login_days"
+            value="{{ settings.visitor_login_days }}"
+            min="1"
+            step="1"
+            required
+            aria-describedby="visitor-login-days-help"
+          >
+          <span>天</span>
+        </div>
+        <p class="form-help" id="visitor-login-days-help">至少 1 天。到期后访客需要重新登录。</p>
+      </div>
+    </section>
+
+    <div class="settings-actions">
       <button type="submit" class="btn btn-primary">保存设置</button>
       <a href="/admin" class="btn btn-secondary">返回后台</a>
     </div>

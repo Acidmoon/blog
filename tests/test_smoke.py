@@ -37,18 +37,6 @@ TABLE_INSERT_ORDER = [
     'visitor_users',
     'visitor_tokens',
 ]
-OPTIONAL_LEGACY_DELETE_TABLES = [
-    'chat_files',
-    'chat_messages',
-    'chat_sessions',
-    'public_chat_ip_auth',
-]
-OPTIONAL_LEGACY_INSERT_TABLES = [
-    'public_chat_ip_auth',
-    'chat_sessions',
-    'chat_messages',
-    'chat_files',
-]
 
 
 def _table_exists(db, table):
@@ -61,7 +49,7 @@ def _table_exists(db, table):
 
 def _snapshot_tables(db):
     snapshots = {}
-    for table in TABLES_TO_SNAPSHOT + OPTIONAL_LEGACY_INSERT_TABLES:
+    for table in TABLES_TO_SNAPSHOT:
         if not _table_exists(db, table):
             continue
         rows = db.execute(f"SELECT * FROM {table}").fetchall()
@@ -93,7 +81,7 @@ def reset_settings(app):
         original = {key: get_setting(key, None) for key in keys}
         db = get_db()
         original_tables = _snapshot_tables(db)
-        for table in OPTIONAL_LEGACY_DELETE_TABLES + TABLE_DELETE_ORDER:
+        for table in TABLE_DELETE_ORDER:
             if _table_exists(db, table):
                 db.execute(f"DELETE FROM {table}")
         set_settings({
@@ -108,10 +96,10 @@ def reset_settings(app):
         set_settings({key: value for key, value in original.items() if value is not None})
         delete_settings([key for key, value in original.items() if value is None])
         db = get_db()
-        for table in OPTIONAL_LEGACY_DELETE_TABLES + TABLE_DELETE_ORDER:
+        for table in TABLE_DELETE_ORDER:
             if _table_exists(db, table):
                 db.execute(f"DELETE FROM {table}")
-        for table in TABLE_INSERT_ORDER + OPTIONAL_LEGACY_INSERT_TABLES:
+        for table in TABLE_INSERT_ORDER:
             _restore_table(db, table, original_tables.get(table, []))
         db.commit()
         reset_auth_rate_limits()
@@ -394,6 +382,25 @@ def test_public_chat_routes_are_removed(client, reset_settings):
     assert client.get('/chat').status_code == 404
     assert client.post('/api/chat', json={'content': 'hello'}).status_code == 404
     assert client.get('/api/chat/sessions').status_code == 404
+
+
+def test_library_is_not_linked_or_mounted(client, reset_settings):
+    for path in ['/']:
+        r = client.get(path)
+        assert r.status_code == 200
+        html = r.data.decode('utf-8')
+        assert '/library/' not in html
+        assert '图书馆' not in html
+
+    _admin_login(client)
+    for path in ['/admin', '/admin/access-settings', '/admin/modules/daily_quote']:
+        r = client.get(path)
+        assert r.status_code == 200
+        html = r.data.decode('utf-8')
+        assert '/library/' not in html
+        assert '图书馆' not in html
+
+    assert client.get('/library/').status_code == 404
 
 
 def test_access_settings_defaults(app, reset_settings):

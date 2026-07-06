@@ -14,7 +14,7 @@ docker compose restart blog
 - `./data/images:/app/static/images`
 - `./home_layout.json:/app/home_layout.json`
 
-这样容器重启后保留 SQLite、文章 Markdown、上传图片、聊天附件和首页布局，同时避免把本地源码目录完整覆盖进生产容器。
+这样容器重启后保留 SQLite、文章 Markdown、上传图片和首页布局，同时避免把本地源码目录完整覆盖进生产容器。
 
 ## 开发热更新
 
