@@ -162,28 +162,10 @@
 /* search.css */
 /* ── Responsive: collapse search on small screens ── */
 @media (max-width: 640px) {
-  body { padding-top: 100px; }
+  body { padding-top: 124px; }
   .hero { padding: 10px 0 32px; }
   .hero-title { font-size: 1.6rem; }
   .hero-subtitle { font-size: 0.88rem; }
-  .nav-inner {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 6px 12px;
-    gap: 6px;
-  }
-  .nav-brand { font-size: 1rem; }
-  .nav-center {
-    order: 3;
-    flex: 1 1 100%;
-    max-width: 100%;
-  }
-  .nav-links {
-    flex-wrap: nowrap;
-    gap: 2px;
-  }
-  .nav-links a,
-  .nav-admin-menu summary { font-size: 0.78rem; padding: 4px 6px; }
   .article-card { padding: 16px 16px; }
   .article-title { font-size: 1rem; }
   .article-list { gap: 12px; }

@@ -134,6 +134,15 @@ def test_homepage_is_public_by_default(client, reset_settings):
     assert r.status_code == 200
 
 
+def test_homepage_navigation_exposes_content_shortcuts(client, reset_settings):
+    r = client.get('/')
+    html = r.data.decode('utf-8')
+    assert 'class="nav-primary"' in html
+    assert 'href="/#article-list"' in html
+    assert 'href="/#tag-filter"' in html
+    assert 'class="nav-mobile-menu"' in html
+
+
 def test_homepage_redirects_when_public_site_login_required(client, reset_settings):
     with client.application.app_context():
         set_settings({'public_site_login_required': '1'})

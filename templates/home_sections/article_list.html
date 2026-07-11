@@ -1,4 +1,4 @@
-<div class="article-list article-cover-grid" data-home-section="article_list">
+<div class="article-list article-cover-grid" id="article-list" data-home-section="article_list">
   {% for article in articles %}
   <article class="article-card article-card--cover{% if article.cover_image %} has-cover{% else %} no-cover{% endif %}" onclick="if(event.target.tagName!=='A'&&!event.target.closest('a')){var a=this.querySelector('.article-title a');if(a)location=a.href}">
     <a class="card-cover" href="/article/{{ article.slug }}" aria-label="阅读 {{ article.title }}" tabindex="-1">
