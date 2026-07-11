@@ -173,19 +173,14 @@ def test_init_db_rebuilds_legacy_tag_relations_deterministically(tmp_path, monke
     assert 3 not in tags_by_article
     assert 999 not in tags_by_article
 
-    # A later startup rebuild removes relations that no longer match the legacy field.
+    # The one-time legacy repair is now recorded as a deployment migration,
+    # rather than being repeated by every web-worker startup.
     with sqlite3.connect(database_path) as connection:
-        connection.execute("UPDATE articles SET tags='R&D, C#' WHERE id=1")
-        connection.execute('INSERT INTO article_tags (article_id, tag) VALUES (?, ?)', (1, '过期再次'))
-    init_db()
-    with sqlite3.connect(database_path) as connection:
-        rebuilt_tags = [
+        migration_versions = [
             row[0]
-            for row in connection.execute(
-                'SELECT tag FROM article_tags WHERE article_id=1 ORDER BY rowid'
-            )
+            for row in connection.execute('SELECT version FROM schema_migrations ORDER BY version')
         ]
-    assert rebuilt_tags == ['R&D', 'C#']
+    assert migration_versions == [1, 2, 3, 4, 5, 6]
 
 
 def test_search_prioritizes_title_matches_then_newest_articles(app):

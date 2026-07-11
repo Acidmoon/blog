@@ -13,6 +13,7 @@ import bleach
 import markdown as md_lib
 
 import config
+from features.articles.content_store import count_words
 from models import get_db
 from services.article_events import record_article_activity
 from services.article_index import delete_article_search, sync_article_search
@@ -22,13 +23,6 @@ from services.tagging import normalize_tag_filter, normalize_tags, serialize_tag
 _ARTICLE_LOCK = threading.RLock()
 _CONTENT_KEY_PATTERN = re.compile(r'^[0-9a-f]{32}$')
 logger = logging.getLogger(__name__)
-
-
-def _count_words(text: str) -> int:
-    """Count Chinese characters + English words in a text."""
-    cjk = len(re.findall(r'[\u4e00-\u9fff\u3400-\u4dbf]', text))
-    en_words = len(re.findall(r'[a-zA-Z0-9]+', text))
-    return cjk + en_words
 
 
 def slugify(text):
@@ -157,7 +151,7 @@ def list_featured_articles(configured=None, limit: int = 5) -> list[dict]:
         article = dict(row)
         article['cover_image'] = _normalize_cover_image(article.get('cover_image'))
         content = read_article_file(article['slug'], article.get('content_key', '')) or ''
-        article['current_word_count'] = _count_words(content)
+        article['current_word_count'] = count_words(content)
         article['summary'] = _plain_excerpt(content) or '暂无摘要'
         featured.append(article)
         if len(featured) >= limit:
@@ -332,7 +326,7 @@ def create_article_draft(
 
     base_slug = slugify(title)
     now = datetime.now().isoformat()
-    word_count = _count_words(content)
+    word_count = count_words(content)
     conn = get_db()
     slug = base_slug
     with _ARTICLE_LOCK:
@@ -418,7 +412,7 @@ def update_article(
         content_key = uuid.uuid4().hex
         try:
             write_article_file(slug, content, content_key=content_key)
-            new_word_count = _count_words(content)
+            new_word_count = count_words(content)
             conn.execute(
                 '''
                 UPDATE articles
@@ -524,7 +518,7 @@ def list_published_articles(page=1, tag=''):
     for row in rows:
         article = dict(row)
         content = read_article_file(article['slug'], article.get('content_key', ''))
-        article['current_word_count'] = _count_words(content) if content else 0
+        article['current_word_count'] = count_words(content) if content else 0
         result.append(article)
     return result, total
 

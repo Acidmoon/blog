@@ -161,37 +161,32 @@ def test_save_home_layout_rejects_invalid_schema_without_touching_file(monkeypat
     assert path.read_text(encoding="utf-8") == original
 
 
-def test_daily_quote_ignores_invalid_cache_and_schedules_background_refresh(monkeypatch, tmp_path):
+def test_daily_quote_ignores_invalid_cache_without_starting_background_work(monkeypatch, tmp_path):
     cache_path = _use_cache_path(monkeypatch, tmp_path)
     cache_path.write_text('{"date": "not-a-date", "text": 123}', encoding="utf-8")
-    scheduled_dates = []
-    monkeypatch.setattr(home_layout, "_schedule_quote_refresh", scheduled_dates.append)
 
     quote = home_layout.get_daily_quote(["本地一言"])
 
     assert quote == "本地一言"
-    assert scheduled_dates == [date.today().isoformat()]
+    assert json.loads(cache_path.read_text(encoding="utf-8")) == {"date": "not-a-date", "text": 123}
 
 
-def test_daily_quote_background_refresh_writes_valid_record(monkeypatch, tmp_path):
+def test_daily_quote_maintenance_refresh_writes_valid_record(monkeypatch, tmp_path):
     cache_path = _use_cache_path(monkeypatch, tmp_path)
-    lock_path = tmp_path / ".quote_cache.json.refresh.lock"
-    lock_path.write_text("test", encoding="utf-8")
     monkeypatch.setattr(home_layout, "fetch_hitokoto", lambda: "新的 API 一言")
 
-    home_layout._refresh_daily_quote(date.today().isoformat(), lock_path)
+    assert home_layout.refresh_daily_quote(["本地一言"])
 
     assert json.loads(cache_path.read_text(encoding="utf-8")) == {
         "date": date.today().isoformat(),
         "text": "新的 API 一言",
         "source": "hitokoto",
     }
-    assert not lock_path.exists()
+    assert not (tmp_path / ".quote_cache.json.refresh.lock").exists()
 
 
 def test_daily_quote_cache_write_failure_falls_back_without_page_failure(monkeypatch, tmp_path):
     _use_cache_path(monkeypatch, tmp_path)
-    monkeypatch.setattr(home_layout, "_schedule_quote_refresh", lambda _today: None)
 
     quote = home_layout.get_daily_quote(["本地一言"])
 
@@ -204,11 +199,7 @@ def test_daily_quote_uses_stale_cache_without_waiting_for_upstream(monkeypatch, 
         json.dumps({"date": "2020-01-01", "text": "旧缓存一言", "source": "hitokoto"}),
         encoding="utf-8",
     )
-    scheduled_dates = []
-    monkeypatch.setattr(home_layout, "_schedule_quote_refresh", scheduled_dates.append)
-
     assert home_layout.get_daily_quote(["本地一言"]) == "旧缓存一言"
-    assert scheduled_dates == [date.today().isoformat()]
 
 
 def test_resolve_hero_tolerates_invalid_nested_values():

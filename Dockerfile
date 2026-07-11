@@ -14,7 +14,10 @@ COPY requirements.txt ./
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.txt
 
-COPY app.py config.py models.py module_loader.py home_layout.json ./
+COPY app.py config.py models.py module_loader.py maintenance.py home_layout.json ./
+COPY infrastructure ./infrastructure
+COPY migrations ./migrations
+COPY features ./features
 COPY modules ./modules
 COPY routes ./routes
 COPY services ./services

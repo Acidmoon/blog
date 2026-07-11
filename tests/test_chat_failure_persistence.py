@@ -83,7 +83,7 @@ def chat_enabled(client):
 def test_failed_first_chat_request_creates_no_empty_session_or_message(client, chat_enabled, monkeypatch):
     """A provider error before success must not leave an invisible draft behind."""
     _login_visitor(client)
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', _fail_completion)
+    monkeypatch.setattr('features.chat.application.chat_completion', _fail_completion)
 
     response = client.post('/api/chat', json={'content': '会失败的问题'})
 
@@ -95,7 +95,7 @@ def test_failed_chat_request_preserves_existing_session_history(client, chat_ena
     """A retryable provider error does not append a stray user turn to an existing session."""
     _login_visitor(client)
     session = client.post('/api/chat/sessions', json={'title': '已有会话'}).get_json()['session']
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', _fail_completion)
+    monkeypatch.setattr('features.chat.application.chat_completion', _fail_completion)
 
     response = client.post('/api/chat', json={'session_id': session['id'], 'content': '会失败的问题'})
     history = client.get(f"/api/chat/sessions/{session['id']}/messages").get_json()['messages']
@@ -108,8 +108,8 @@ def test_persistence_failure_rolls_back_new_session_and_both_messages(client, ch
     """A post-model write error cannot leave a newly-created draft or first message."""
     _login_visitor(client)
     visitor_id = _current_visitor_id(client.application)
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', _successful_completion)
-    monkeypatch.setattr('services.chat_orchestrator.generate_chat_session_title', lambda messages: '完整标题')
+    monkeypatch.setattr('features.chat.application.chat_completion', _successful_completion)
+    monkeypatch.setattr('features.chat.application.generate_chat_session_title', lambda messages: '完整标题')
     _fail_assistant_message_insert(monkeypatch)
 
     with client.application.app_context(), pytest.raises(sqlite3.OperationalError):
@@ -128,8 +128,8 @@ def test_persistence_failure_preserves_existing_session_title_and_history(client
     _login_visitor(client)
     visitor_id = _current_visitor_id(client.application)
     session = client.post('/api/chat/sessions', json={'title': '新的对话'}).get_json()['session']
-    monkeypatch.setattr('services.chat_orchestrator.chat_completion', _successful_completion)
-    monkeypatch.setattr('services.chat_orchestrator.generate_chat_session_title', lambda messages: '完整标题')
+    monkeypatch.setattr('features.chat.application.chat_completion', _successful_completion)
+    monkeypatch.setattr('features.chat.application.generate_chat_session_title', lambda messages: '完整标题')
 
     from models import get_db
 

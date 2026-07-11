@@ -1,6 +1,23 @@
 name: waterhill-blog
 
 services:
+  migrate:
+    image: waterhill-blog:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    profiles: ["maintenance"]
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      ARTICLES_DIR: /app/data/articles
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Acidmoon}
+    volumes:
+      - ./data:/app/data
+      - ./data/images:/app/static/images
+      - ./home_layout.json:/app/home_layout.json
+    command: ["python", "-m", "migrations", "upgrade"]
+
   blog:
     image: waterhill-blog:local
     build:

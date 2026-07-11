@@ -5,15 +5,14 @@ from __future__ import annotations
 import pytest
 from jinja2 import ChoiceLoader, DictLoader
 
+from features.home import application as home_application
 from module_loader import HomeSectionDefinition, get_module_registry
 from modules.activity_heatmap import manifest as activity_heatmap_manifest
-from routes import home_api, public_pages
 
 
 def _override_home_layout(monkeypatch, layout):
-    """Use one in-memory layout for both the full page and AJAX endpoint."""
-    monkeypatch.setattr(public_pages, "load_home_layout", lambda: layout)
-    monkeypatch.setattr(home_api, "load_home_layout", lambda: layout)
+    """Use one feature-level layout for both the full page and AJAX endpoint."""
+    monkeypatch.setattr(home_application, "load_home_layout", lambda: layout)
 
 
 def _install_test_templates(app, monkeypatch, templates):

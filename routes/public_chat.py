@@ -3,6 +3,7 @@
 from flask import jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 
+from features.chat.application import send_public_chat_message
 from routes.public_utils import client_ip
 from services.auth import safe_next_url
 from services.access_settings import get_access_settings
@@ -15,7 +16,6 @@ from services.ai_chat import (
     ChatValidationError,
     get_public_chat_settings,
 )
-from services.chat_orchestrator import send_public_chat_message
 from services.chat_sessions import (
     ChatFileUploadError,
     ChatSessionError,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
 
@@ -14,6 +15,9 @@ BuildContext = Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]
 HomeSectionPlacement = Literal["main", "sidebar"]
 HOME_SECTION_PLACEMENTS = frozenset({"main", "sidebar"})
 MODULE_REGISTRY_EXTENSION_KEY = "blog_modules"
+MODULE_API_VERSION = 1
+MODULE_CAPABILITIES = frozenset({"blueprints", "home_sections", "admin_modules"})
+_MODULE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 
 
 @dataclass(frozen=True)
@@ -61,10 +65,12 @@ class AdminModuleDefinition:
 
 @dataclass
 class ModuleDefinition:
-    """Normalized module manifest."""
+    """Normalized manifest for one trusted, in-repository extension."""
 
     id: str
     name: str
+    api_version: int = MODULE_API_VERSION
+    capabilities: frozenset[str] = field(default_factory=frozenset)
     enabled: bool = True
     blueprints: list[Any] = field(default_factory=list)
     home_sections: list[HomeSectionDefinition] = field(default_factory=list)
@@ -80,10 +86,11 @@ class ModuleRegistry:
     admin_modules: dict[str, AdminModuleDefinition] = field(default_factory=dict)
 
     def register_module(self, module: ModuleDefinition) -> None:
-        """Register one enabled module after validating all identifier namespaces."""
+        """Register one enabled module after validating its public contract."""
         if not module.enabled:
             return
 
+        _validate_module_contract(module)
         if module.id in self.modules:
             raise ValueError(f"duplicate module id: {module.id!r}")
 
@@ -162,14 +169,96 @@ def _coerce_module(raw: Any, import_name: str) -> ModuleDefinition:
     if not isinstance(raw, dict):
         raise TypeError(f"{import_name}.MODULE must be dict or ModuleDefinition, got {type(raw)!r}")
     module_id = str(raw.get("id") or import_name.rsplit(".", 2)[-2])
+    raw_capabilities = raw.get("capabilities")
+    if not isinstance(raw_capabilities, (list, tuple, set, frozenset)):
+        raise TypeError(f"{import_name}.MODULE.capabilities must be a list of capability names")
     return ModuleDefinition(
         id=module_id,
         name=str(raw.get("name") or module_id),
+        api_version=int(raw.get("api_version", 0)),
+        capabilities=frozenset(str(capability) for capability in raw_capabilities),
         enabled=bool(raw.get("enabled", True)),
         blueprints=list(raw.get("blueprints", [])),
         home_sections=[_coerce_home_section(item) for item in raw.get("home_sections", [])],
         admin_modules=[_coerce_admin_module(item) for item in raw.get("admin_modules", [])],
     )
+
+
+def _validate_module_contract(module: ModuleDefinition) -> None:
+    """Reject unsupported extension contracts before Flask registers any route."""
+    if not _MODULE_ID_PATTERN.fullmatch(module.id):
+        raise ValueError(f"invalid module id: {module.id!r}")
+    if module.api_version != MODULE_API_VERSION:
+        raise ValueError(
+            f"module {module.id!r} requires API {module.api_version}, "
+            f"but this application supports {MODULE_API_VERSION}"
+        )
+    unsupported = module.capabilities.difference(MODULE_CAPABILITIES)
+    if unsupported:
+        raise ValueError(f"module {module.id!r} declares unsupported capabilities: {sorted(unsupported)!r}")
+    actual_capabilities = frozenset(
+        capability
+        for capability, values in (
+            ("blueprints", module.blueprints),
+            ("home_sections", module.home_sections),
+            ("admin_modules", module.admin_modules),
+        )
+        if values
+    )
+    if actual_capabilities != module.capabilities:
+        raise ValueError(
+            f"module {module.id!r} declares {sorted(module.capabilities)!r}, "
+            f"but provides {sorted(actual_capabilities)!r}"
+        )
+    for section in module.home_sections:
+        if not section.template.strip():
+            raise ValueError(f"module {module.id!r} has a home section without a template")
+        if section.build_context is not None and not callable(section.build_context):
+            raise TypeError(f"module {module.id!r} has a non-callable home section context builder")
+    for admin_module in module.admin_modules:
+        if admin_module.handler is not None and not callable(admin_module.handler):
+            raise TypeError(f"module {module.id!r} has a non-callable admin handler")
+
+
+def _route_methods(rule: Any) -> frozenset[str]:
+    """Normalize Flask's implicit HTTP methods for collision comparison."""
+    return frozenset(method for method in rule.methods if method not in {"HEAD", "OPTIONS"})
+
+
+def _validate_module_routes(app: Flask, modules: list[ModuleDefinition]) -> None:
+    """Detect URL/method and Blueprint-name collisions before registration.
+
+    Modules are trusted Python code, not a sandbox.  This validation protects
+    the host application's URL contract from accidental overlaps while keeping
+    Flask's normal Blueprint registration as the source of truth.
+    """
+    registered_names = set(app.blueprints)
+    registered_rules: dict[str, set[str]] = {}
+    for rule in app.url_map.iter_rules():
+        registered_rules.setdefault(rule.rule, set()).update(_route_methods(rule))
+
+    for module in modules:
+        for blueprint in module.blueprints:
+            blueprint_name = str(getattr(blueprint, "name", ""))
+            if not blueprint_name:
+                raise ValueError(f"module {module.id!r} contains an unnamed Blueprint")
+            if blueprint_name in registered_names:
+                raise ValueError(f"module {module.id!r} reuses Blueprint name: {blueprint_name!r}")
+
+            # The probe must not add Flask's own /static route, otherwise every
+            # module Blueprint would appear to collide with the host static URL.
+            probe = Flask(f"module-route-probe-{module.id}-{blueprint_name}", static_folder=None)
+            probe.register_blueprint(blueprint)
+            for rule in probe.url_map.iter_rules():
+                methods = set(_route_methods(rule))
+                overlap = methods.intersection(registered_rules.get(rule.rule, set()))
+                if overlap:
+                    raise ValueError(
+                        f"module {module.id!r} route collision at {rule.rule!r} "
+                        f"for methods {sorted(overlap)!r}"
+                    )
+                registered_rules.setdefault(rule.rule, set()).update(methods)
+            registered_names.add(blueprint_name)
 
 
 def discover_modules(package_name: str = "modules") -> list[ModuleDefinition]:
@@ -204,6 +293,8 @@ def load_modules(app: Flask, package_name: str = "modules") -> ModuleRegistry:
     registry = ModuleRegistry()
     for module in modules:
         registry.register_module(module)
+
+    _validate_module_routes(app, modules)
 
     for module in modules:
         for blueprint in module.blueprints:

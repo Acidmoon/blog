@@ -5,7 +5,7 @@ from pathlib import Path
 from flask import Flask, jsonify, redirect, request, url_for
 
 import config
-from models import close_db, init_db
+from models import close_db
 from module_loader import load_modules
 from routes import register_blueprints
 from services.admin_modules import build_admin_nav, build_admin_nav_groups
@@ -20,7 +20,6 @@ from services.request_security import (
     csrf_request_is_valid,
     csrf_token,
 )
-from services.search import ensure_article_search_index
 from services.visitor_auth import current_visitor
 
 
@@ -67,13 +66,6 @@ def create_app(test_config: dict | None = None):
 
     config.ensure_directories()
     app.teardown_appcontext(close_db)
-    init_db()
-    # Build a legacy FTS index through an app context so its connection is
-    # released by the normal teardown path before the server accepts traffic.
-    with app.app_context():
-        ensure_article_search_index()
-    load_modules(app)
-
     @app.context_processor
     def inject_global_admin_nav():
         return {
@@ -87,8 +79,6 @@ def create_app(test_config: dict | None = None):
             "csrf_token": csrf_token,
         }
 
-    register_blueprints(app)
-
     @app.get('/healthz')
     def healthz():
         """Report process readiness without exposing dependency details."""
@@ -100,6 +90,11 @@ def create_app(test_config: dict | None = None):
         if not healthy:
             return jsonify({'status': 'unhealthy'}), 503
         return jsonify({'status': 'ok'})
+
+    # Core routes, including the health endpoint, are registered before
+    # extensions so module validation sees every URL the host application owns.
+    register_blueprints(app)
+    load_modules(app)
 
     @app.before_request
     def require_visitor_for_public_site():

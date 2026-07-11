@@ -3,10 +3,14 @@
 ## 生产/日常运行
 
 ```bash
-docker compose up -d --build
+docker compose build blog
+docker compose run --rm --no-deps migrate
+docker compose up -d --no-build blog
 docker compose logs -f blog
 docker compose restart blog
 ```
+
+`migrate` 是显式的部署期维护服务，会在启动 Web worker 前执行 `python -m migrations upgrade`。不要跳过该步骤，也不要依赖应用启动自动建表或修复历史数据。
 
 默认 `docker-compose.yml` 使用镜像内代码运行，只挂载运行时数据：
 
@@ -34,11 +38,13 @@ fi
 python -m json.tool data/home_layout.json >/dev/null
 ```
 
-只有在目标文件不存在时才复制，避免覆盖已经存在的运行时布局。校验通过后，按常规方式只重建目标服务，不要执行 `docker compose down`：
+只有在目标文件不存在时才复制，避免覆盖已经存在的运行时布局。校验通过后，先执行数据库迁移，再只重建目标服务，不要执行 `docker compose down`：
 
 ```bash
 cd /root/blog
-docker compose up -d --build blog
+docker compose build blog
+docker compose run --rm --no-deps migrate
+docker compose up -d --no-build blog
 docker compose exec -T blog python -c "from pathlib import Path; print(Path('/app/data/home_layout.json').is_file())"
 ```
 
@@ -101,6 +107,12 @@ docker compose exec -T blog python -m services.article_maintenance --retention-d
 ```
 
 先检查 dry-run 输出和恢复批次清单，再决定是否保留或清理隔离目录；运行中的 Web 请求不得执行 `--apply`。
+
+每日一言刷新是独立维护任务，不在首页请求中创建后台线程。可由 cron 或其他调度器每天调用：
+
+```bash
+docker compose run --rm --no-deps blog python -m maintenance refresh-daily-quote
+```
 
 ## 验证
 

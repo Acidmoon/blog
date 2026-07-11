@@ -4,7 +4,8 @@ import argparse
 
 from models import get_db
 from services.article_index import article_search_terms, sync_article_search
-from services.articles import _count_words, read_article_file
+from features.articles.content_store import count_words
+from services.articles import read_article_file
 
 
 MAX_SEARCH_QUERY_LENGTH = 200
@@ -109,7 +110,6 @@ def rebuild_article_search_index() -> dict[str, int]:
 
 def _matching_rows(query: str, *, limit: int, offset: int):
     """Query FTS first and read Markdown only for the requested result page."""
-    ensure_article_search_index()
     conn = get_db()
     phrase = _fts_phrase(query)
     if phrase is None:
@@ -171,7 +171,7 @@ def _render_search_result(row, query: str):
     title_match = q in article['title'].lower()
     tag_match = q in (article['tags'] or '').lower()
     content = read_article_file(article['slug'], article.get('content_key', ''))
-    article['current_word_count'] = _count_words(content) if content else 0
+    article['current_word_count'] = count_words(content) if content else 0
     content_match = bool(content) and q in content.lower()
     snippet = ''
     if content_match and content:
@@ -225,10 +225,10 @@ def main() -> int:
     args = parser.parse_args()
     if not args.rebuild:
         parser.error('请指定 --rebuild')
-    from models import init_db
-
     config.ensure_directories()
-    init_db()
+    from migrations import migrate_database
+
+    migrate_database()
     report = rebuild_article_search_index()
     print(f"indexed={report['indexed']} articles={report['articles']}")
     return 0

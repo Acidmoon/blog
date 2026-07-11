@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import tempfile
-import threading
 import time
 import urllib.request
 from datetime import date
@@ -381,31 +380,32 @@ def _try_acquire_quote_refresh_lock() -> Path | None:
     return None
 
 
-def _refresh_daily_quote(today_key: str, lock_path: Path) -> None:
-    """Refresh cache outside request handling and always release the lease."""
+def refresh_daily_quote(quotes: list[str], *, today: date | None = None) -> bool:
+    """Fetch and persist today's quote for a scheduled maintenance invocation.
+
+    This function is intentionally never called by a page request.  The lease
+    keeps duplicate cron or container invocations from refreshing concurrently,
+    while readers continue to use a cached or deterministic local fallback.
+    """
+    current_day = today or date.today()
+    today_key = current_day.isoformat()
+    lock_path = _try_acquire_quote_refresh_lock()
+    if lock_path is None:
+        return False
     try:
         quote = fetch_hitokoto()
-        if quote:
-            _save_quote_cache({"date": today_key, "text": quote, "source": "hitokoto"})
+        if not quote:
+            return False
+        _save_quote_cache({"date": today_key, "text": quote, "source": "hitokoto"})
+        return True
+    except OSError as exc:
+        logger.info("每日一言缓存刷新失败: %s", exc)
+        return False
     finally:
         try:
             lock_path.unlink(missing_ok=True)
         except OSError as exc:
             logger.info("无法释放每日一言刷新锁: %s", exc)
-
-
-def _schedule_quote_refresh(today_key: str) -> None:
-    """Start at most one short-lived cross-process refresh for the current day."""
-    lock_path = _try_acquire_quote_refresh_lock()
-    if lock_path is None:
-        return
-    worker = threading.Thread(
-        target=_refresh_daily_quote,
-        args=(today_key, lock_path),
-        name="daily-quote-refresh",
-        daemon=True,
-    )
-    worker.start()
 
 
 def _local_daily_quote(quotes: list[str], today: date) -> str:
@@ -415,7 +415,7 @@ def _local_daily_quote(quotes: list[str], today: date) -> str:
 
 
 def get_daily_quote(quotes: list[str]) -> str:
-    """Return cached/local content immediately and refresh remote content asynchronously."""
+    """Return cached/local content without writing or starting work in a request."""
     today = date.today()
     today_key = today.isoformat()
     cached = _load_quote_cache()
@@ -427,8 +427,6 @@ def get_daily_quote(quotes: list[str]) -> str:
     visible_quote = cached.get("text")
     if not visible_quote:
         visible_quote = _local_daily_quote(quotes, today)
-        _save_quote_cache({"date": today_key, "text": visible_quote, "source": "local"})
-    _schedule_quote_refresh(today_key)
     return visible_quote
 
 

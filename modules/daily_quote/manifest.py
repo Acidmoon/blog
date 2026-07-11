@@ -9,6 +9,8 @@ def build_daily_quote_context(layout, base_context):
 MODULE = {
     "id": "daily_quote",
     "name": "每日一言",
+    "api_version": 1,
+    "capabilities": ["home_sections"],
     "home_sections": [
         HomeSectionDefinition(
             id="daily_quote",

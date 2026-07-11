@@ -143,8 +143,20 @@ log "recorded previous image: ${previous_image_id:-none}"
 log "fast-forwarding ${BRANCH}"
 git pull --ff-only "$REMOTE" "$BRANCH"
 
-log "building and starting ${SERVICE}"
-if ! compose up -d --build "$SERVICE"; then
+log "building ${SERVICE} image"
+if ! compose build "$SERVICE"; then
+  printf '[deploy] target image build failed\n' >&2
+  exit 1
+fi
+
+log "applying versioned database migrations"
+if ! compose run --rm --no-deps migrate; then
+  printf '[deploy] database migration failed; target service was not restarted\n' >&2
+  exit 1
+fi
+
+log "starting ${SERVICE}"
+if ! compose up -d --no-build "$SERVICE"; then
   rollback_target_service "target service failed to start"
   exit 1
 fi

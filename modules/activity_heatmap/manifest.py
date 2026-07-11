@@ -28,6 +28,8 @@ def build_activity_heatmap_context(layout, base_context):
 MODULE = {
     "id": "activity_heatmap",
     "name": "月度活动热力图",
+    "api_version": 1,
+    "capabilities": ["home_sections"],
     "home_sections": [
         HomeSectionDefinition(
             id="activity_heatmap",

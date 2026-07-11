@@ -4,6 +4,8 @@ from services.home_layout_admin import handle_layout
 MODULE = {
     "id": "core_home",
     "name": "核心首页模块",
+    "api_version": 1,
+    "capabilities": ["admin_modules"],
     "admin_modules": [
         AdminModuleDefinition(
             id="daily_quote",

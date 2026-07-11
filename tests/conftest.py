@@ -89,8 +89,11 @@ def test_runtime_paths(tmp_path_factory):
 def app(test_runtime_paths):
     """Create one app backed only by the pytest-owned runtime paths."""
     from app import create_app
+    from migrations import migrate_database
     from services.articles import create_article_draft, get_article_meta, publish_article
 
+    # Production applies the same migration command before web workers start.
+    migrate_database()
     test_app = create_app({"TESTING": True})
     with test_app.app_context():
         if not get_article_meta("这是我的博客的第一篇文章", published_only=False):
