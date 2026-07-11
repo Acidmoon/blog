@@ -75,9 +75,7 @@
 
   var current = 0;
   var position = 1;
-  var timer = null;
   var isAnimating = false;
-  var intervalMs = 5000;
   function applyPosition() {
     rail.style.transform = 'translate3d(' + (-position * 100) + '%, 0, 0)';
   }
@@ -103,14 +101,6 @@
     rail.classList.remove('is-jump');
     applyPosition();
   }
-  function stop() {
-    if (timer) window.clearInterval(timer);
-    timer = null;
-  }
-  function start() {
-    if (!timer) timer = window.setInterval(function(){ go(current + 1); }, intervalMs);
-  }
-  function restart() { stop(); start(); }
   rail.addEventListener('transitionend', function(event) {
     if (event.propertyName !== 'transform') return;
     isAnimating = false;
@@ -120,10 +110,9 @@
       jumpTo(realSlides.length - 1);
     }
   });
-  if (prev) prev.addEventListener('click', function(){ go(current - 1); restart(); });
-  if (next) next.addEventListener('click', function(){ go(current + 1); restart(); });
+  if (prev) prev.addEventListener('click', function(){ go(current - 1); });
+  if (next) next.addEventListener('click', function(){ go(current + 1); });
   jumpTo(0);
-  start();
 })();
 </script>
 

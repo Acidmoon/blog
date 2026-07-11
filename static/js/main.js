@@ -378,8 +378,18 @@ function initArticleTOC() {
     function updateActive() {
       var allDesktop = tocNav.querySelectorAll('.toc-item');
       var allMobile = tocMobileNav ? tocMobileNav.querySelectorAll('.toc-item') : [];
-      allDesktop.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+      var activeDesktop = null;
+      allDesktop.forEach(function(a) {
+        var isActive = a.dataset.heading === activeId;
+        a.classList.toggle('active', isActive);
+        if (isActive) activeDesktop = a;
+      });
       allMobile.forEach(function(a) { a.classList.toggle('active', a.dataset.heading === activeId); });
+
+      // Keep the current section visible inside a long desktop TOC without scrolling the article itself.
+      if (activeDesktop && window.matchMedia('(min-width: 1360px)').matches) {
+        activeDesktop.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
     }
 
     // Initial active

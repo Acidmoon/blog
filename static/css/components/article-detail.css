@@ -559,7 +559,7 @@
   padding: 16px 24px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1360px) {
   .article-toc {
     position: fixed;
     top: 80px;
@@ -567,12 +567,27 @@
     z-index: 40;
     display: block;
   }
+  .toc-sticky {
+    max-height: calc(100vh - 104px);
+    max-height: calc(100dvh - 104px);
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-gutter: stable;
+  }
+  .toc-title {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding-bottom: 12px;
+    background: var(--bg-base);
+  }
+  .toc-item { overflow-wrap: anywhere; }
   .back-to-top {
     right: 28px;
     bottom: 28px;
   }
 }
-@media (max-width: 1023px) {
+@media (max-width: 1359px) {
   .article-page-wrapper { padding: 10px 16px 0; }
   .toc-mobile-toggle { display: flex; }
 }
