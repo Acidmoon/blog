@@ -10,6 +10,13 @@
   <script>
     (function(){var t=localStorage.getItem('waterhill-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
   </script>
+  <script>
+    // Shared browser contract for every JSON mutation, including chat login.
+    window.getCsrfToken = function () {
+      var token = document.querySelector('meta[name="csrf-token"]');
+      return token ? token.content : '';
+    };
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" onload="this.rel='stylesheet'">
