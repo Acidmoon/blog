@@ -472,6 +472,118 @@ function initArticleTOC() {
 }
 
 /* ── Homepage AJAX Navigation (tag/page switch without reload) ── */
+function initHomeSectionSnap() {
+  var homeLayout = document.querySelector('[data-home-section-snap]');
+  if (!homeLayout || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var snapZone = 84;
+  var upwardForceThreshold = 160;
+  var upwardForceWindow = 220;
+  var upwardForce = 0;
+  var lastUpwardInputAt = 0;
+  var isSnapping = false;
+  var snapTimer = null;
+  var touchStartY = null;
+  var touchStartScrollY = 0;
+
+  function getSecondSectionTop() {
+    return Math.round(homeLayout.getBoundingClientRect().top + window.scrollY);
+  }
+
+  function isInteractiveTarget(target) {
+    return target && target.closest(
+      'a, button, input, textarea, select, summary, [contenteditable="true"], [role="dialog"]'
+    );
+  }
+
+  function shouldIgnore(event) {
+    return event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
+      isInteractiveTarget(event.target) || document.querySelector('.auth-modal:not([hidden]), details[open]');
+  }
+
+  function normalizeWheelDelta(event) {
+    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) return event.deltaY * 16;
+    if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) return event.deltaY * window.innerHeight;
+    return event.deltaY;
+  }
+
+  function snapTo(top) {
+    if (isSnapping || Math.abs(window.scrollY - top) < 2) return;
+
+    isSnapping = true;
+    window.scrollTo({ top: top, behavior: 'smooth' });
+    window.clearTimeout(snapTimer);
+    snapTimer = window.setTimeout(function() {
+      isSnapping = false;
+    }, 650);
+  }
+
+  function handleWheel(event) {
+    if (shouldIgnore(event)) return;
+
+    var delta = normalizeWheelDelta(event);
+    if (!delta || isSnapping) {
+      if (isSnapping) event.preventDefault();
+      return;
+    }
+
+    var secondSectionTop = getSecondSectionTop();
+    var scrollY = window.scrollY;
+
+    // Any downward intent from the hero lands on the first line of the article area.
+    if (delta > 0 && scrollY < secondSectionTop - 2) {
+      event.preventDefault();
+      upwardForce = 0;
+      snapTo(secondSectionTop);
+      return;
+    }
+
+    // At the article boundary, a light upward nudge stays anchored; a deliberate gesture returns home.
+    if (delta < 0 && Math.abs(scrollY - secondSectionTop) <= snapZone) {
+      event.preventDefault();
+      var now = performance.now();
+      if (now - lastUpwardInputAt > upwardForceWindow) upwardForce = 0;
+      upwardForce += Math.abs(delta);
+      lastUpwardInputAt = now;
+
+      if (upwardForce >= upwardForceThreshold) {
+        upwardForce = 0;
+        snapTo(0);
+      } else {
+        snapTo(secondSectionTop);
+      }
+    }
+  }
+
+  function handleTouchStart(event) {
+    if (event.touches.length !== 1 || shouldIgnore(event)) return;
+    touchStartY = event.touches[0].clientY;
+    touchStartScrollY = window.scrollY;
+  }
+
+  function handleTouchEnd(event) {
+    if (touchStartY === null || event.changedTouches.length !== 1) return;
+
+    var delta = touchStartY - event.changedTouches[0].clientY;
+    touchStartY = null;
+    if (isSnapping || Math.abs(delta) < 18) return;
+
+    var secondSectionTop = getSecondSectionTop();
+    if (delta > 0 && touchStartScrollY < secondSectionTop - snapZone) {
+      snapTo(secondSectionTop);
+      return;
+    }
+
+    if (delta < 0 && Math.abs(touchStartScrollY - secondSectionTop) <= snapZone) {
+      snapTo(Math.abs(delta) >= upwardForceThreshold ? 0 : secondSectionTop);
+    }
+  }
+
+  window.addEventListener('wheel', handleWheel, { passive: false });
+  window.addEventListener('touchstart', handleTouchStart, { passive: true });
+  window.addEventListener('touchend', handleTouchEnd, { passive: true });
+}
+
 function initHomeAjaxNav() {
   var homeLayout = document.querySelector('.home-layout');
   if (!homeLayout) return;
@@ -605,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initArticleTOC();
   initSearch();
   initWaterRipple();
+  initHomeSectionSnap();
   initHomeAjaxNav();
   initWidthToggle();
   initBackToTop();
