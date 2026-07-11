@@ -13,6 +13,7 @@ from services.ai_chat import is_public_chat_enabled
 from services.access_settings import is_public_site_login_required
 from services.auth import current_identity, safe_next_url
 from services.error_responses import register_error_handlers
+from services.articles import list_navigation_tags
 from services.request_security import (
     CSRF_SAFE_METHODS,
     csrf_failure_response,
@@ -77,6 +78,7 @@ def create_app(test_config: dict | None = None):
             "current_identity": current_identity,
             "current_visitor": current_visitor,
             "csrf_token": csrf_token,
+            "nav_tags": list_navigation_tags(),
         }
 
     @app.get('/healthz')

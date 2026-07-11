@@ -138,8 +138,14 @@ def test_homepage_navigation_exposes_content_shortcuts(client, reset_settings):
     r = client.get('/')
     html = r.data.decode('utf-8')
     assert 'class="nav-primary"' in html
+    assert 'data-nav-dropdown' in html
+    assert 'id="navArticlesToggle"' in html
+    assert 'id="navArticlesPanel"' in html
+    assert 'role="menu"' in html
     assert 'href="/#article-list"' in html
     assert 'href="/#tag-filter"' in html
+    assert '文章分类' in html
+    assert 'href="/?tag=%E5%8D%9A%E5%AE%A2"' in html
     assert 'class="nav-mobile-menu"' in html
 
 

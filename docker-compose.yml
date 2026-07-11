@@ -40,7 +40,7 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-1}
       ADMIN_SESSION_MAX_AGE_SECONDS: ${ADMIN_SESSION_MAX_AGE_SECONDS:-43200}
       ARTICLES_DIR: /app/data/articles
-      ASSET_VERSION: ${ASSET_VERSION:-2026-06-17-architecture-refactor}
+      ASSET_VERSION: ${ASSET_VERSION:-2026-07-11-navigation-dropdown}
       AI_POLISH_TIMEOUT: ${AI_POLISH_TIMEOUT:-60}
       AI_POLISH_API_BASE: ${AI_POLISH_API_BASE:-https://www.waterhill.cyou/v1}
       AI_POLISH_API_KEY: ${AI_POLISH_API_KEY:-}

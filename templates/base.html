@@ -50,8 +50,40 @@
       </a>
       <nav class="nav-primary" aria-label="内容导航">
         <a href="/">首页</a>
-        <a href="/#article-list">文章</a>
-        <a href="/#tag-filter">标签</a>
+        <div class="nav-dropdown" data-nav-dropdown>
+          <button
+            id="navArticlesToggle"
+            class="nav-dropdown-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-haspopup="menu"
+            aria-controls="navArticlesPanel"
+          >
+            <span>文章</span>
+            <svg class="nav-dropdown-chevron" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div id="navArticlesPanel" class="nav-dropdown-panel" role="menu" aria-label="文章分类">
+            <a class="nav-dropdown-overview" href="/#article-list" role="menuitem">
+              <span>浏览文章</span>
+              <small>回到最新发布</small>
+            </a>
+            <a class="nav-dropdown-overview" href="/#tag-filter" role="menuitem">
+              <span>全部标签</span>
+              <small>按主题筛选阅读</small>
+            </a>
+            {% if nav_tags %}
+            <div class="nav-dropdown-divider" aria-hidden="true"></div>
+            <p class="nav-dropdown-label">常用标签</p>
+            <div class="nav-dropdown-tags">
+              {% for tag in nav_tags %}
+              <a href="/?tag={{ tag|urlencode }}" role="menuitem">{{ tag }}</a>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
       </nav>
       <div class="nav-center">
         <form class="search-form" action="/search" method="GET" role="search">
@@ -94,8 +126,16 @@
           </summary>
           <div class="nav-mobile-panel">
             <a href="/">首页</a>
-            <a href="/#article-list">文章</a>
-            <a href="/#tag-filter">标签</a>
+            <a href="/#article-list">浏览文章</a>
+            <details class="nav-mobile-submenu">
+              <summary>文章分类</summary>
+              <div class="nav-mobile-submenu-panel">
+                <a href="/#tag-filter">全部标签</a>
+                {% for tag in nav_tags %}
+                <a href="/?tag={{ tag|urlencode }}">{{ tag }}</a>
+                {% endfor %}
+              </div>
+            </details>
           </div>
         </details>
       </div>

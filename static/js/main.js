@@ -53,6 +53,67 @@ function initNavbarScroll() {
   update();
 }
 
+/* ── Navigation Dropdowns ────────────────────────── */
+function initNavDropdowns() {
+  const dropdowns = Array.from(document.querySelectorAll('[data-nav-dropdown]'));
+  if (!dropdowns.length) return;
+
+  function setOpen(dropdown, open) {
+    const trigger = dropdown.querySelector('.nav-dropdown-toggle');
+    dropdown.classList.toggle('is-open', open);
+    if (trigger) trigger.setAttribute('aria-expanded', String(open));
+  }
+
+  function closeOthers(activeDropdown) {
+    dropdowns.forEach(dropdown => {
+      if (dropdown !== activeDropdown) setOpen(dropdown, false);
+    });
+  }
+
+  dropdowns.forEach(dropdown => {
+    const trigger = dropdown.querySelector('.nav-dropdown-toggle');
+    const panel = dropdown.querySelector('.nav-dropdown-panel');
+    if (!trigger || !panel) return;
+
+    dropdown.addEventListener('mouseenter', () => {
+      closeOthers(dropdown);
+      setOpen(dropdown, true);
+    });
+    dropdown.addEventListener('mouseleave', () => setOpen(dropdown, false));
+    dropdown.addEventListener('focusin', event => {
+      if (event.target === trigger) return;
+      closeOthers(dropdown);
+      setOpen(dropdown, true);
+    });
+    dropdown.addEventListener('focusout', event => {
+      if (!dropdown.contains(event.relatedTarget)) setOpen(dropdown, false);
+    });
+    trigger.addEventListener('click', () => {
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        closeOthers(dropdown);
+        setOpen(dropdown, true);
+        return;
+      }
+      const willOpen = !dropdown.classList.contains('is-open');
+      closeOthers(dropdown);
+      setOpen(dropdown, willOpen);
+    });
+    trigger.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown') return;
+      event.preventDefault();
+      closeOthers(dropdown);
+      setOpen(dropdown, true);
+      const firstItem = panel.querySelector('a');
+      if (firstItem) firstItem.focus();
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    dropdowns.forEach(dropdown => setOpen(dropdown, false));
+  });
+}
+
 /* ── Article Card Staggered Reveal ────────────────── */
 function initCardReveal() {
   // 简单淡入：不再用 JS 暂停动画，直接让 CSS animation 自然播放
@@ -535,6 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
   createMistParticles();
   initThemeToggle();
   initNavbarScroll();
+  initNavDropdowns();
   initReadingProgress();
   initCardReveal();
   initCardClick();

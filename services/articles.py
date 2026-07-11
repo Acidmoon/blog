@@ -469,6 +469,25 @@ def list_all_tags():
     return [row['tag'] for row in rows]
 
 
+def list_navigation_tags(limit: int = 6) -> list[str]:
+    """Return a bounded set of published tags for the global article menu."""
+    if not isinstance(limit, int) or limit < 1:
+        return []
+    rows = get_db().execute(
+        '''
+        SELECT article_tags.tag, COUNT(*) AS article_count
+        FROM article_tags
+        JOIN articles ON articles.id = article_tags.article_id
+        WHERE articles.published=1
+        GROUP BY article_tags.tag
+        ORDER BY article_count DESC, article_tags.tag COLLATE NOCASE
+        LIMIT ?
+        ''',
+        (limit,),
+    ).fetchall()
+    return [row['tag'] for row in rows]
+
+
 def list_all_tags_admin():
     """Return all tags from ALL articles (including drafts), for admin hero config."""
     conn = get_db()
