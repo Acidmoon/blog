@@ -38,7 +38,7 @@
         {% if article.tags %}
         <span class="article-tags">
           {% for t in article.tags.split(',') if t.strip() %}
-          <a href="/?tag={{ t.strip() }}" class="tag-sm">{{ t.strip() }}</a>
+          <a href="/?tag={{ t.strip()|urlencode }}" class="tag-sm">{{ t.strip() }}</a>
           {% endfor %}
         </span>
         {% endif %}

@@ -408,6 +408,12 @@
 .aw {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
+.aw__error {
+  margin-top: 10px;
+  color: var(--flash-error-text);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
 
 /* ── Desktop: make cells more compact for faster rendering ── */
 @media (min-width: 851px) {

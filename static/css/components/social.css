@@ -7,6 +7,9 @@
   gap: 6px;
   flex-shrink: 0;
 }
+.nav-logout-form {
+  margin: 0;
+}
 .nav-auth-btn {
   font-size: 0.84rem;
   padding: 6px 14px;

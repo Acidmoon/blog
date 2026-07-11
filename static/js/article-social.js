@@ -19,7 +19,10 @@
   if (likeBtn) {
     likeBtn.addEventListener('click', () => {
       likeBtn.disabled = true;
-      fetch(`/api/article/${encodeURIComponent(slug)}/like`, { method: 'POST' })
+      fetch(`/api/article/${encodeURIComponent(slug)}/like`, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': window.getCsrfToken() },
+      })
         .then(r => r.json())
         .then(data => {
           if (data.error) { alert(data.error); return; }
@@ -103,7 +106,10 @@
     if (!btn) return;
     if (!confirm('确定删除这条评论？')) return;
     const id = btn.dataset.del;
-    fetch(`/api/comments/${id}`, { method: 'DELETE' })
+    fetch(`/api/comments/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-Token': window.getCsrfToken() },
+    })
       .then(r => r.json())
       .then(data => {
         if (data.error) { alert(data.error); return; }
@@ -125,7 +131,10 @@
       hint.textContent = '发表中…';
       fetch(`/api/article/${encodeURIComponent(slug)}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': window.getCsrfToken(),
+        },
         body: JSON.stringify({ content }),
       })
         .then(r => r.json())

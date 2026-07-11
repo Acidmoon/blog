@@ -5,23 +5,43 @@ from __future__ import annotations
 import importlib
 import pkgutil
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
-from flask import Flask
+from flask import Flask, current_app
 
 
 BuildContext = Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]
+HomeSectionPlacement = Literal["main", "sidebar"]
+HOME_SECTION_PLACEMENTS = frozenset({"main", "sidebar"})
+MODULE_REGISTRY_EXTENSION_KEY = "blog_modules"
 
 
 @dataclass(frozen=True)
 class HomeSectionDefinition:
-    """A renderable homepage section contributed by a module."""
+    """A renderable homepage section contributed by a module.
+
+    ``placement`` declares the page container rather than requiring a route to
+    maintain a special-case list of section ids. Section templates receive the
+    context returned by ``build_context`` through the shared renderer.
+    """
 
     id: str
     name: str
     template: str
     default_order: int = 100
     build_context: BuildContext | None = None
+    placement: HomeSectionPlacement = "main"
+
+    def __post_init__(self) -> None:
+        """Normalize and validate the finite set of supported page containers."""
+        normalized_placement = str(self.placement).strip().lower()
+        if normalized_placement not in HOME_SECTION_PLACEMENTS:
+            supported = ", ".join(sorted(HOME_SECTION_PLACEMENTS))
+            raise ValueError(
+                f"unsupported home section placement {self.placement!r}; "
+                f"expected one of: {supported}"
+            )
+        object.__setattr__(self, "placement", normalized_placement)
 
 
 @dataclass(frozen=True)
@@ -53,23 +73,53 @@ class ModuleDefinition:
 
 @dataclass
 class ModuleRegistry:
-    """In-memory registry populated at app startup."""
+    """In-memory registry owned by exactly one Flask application instance."""
 
     modules: dict[str, ModuleDefinition] = field(default_factory=dict)
     home_sections: dict[str, HomeSectionDefinition] = field(default_factory=dict)
     admin_modules: dict[str, AdminModuleDefinition] = field(default_factory=dict)
 
     def register_module(self, module: ModuleDefinition) -> None:
+        """Register one enabled module after validating all identifier namespaces."""
         if not module.enabled:
             return
+
+        if module.id in self.modules:
+            raise ValueError(f"duplicate module id: {module.id!r}")
+
+        self._validate_home_section_ids(module)
+        self._validate_admin_module_ids(module)
         self.modules[module.id] = module
         for section in module.home_sections:
             self.home_sections[section.id] = section
         for admin_module in module.admin_modules:
             self.admin_modules[admin_module.id] = admin_module
 
+    def _validate_home_section_ids(self, module: ModuleDefinition) -> None:
+        """Reject duplicate section ids before mutating this registry."""
+        seen_ids: set[str] = set()
+        for section in module.home_sections:
+            if section.id in seen_ids or section.id in self.home_sections:
+                raise ValueError(f"duplicate home section id: {section.id!r}")
+            seen_ids.add(section.id)
 
-REGISTRY = ModuleRegistry()
+    def _validate_admin_module_ids(self, module: ModuleDefinition) -> None:
+        """Reject duplicate admin ids before mutating this registry."""
+        seen_ids: set[str] = set()
+        for admin_module in module.admin_modules:
+            if admin_module.id in seen_ids or admin_module.id in self.admin_modules:
+                raise ValueError(f"duplicate admin module id: {admin_module.id!r}")
+            seen_ids.add(admin_module.id)
+
+
+def get_module_registry(app: Flask | None = None) -> ModuleRegistry:
+    """Return the registry attached to an application, never a process singleton."""
+    if app is None:
+        app = current_app._get_current_object()
+    registry = app.extensions.get(MODULE_REGISTRY_EXTENSION_KEY)
+    if not isinstance(registry, ModuleRegistry):
+        raise RuntimeError("blog module registry is not initialized for this application")
+    return registry
 
 
 def _coerce_home_section(raw: Any) -> HomeSectionDefinition:
@@ -83,6 +133,7 @@ def _coerce_home_section(raw: Any) -> HomeSectionDefinition:
         template=str(raw["template"]),
         default_order=int(raw.get("default_order", 100) or 100),
         build_context=raw.get("build_context"),
+        placement=raw.get("placement") or "main",
     )
 
 
@@ -145,15 +196,18 @@ def discover_modules(package_name: str = "modules") -> list[ModuleDefinition]:
 
 
 def load_modules(app: Flask, package_name: str = "modules") -> ModuleRegistry:
-    """Discover modules, register their blueprints, and populate REGISTRY."""
-    REGISTRY.modules.clear()
-    REGISTRY.home_sections.clear()
-    REGISTRY.admin_modules.clear()
+    """Discover and validate modules before attaching a fresh app-local registry."""
+    if MODULE_REGISTRY_EXTENSION_KEY in app.extensions:
+        raise RuntimeError("blog module registry is already initialized for this application")
 
-    for module in discover_modules(package_name):
-        REGISTRY.register_module(module)
+    modules = discover_modules(package_name)
+    registry = ModuleRegistry()
+    for module in modules:
+        registry.register_module(module)
+
+    for module in modules:
         for blueprint in module.blueprints:
             app.register_blueprint(blueprint)
 
-    app.extensions["blog_modules"] = REGISTRY
-    return REGISTRY
+    app.extensions[MODULE_REGISTRY_EXTENSION_KEY] = registry
+    return registry

@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+import sqlite3
+import threading
 import time
 from datetime import datetime
 from functools import wraps
@@ -15,12 +17,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import config
 from models import get_db
 from services.access_settings import get_access_settings, is_public_site_login_required
+from services.request_security import client_ip
 
 
 VISITOR_COOKIE_NAME = 'visitor_token'
 VISITOR_USERNAME_RE = re.compile(r'^[A-Za-z0-9]{1,12}$')
 # 密码已哈希存储，不限制字符；仅设一个宽松上限防止超长输入拖慢哈希
 MAX_PASSWORD_LENGTH = 128
+_TOKEN_PURGE_LOCK = threading.Lock()
+_last_token_purge_at = 0.0
 
 
 class VisitorAuthError(ValueError):
@@ -53,7 +58,8 @@ def _now_text() -> str:
 
 
 def _client_ip() -> str:
-    return request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    """Compatibility wrapper for callers that predate the trusted-proxy helper."""
+    return client_ip()
 
 
 def _parse_seen_at(value: str | None) -> float | None:
@@ -143,11 +149,30 @@ def authenticate_or_create_visitor(username: str, password: str, client_ip: str 
     return _authenticate_existing_visitor(username, password, client_ip)
 
 
-def purge_expired_visitor_tokens(now: float | None = None) -> None:
+def purge_expired_visitor_tokens(now: float | None = None) -> int:
     now_ts = time.time() if now is None else now
     conn = get_db()
-    conn.execute("DELETE FROM visitor_tokens WHERE expires_at<=?", (now_ts,))
+    cursor = conn.execute("DELETE FROM visitor_tokens WHERE expires_at<=?", (now_ts,))
     conn.commit()
+    return int(cursor.rowcount or 0)
+
+
+def maybe_purge_expired_visitor_tokens(now: float | None = None) -> int:
+    """Bound periodic token cleanup so normal reads do not become writes."""
+    global _last_token_purge_at
+    now_ts = time.time() if now is None else now
+    interval = max(1, int(config.VISITOR_TOKEN_PURGE_INTERVAL_SECONDS))
+    if now_ts - _last_token_purge_at < interval:
+        return 0
+    with _TOKEN_PURGE_LOCK:
+        if now_ts - _last_token_purge_at < interval:
+            return 0
+        try:
+            removed = purge_expired_visitor_tokens(now_ts)
+        except sqlite3.OperationalError:
+            return 0
+        _last_token_purge_at = now_ts
+        return removed
 
 
 def issue_visitor_token(user_id: int, client_ip: str = '', now: float | None = None, days: int | None = None) -> tuple[str, float]:
@@ -243,6 +268,7 @@ def get_visitor_from_token(raw_token: str | None, now: float | None = None) -> d
 def current_visitor() -> dict | None:
     if hasattr(g, 'visitor_user'):
         return g.visitor_user
+    maybe_purge_expired_visitor_tokens()
     visitor = get_visitor_from_token(request.cookies.get(VISITOR_COOKIE_NAME))
     if visitor is None:
         from services.auth import is_admin_authenticated

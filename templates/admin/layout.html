@@ -11,6 +11,12 @@
   </div>
 
   <form method="post" class="layout-form layout-form-clean">
+    <section class="layout-panel">
+      <div class="layout-section-head"><span class="layout-section-kicker">首页文案</span><h3 class="layout-section-title">首屏标题</h3></div>
+      <label>标签 <input name="hero_label" value="{{ hero_default.get('label', '') }}"></label>
+      <label>标题 <input name="hero_title" value="{{ hero_default.get('title', '') }}"></label>
+      <label>副标题 <input name="hero_subtitle" value="{{ hero_default.get('subtitle', '') }}"></label>
+    </section>
     <section class="layout-panel layout-featured-panel">
       <div class="layout-section-head">
         <span class="layout-section-kicker">第一屏</span>

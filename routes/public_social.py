@@ -7,6 +7,7 @@ from services.auth import current_identity
 from services.articles import get_article_meta
 from services.comments import (
     CommentError,
+    LikeUnavailableError,
     add_comment,
     count_comments,
     delete_comment,
@@ -14,6 +15,7 @@ from services.comments import (
     list_comments,
     toggle_like,
 )
+from services.query_params import QueryParameterError, parse_positive_page
 from services.visitor_auth import current_visitor
 
 
@@ -35,7 +37,10 @@ def register_routes(bp):
         meta = get_article_meta(slug)
         if not meta:
             return jsonify({'error': '文章不存在'}), 404
-        page = request.args.get('page', 1, type=int)
+        try:
+            page = parse_positive_page(request.args.get('page'))
+        except QueryParameterError as exc:
+            return jsonify({'error': str(exc)}), 400
         visitor = current_visitor()
         result = list_comments(meta['id'], page=page)
         return jsonify({
@@ -83,9 +88,12 @@ def register_routes(bp):
         if not meta:
             return jsonify({'error': '文章不存在'}), 404
         visitor = current_visitor()
-        result = toggle_like(
-            meta['id'],
-            visitor['id'] if visitor else None,
-            client_ip(),
-        )
+        try:
+            result = toggle_like(
+                meta['id'],
+                visitor['id'] if visitor else None,
+                client_ip(),
+            )
+        except LikeUnavailableError as exc:
+            return jsonify({'error': str(exc)}), 503
         return jsonify(result)

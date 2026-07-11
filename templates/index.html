@@ -127,7 +127,7 @@
 })();
 </script>
 
-{% if sidebar_sections %}
+{% if sidebar_sections and sidebar_sections[0].id == 'activity_heatmap' %}
   {% set heatmap = sidebar_sections[0].context.activity_heatmap %}
   <div class="heatmap-dock is-collapsed" data-heatmap-dock>
     <button type="button" class="heatmap-dock__toggle" data-heatmap-toggle aria-expanded="false" aria-controls="heatmapDockPanel">
@@ -182,23 +182,18 @@
     });
   })();
   </script>
+{% elif sidebar_sections %}
+  <aside class="home-sidebar">
+  {% for section in sidebar_sections %}
+    {{ section.html }}
+  {% endfor %}
+  </aside>
 {% endif %}
 
 <div class="home-layout">
   <main class="container home-sections">
     {% for section in home_sections %}
-      {% with section_id=section.id,
-              section_name=section.name,
-              articles=section.context.articles,
-              page=section.context.page,
-              total=section.context.total,
-              per_page=section.context.per_page,
-              total_pages=section.context.total_pages,
-              current_tag=section.context.current_tag,
-              all_tags=section.context.all_tags,
-              daily_quote=section.context.daily_quote %}
-        {% include section.template %}
-      {% endwith %}
+      {{ section.html }}
     {% endfor %}
   </main>
 </div>

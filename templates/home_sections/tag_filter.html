@@ -4,7 +4,7 @@
   <div class="tag-filter">
     <a href="/" class="tag {% if not current_tag %}active{% endif %}">全部</a>
     {% for tag in all_tags %}
-    <a href="/?tag={{ tag }}" class="tag {% if current_tag == tag %}active{% endif %}">{{ tag }}</a>
+    <a href="/?tag={{ tag|urlencode }}" class="tag {% if current_tag == tag %}active{% endif %}">{{ tag }}</a>
     {% endfor %}
   </div>
 </div>

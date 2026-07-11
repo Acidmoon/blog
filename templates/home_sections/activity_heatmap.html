@@ -5,8 +5,12 @@
          data-aw-next="{{ activity_heatmap.next_year }}-{{ activity_heatmap.next_month }}"
          data-aw-hasnext="{{ '1' if activity_heatmap.has_next else '0' }}">
   <header class="aw__hd">
+    {% if activity_heatmap.has_prev %}
     <button class="aw__nav aw__nav--prev" aria-label="上个月"
             onclick="awNavMonth('{{ activity_heatmap.prev_year }}','{{ activity_heatmap.prev_month }}')">◀</button>
+    {% else %}
+    <span class="aw__nav aw__nav--disabled">◀</span>
+    {% endif %}
     <div class="aw__title-block">
       <span class="aw__title serif">{{ activity_heatmap.year }}年{{ activity_heatmap.month_display }}</span>
       <span class="aw__eyebrow">文章活动热力图</span>

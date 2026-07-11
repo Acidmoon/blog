@@ -4,20 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from module_loader import REGISTRY, AdminModuleDefinition
+from module_loader import AdminModuleDefinition, get_module_registry
 
 
 def admin_module_registry() -> dict[str, AdminModuleDefinition]:
-    """Return admin modules contributed by loaded modules."""
-    return REGISTRY.admin_modules
+    """Return admin modules for the current Flask application."""
+    return get_module_registry().admin_modules
 
 
 def admin_module_list() -> list[AdminModuleDefinition]:
     return sorted(admin_module_registry().values(), key=lambda item: (item.order, item.id))
 
 
-def _nav_item(url: str, label: str) -> dict[str, str]:
-    return {"url": url, "label": label}
+def _nav_item(url: str, label: str, *, method: str = 'get') -> dict[str, str]:
+    """Describe a navigation destination, including a safe method for actions."""
+    item = {"url": url, "label": label}
+    if method.lower() != 'get':
+        item['method'] = method.lower()
+    return item
 
 
 def build_admin_nav_groups() -> list[dict[str, Any]]:
@@ -41,7 +45,7 @@ def build_admin_nav_groups() -> list[dict[str, Any]]:
         {
             "id": "system",
             "label": "系统",
-            "items": [_nav_item("/admin/logout", "退出")],
+            "items": [_nav_item("/admin/logout", "退出", method='post')],
         },
     ]
 

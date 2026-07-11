@@ -40,6 +40,16 @@ def handle_layout():
         quotes = [q.strip() for q in quotes_raw.splitlines() if q.strip()]
 
         layout_config["featured_articles"] = _featured_articles_from_form()
+        hero = layout_config.setdefault("hero", {"_default": {}, "tags": {}})
+        if not isinstance(hero, dict):
+            hero = {"_default": {}, "tags": {}}
+            layout_config["hero"] = hero
+        default_hero = hero.setdefault("_default", {})
+        if not isinstance(default_hero, dict):
+            default_hero = {}
+            hero["_default"] = default_hero
+        for field in ("label", "title", "subtitle"):
+            default_hero[field] = request.form.get(f"hero_{field}", "").strip()
         layout_config["quotes"] = quotes or ["书山有路勤为径，学海无涯苦作舟。"]
         layout_config["section_order"] = normalize_section_order(layout_config.get("section_order"))
         layout_config["section_visibility"] = {
@@ -68,6 +78,7 @@ def handle_layout():
     ]
     return render_template(
         'admin/layout.html',
+        hero_default=(layout_config.get("hero", {}).get("_default", {}) if isinstance(layout_config.get("hero"), dict) else {}),
         article_options=article_options,
         featured_slots=_featured_slots(layout_config),
         quotes_text=quotes_text,

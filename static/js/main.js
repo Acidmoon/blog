@@ -409,6 +409,25 @@ function initHomeAjaxNav() {
   var heroTitle = document.querySelector('.hero-title');
   var heroSubtitle = document.querySelector('.hero-subtitle');
   var heroLabel = document.querySelector('.hero-label');
+  var errorNotice = document.createElement('p');
+  errorNotice.className = 'home-navigation-error';
+  errorNotice.setAttribute('role', 'status');
+  errorNotice.setAttribute('aria-live', 'polite');
+  errorNotice.hidden = true;
+  mainContainer.parentNode.insertBefore(errorNotice, mainContainer);
+
+  function showNavigationError(message) {
+    errorNotice.textContent = message || '加载失败，请稍后重试。';
+    errorNotice.hidden = false;
+  }
+
+  function readApiError(response) {
+    return response.json()
+      .then(function(data) {
+        return data && typeof data.error === 'string' ? data.error : '加载失败，请稍后重试。';
+      })
+      .catch(function() { return '加载失败，请稍后重试。'; });
+  }
 
   function navigate(url) {
     var params = new URL(url, location.origin).searchParams;
@@ -416,9 +435,15 @@ function initHomeAjaxNav() {
 
     mainContainer.style.opacity = '0.5';
     mainContainer.style.transition = 'opacity 0.15s';
+    errorNotice.hidden = true;
 
     fetch(apiUrl)
-      .then(function(r) { return r.json(); })
+      .then(function(response) {
+        if (response.ok) return response.json();
+        return readApiError(response).then(function(message) {
+          throw new Error(message);
+        });
+      })
       .then(function(data) {
         mainContainer.innerHTML = data.html;
         mainContainer.style.opacity = '1';
@@ -436,8 +461,9 @@ function initHomeAjaxNav() {
         var articleList = mainContainer.querySelector('.article-list');
         if (articleList) articleList.scrollTop = 0;
       })
-      .catch(function() {
-        location.href = url;
+      .catch(function(error) {
+        mainContainer.style.opacity = '1';
+        showNavigationError(error && error.message ? error.message : '加载失败，请稍后重试。');
       });
   }
 

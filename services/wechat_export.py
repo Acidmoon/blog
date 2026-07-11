@@ -1,7 +1,7 @@
 import html
 import re
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from services.articles import render_md
 
@@ -12,7 +12,10 @@ BLOCK_TAGS = {
     'tr', 'td', 'th', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'figure',
 }
 
-INLINE_TAGS = {'a', 'span', 'strong', 'em', 'b', 'i', 'code', 'br', 'img'}
+INLINE_TAGS = {'a', 'span', 'strong', 'em', 'b', 'i', 'code', 'br', 'img', 'sub', 'sup'}
+VOID_TAGS = {'br', 'hr', 'img'}
+SUPPORTED_TAGS = BLOCK_TAGS | INLINE_TAGS | {'hr', 's', 'del'}
+SAFE_URL_SCHEMES = {'http', 'https', 'mailto'}
 
 
 def _strip_markdown(markdown_text: str) -> str:
@@ -29,23 +32,59 @@ def build_digest(markdown_text: str, limit: int = 120) -> str:
     return text[:limit]
 
 
-def _style_open_tag(tag: str, attrs: list[tuple[str, str]], base_style: str) -> str:
-    attrs_dict = {k: v for k, v in attrs}
-    attrs_dict.pop('class', None)
-    existing_style = attrs_dict.pop('style', '')
-    style = '; '.join(part.strip().rstrip(';') for part in [base_style, existing_style] if part and part.strip())
-    attrs_dict['style'] = style
-    if tag == 'a' and 'target' not in attrs_dict:
-        attrs_dict['target'] = '_blank'
-        attrs_dict['rel'] = 'noopener noreferrer'
-    if tag == 'img':
-        attrs_dict.setdefault('referrerpolicy', 'no-referrer')
-        attrs_dict.setdefault('loading', 'lazy')
-        attrs_dict['style'] = style or 'max-width:100%; height:auto; display:block; margin:16px auto;'
+def _safe_url(value: str) -> str:
+    """Return only absolute safe-scheme or relative URLs for exported HTML."""
+    normalized = html.unescape(str(value or '')).strip()
+    if not normalized:
+        return ''
+    compact = re.sub(r'[\x00-\x20]+', '', normalized)
+    scheme = urlsplit(compact).scheme.lower()
+    if scheme and scheme not in SAFE_URL_SCHEMES:
+        return ''
+    return normalized
+
+
+def _absolute_url(value: str, base_url: str) -> str:
+    safe_value = _safe_url(value)
+    if not safe_value:
+        return ''
+    if urlsplit(safe_value).scheme:
+        return safe_value
+    safe_base = _safe_url(base_url)
+    if urlsplit(safe_base).scheme in {'http', 'https'}:
+        return urljoin(safe_base.rstrip('/') + '/', safe_value)
+    return safe_value
+
+
+def _style_open_tag(tag: str, attrs: list[tuple[str, str | None]], base_style: str) -> str:
+    attrs_dict = {str(key).lower(): value for key, value in attrs if value is not None}
+    safe_attrs: dict[str, str] = {}
+    if tag == 'a':
+        href = _safe_url(attrs_dict.get('href', ''))
+        if href:
+            safe_attrs['href'] = href
+            safe_attrs['target'] = '_blank'
+            safe_attrs['rel'] = 'noopener noreferrer'
+        if attrs_dict.get('title'):
+            safe_attrs['title'] = str(attrs_dict['title'])
+    elif tag == 'img':
+        src = _safe_url(attrs_dict.get('src', ''))
+        if src:
+            safe_attrs['src'] = src
+        if attrs_dict.get('alt'):
+            safe_attrs['alt'] = str(attrs_dict['alt'])
+        if attrs_dict.get('title'):
+            safe_attrs['title'] = str(attrs_dict['title'])
+        safe_attrs['referrerpolicy'] = 'no-referrer'
+        safe_attrs['loading'] = 'lazy'
+    elif tag in {'h1', 'h2', 'h3', 'h4', 'h5', 'h6'} and attrs_dict.get('id'):
+        safe_attrs['id'] = str(attrs_dict['id'])
+
+    style = base_style.strip().rstrip(';')
+    if style:
+        safe_attrs['style'] = style
     parts = []
-    for key, value in attrs_dict.items():
-        if value is None:
-            continue
+    for key, value in safe_attrs.items():
         parts.append(f'{key}="{html.escape(str(value), quote=True)}"')
     return f'<{tag} ' + ' '.join(parts) + '>' if parts else f'<{tag}>'
 
@@ -59,11 +98,13 @@ class _WechatHTMLTransformer(HTMLParser):
     def handle_starttag(self, tag, attrs):
         tag = tag.lower()
         attrs = list(attrs)
+        if tag not in SUPPORTED_TAGS:
+            return
         if tag == 'h1':
             self.parts.append(_style_open_tag(tag, attrs, 'font-size: 24px; line-height: 1.35; font-weight: 700; margin: 28px 0 16px; color: #222;'))
         elif tag == 'h2':
             self.parts.append(_style_open_tag(tag, attrs, 'font-size: 20px; line-height: 1.4; font-weight: 700; margin: 24px 0 14px; color: #222;'))
-        elif tag == 'h3':
+        elif tag in {'h3', 'h4', 'h5', 'h6'}:
             self.parts.append(_style_open_tag(tag, attrs, 'font-size: 18px; line-height: 1.45; font-weight: 700; margin: 20px 0 12px; color: #222;'))
         elif tag == 'p':
             self.parts.append(_style_open_tag(tag, attrs, 'margin: 0 0 1em; line-height: 1.9; font-size: 16px; color: #333;'))
@@ -74,18 +115,20 @@ class _WechatHTMLTransformer(HTMLParser):
         elif tag == 'code':
             self.parts.append(_style_open_tag(tag, attrs, 'font-family: Menlo, Monaco, Consolas, monospace; font-size: 0.95em; background: #f6f7f8; padding: 0.12em 0.35em; border-radius: 4px;'))
         elif tag == 'a':
-            attrs = [(k, v) for k, v in attrs if k != 'class']
-            href = dict(attrs).get('href', '')
-            if href and not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', href):
-                href = urljoin(self.base_url, href)
-                attrs = [(k, href if k == 'href' else v) for k, v in attrs]
-            self.parts.append(_style_open_tag(tag, attrs, 'color: #1a73e8; text-decoration: none;'))
+            attrs_dict = dict(attrs)
+            href = _absolute_url(attrs_dict.get('href', ''), self.base_url)
+            link_attrs = [('href', href)] if href else []
+            if attrs_dict.get('title'):
+                link_attrs.append(('title', attrs_dict['title']))
+            self.parts.append(_style_open_tag(tag, link_attrs, 'color: #1a73e8; text-decoration: none;'))
         elif tag == 'img':
             attrs_dict = dict(attrs)
-            src = attrs_dict.get('src', '')
-            if src and not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', src):
-                attrs = [(k, urljoin(self.base_url, src) if k == 'src' else v) for k, v in attrs]
-            self.parts.append(_style_open_tag(tag, attrs, 'max-width:100%; height:auto; display:block; margin:16px auto;'))
+            src = _absolute_url(attrs_dict.get('src', ''), self.base_url)
+            image_attrs = [('src', src)] if src else []
+            for name in ('alt', 'title'):
+                if attrs_dict.get(name):
+                    image_attrs.append((name, attrs_dict[name]))
+            self.parts.append(_style_open_tag(tag, image_attrs, 'max-width:100%; height:auto; display:block; margin:16px auto;'))
         elif tag in {'ul', 'ol'}:
             self.parts.append(_style_open_tag(tag, attrs, 'margin: 0 0 1em 1.4em; padding: 0; line-height: 1.9;'))
         elif tag == 'li':
@@ -106,16 +149,21 @@ class _WechatHTMLTransformer(HTMLParser):
         elif tag == 'br':
             self.parts.append('<br>')
         else:
-            self.parts.append(self.get_starttag_text() or '')
+            self.parts.append(_style_open_tag(tag, attrs, ''))
 
     def handle_endtag(self, tag):
         tag = tag.lower()
-        if tag in {'img', 'br', 'hr'}:
+        if tag not in SUPPORTED_TAGS or tag in VOID_TAGS:
             return
         self.parts.append(f'</{tag}>')
 
+    def handle_startendtag(self, tag, attrs):
+        tag = tag.lower()
+        if tag in VOID_TAGS:
+            self.handle_starttag(tag, attrs)
+
     def handle_data(self, data):
-        self.parts.append(data)
+        self.parts.append(html.escape(data, quote=False))
 
     def handle_entityref(self, name):
         self.parts.append(f'&{name};')
@@ -134,6 +182,7 @@ def render_wechat_html(title: str, markdown_text: str, base_url: str = '', sourc
     rendered = render_md(markdown_text or '')
     transformer = _WechatHTMLTransformer(base_url or '')
     transformer.feed(rendered)
+    transformer.close()
     body_html = transformer.get_html()
     wrapper_style = (
         'font-family: -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; '
@@ -141,17 +190,18 @@ def render_wechat_html(title: str, markdown_text: str, base_url: str = '', sourc
     )
     meta = []
     if author:
-        meta.append(f'作者：{html.escape(author)}')
+        meta.append(f'作者：{html.escape(str(author))}')
     if tags:
-        meta.append(f'标签：{html.escape(tags)}')
-    if source_url:
-        source = html.escape(source_url)
-        meta.append(f'原文：<a href="{source}" style="color:#1a73e8;text-decoration:none;">{source}</a>')
+        meta.append(f'标签：{html.escape(str(tags))}')
+    safe_source_url = _safe_url(source_url)
+    if safe_source_url:
+        source = html.escape(safe_source_url, quote=True)
+        meta.append(f'原文：<a href="{source}" target="_blank" rel="noopener noreferrer" style="color:#1a73e8;text-decoration:none;">{source}</a>')
     meta_html = ''
     if meta:
         meta_html = '<div style="margin: 12px 0 20px; font-size: 13px; color: #888; line-height: 1.8;">' + '<br>'.join(meta) + '</div>'
     html_doc = f'''<section style="{wrapper_style}">
-  <h1 style="font-size: 24px; line-height: 1.35; font-weight: 700; margin: 0 0 12px; color: #222;">{html.escape(title)}</h1>
+  <h1 style="font-size: 24px; line-height: 1.35; font-weight: 700; margin: 0 0 12px; color: #222;">{html.escape(str(title or ''))}</h1>
   {meta_html}
   {body_html}
 </section>'''

@@ -47,6 +47,15 @@
   background: var(--accent-primary);
 }
 
+.home-navigation-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  color: var(--flash-error-text);
+  background: var(--flash-error-bg);
+  border-left: 3px solid var(--flash-error-text);
+  font-size: 0.85rem;
+}
+
 
 /* home-widgets.css */
 /* ── Daily Quote Line ──────────────────────────────── */

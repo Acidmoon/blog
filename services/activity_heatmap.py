@@ -26,6 +26,28 @@ def _parse_date(value: str | None) -> date | None:
             return None
 
 
+def _month_boundary(year: int, month: int) -> tuple[date, date | None]:
+    """Return the first day and an exclusive next-month boundary when representable."""
+    start = date(year, month, 1)
+    if year == 9999 and month == 12:
+        # Python cannot represent 10000-01-01. A missing upper bound is safe here
+        # because no valid SQLite ISO date can fall beyond the supported calendar.
+        return start, None
+    if month == 12:
+        return start, date(year + 1, 1, 1)
+    return start, date(year, month + 1, 1)
+
+
+def _range_condition(column: str, start: date, end_exclusive: date | None) -> tuple[str, tuple[str, ...]]:
+    """Build an index-friendly ISO range condition for one timestamp column."""
+    if end_exclusive is None:
+        return f"{column} >= ?", (start.isoformat(),)
+    return f"{column} >= ? AND {column} < ?", (
+        start.isoformat(),
+        end_exclusive.isoformat(),
+    )
+
+
 def _count_words(text: str) -> int:
     """Count Chinese characters + English words in a markdown text.
     Chinese chars: CJK Unified Ideographs (U+4E00–U+9FFF) + extensions.
@@ -35,51 +57,48 @@ def _count_words(text: str) -> int:
     return cjk + en_words
 
 
-def _activity_counts(start: date, end: date) -> dict[date, int]:
-    """Count article create/update activity per day for published articles."""
+def _activity_counts(start: date, end: date, end_exclusive: date | None) -> dict[date, int]:
+    """Count immutable, publicly visible article events per day."""
     counts: dict[date, int] = defaultdict(int)
     conn = get_db()
+    occurred_condition, occurred_params = _range_condition('occurred_at', start, end_exclusive)
     rows = conn.execute(
-        """
-        SELECT slug, created_at, updated_at
-        FROM articles
-        WHERE published=1
-          AND (date(created_at) BETWEEN ? AND ? OR date(updated_at) BETWEEN ? AND ?)
+        f"""
+        SELECT occurred_at, COUNT(*) AS total
+        FROM article_activity_events
+        WHERE visible=1 AND ({occurred_condition})
+        GROUP BY substr(occurred_at, 1, 10)
         """,
-        (start.isoformat(), end.isoformat(), start.isoformat(), end.isoformat()),
+        occurred_params,
     ).fetchall()
 
     for row in rows:
-        seen_for_article: set[date] = set()
-        for field in ("created_at", "updated_at"):
-            day = _parse_date(row[field])
-            if day and start <= day <= end and day not in seen_for_article:
-                counts[day] += 1
-                seen_for_article.add(day)
+        day = _parse_date(row['occurred_at'])
+        if day and start <= day <= end:
+            counts[day] += int(row['total'] or 0)
     return dict(counts)
 
 
-def _word_counts(start: date, end: date) -> dict[date, int]:
-    """Count words from stored word_count at article creation time.
-    Words are attributed only to the creation date — subsequent edits
-    do not change the word count or move it to another day."""
+def _word_counts(start: date, end: date, end_exclusive: date | None) -> dict[date, int]:
+    """Aggregate net word changes recorded with immutable activity events."""
     words_per_day: dict[date, int] = defaultdict(int)
     conn = get_db()
+    occurred_condition, occurred_params = _range_condition('occurred_at', start, end_exclusive)
     rows = conn.execute(
-        """
-        SELECT slug, created_at, word_count
-        FROM articles
-        WHERE published=1
-          AND date(created_at) BETWEEN ? AND ?
+        f"""
+        SELECT occurred_at, COALESCE(SUM(word_delta), 0) AS word_delta
+        FROM article_activity_events
+        WHERE visible=1 AND ({occurred_condition})
+        GROUP BY substr(occurred_at, 1, 10)
         """,
-        (start.isoformat(), end.isoformat()),
+        occurred_params,
     ).fetchall()
 
     for row in rows:
-        wc = row["word_count"] or 0
-        day = _parse_date(row["created_at"])
-        if day and start <= day <= end and wc > 0:
-            words_per_day[day] += wc
+        word_delta = int(row["word_delta"] or 0)
+        day = _parse_date(row["occurred_at"])
+        if day and start <= day <= end:
+            words_per_day[day] += word_delta
     return dict(words_per_day)
 
 
@@ -94,37 +113,49 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
         year = today.year
     if month is None:
         month = today.month
+    if not isinstance(year, int) or not 1 <= year <= 9999:
+        raise ValueError('年份必须在 1 到 9999 之间')
+    if not isinstance(month, int) or not 1 <= month <= 12:
+        raise ValueError('月份必须在 1 到 12 之间')
 
-    start = date(year, month, 1)
+    start, end_exclusive = _month_boundary(year, month)
     last_day = calendar.monthrange(year, month)[1]
     end = date(year, month, last_day)
 
     # Navigation: prev / next month
     if month == 1:
-        prev_year, prev_month = year - 1, 12
+        prev_year, prev_month = (year - 1, 12) if year > 1 else (None, None)
     else:
         prev_year, prev_month = year, month - 1
-    if month == 12:
+    if month == 12 and year == 9999:
+        next_year, next_month = None, None
+    elif month == 12:
         next_year, next_month = year + 1, 1
     else:
         next_year, next_month = year, month + 1
 
     # Don't navigate past the current month
-    has_next = date(next_year, next_month, 1) <= date(today.year, today.month, 1)
+    current_month = (today.year, today.month)
+    has_prev = prev_year is not None
+    has_next = next_year is not None and (next_year, next_month) <= current_month
 
-    counts = _activity_counts(start, end)
+    counts = _activity_counts(start, end, end_exclusive)
     max_count = max(counts.values(), default=0)
-    words = _word_counts(start, end)
+    words = _word_counts(start, end, end_exclusive)
 
     # Calendar grid starts on Monday and ends on Sunday so the squares align vertically.
     grid_start = start - timedelta(days=start.weekday())
-    grid_end = end + timedelta(days=(6 - end.weekday()))
+    trailing_days = 6 - end.weekday()
+    max_date = date.max
+    grid_end = end if end > max_date - timedelta(days=trailing_days) else end + timedelta(days=trailing_days)
 
     weeks = []
     cursor = grid_start
     while cursor <= grid_end:
         week = []
         for _ in range(7):
+            if cursor > grid_end:
+                break
             count = counts.get(cursor, 0)
             if count <= 0:
                 level = 0
@@ -145,8 +176,12 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
                     "words": word_count,
                 }
             )
+            if cursor == max_date:
+                break
             cursor += timedelta(days=1)
         weeks.append(week)
+        if cursor == max_date:
+            break
 
     total_words = sum(words.values())
     today_words = words.get(today, 0)
@@ -158,7 +193,7 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
 
     return {
         "title": f"{year}年{month}月活动",
-        "subtitle": "文章发布 / 更新",
+        "subtitle": "文章活动记录",
         "weeks": weeks,
         "total": sum(counts.values()),
         "max_count": max_count,
@@ -173,6 +208,7 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
         # Navigation
         "prev_year": prev_year,
         "prev_month": prev_month,
+        "has_prev": has_prev,
         "next_year": next_year,
         "next_month": next_month,
         "has_next": has_next,

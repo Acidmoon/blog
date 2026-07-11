@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ config.SITE_TITLE }}{% endblock %}</title>
   <meta name="description" content="{% block description %}{{ config.SITE_SUBTITLE }}{% endblock %}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <!-- Block theme flash: apply saved theme BEFORE first paint -->
   <script>
     (function(){var t=localStorage.getItem('waterhill-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
@@ -44,7 +45,10 @@
       <div class="nav-auth">
         {% if identity and identity.visitor %}
         <span class="nav-user" title="已登录">{{ identity.visitor.username }}</span>
-        <a href="/logout" class="nav-auth-btn nav-auth-btn--ghost">退出</a>
+        <form method="post" action="{{ url_for('public.logout') }}" class="nav-logout-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="nav-auth-btn nav-auth-btn--ghost">退出</button>
+        </form>
         {% else %}
         <button type="button" class="nav-auth-btn nav-auth-btn--ghost" data-auth-open="login">登录</button>
         <button type="button" class="nav-auth-btn nav-auth-btn--solid" data-auth-open="register">注册</button>

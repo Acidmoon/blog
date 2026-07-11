@@ -1,7 +1,6 @@
 """Shared helpers for public route modules."""
 
-from flask import request
+from services.request_security import client_ip
 
 
-def client_ip() -> str:
-    return request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+__all__ = ["client_ip"]

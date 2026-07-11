@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "macros/icons.html" import icon_send %}
+{% block title %}AI 对话 · {{ config.SITE_TITLE }}{% endblock %}
+{% block description %}和水浇岭博客的访客 AI 对话{% endblock %}
+
+{% block content %}
+<main class="chat-page">
+  <section class="chat-shell" data-enabled="{{ '1' if chat_enabled else '0' }}">
+    {% if not chat_enabled %}
+    <div class="chat-unavailable">
+      <p class="chat-kicker">AI Chat</p>
+      <h1 class="serif">公开对话暂未开启</h1>
+      <p>站长还没有开放这个入口，晚点再来看看。</p>
+    </div>
+    {% else %}
+    <div class="chat-workspace" id="chatWorkspace">
+      <aside class="chat-rail" aria-label="对话历史">
+        <div class="chat-rail-shell">
+          <div class="chat-rail-top">
+            <a href="/" class="chat-home-link serif">水浇岭</a>
+            <button type="button" class="chat-rail-toggle" id="chatRailToggle" aria-controls="chatRailDrawer" aria-expanded="false" title="查看历史" aria-label="查看历史">
+              <svg class="chat-rail-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
+            </button>
+          </div>
+          <div class="chat-rail-stage">
+            <div class="chat-rail-copy" id="chatRailCopy">
+              <p class="chat-kicker">Waterhill AI</p>
+              <h1 class="serif">把话放进山雾里</h1>
+              <p>在这里保存你的会话，继续上一次没说完的话。</p>
+            </div>
+            <div class="chat-rail-drawer" id="chatRailDrawer" aria-hidden="true">
+              <div class="chat-rail-meta">
+                <span>{{ chat_model }}</span>
+                {% if chat_visitor %}
+                <span>{{ chat_visitor.username }}</span>
+                {% endif %}
+                <button type="button" class="chat-clear" id="chatNewBtn">新建对话</button>
+              </div>
+              <div class="chat-session-list" id="chatSessionList" aria-label="会话列表"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="chat-conversation" aria-label="AI 对话">
+        <div class="chat-messages" id="chatMessages" aria-live="polite">
+          <div class="chat-empty" id="chatEmpty">
+            <p class="chat-empty-kicker">未落笔</p>
+            <h2 class="serif">先问一个问题。</h2>
+            <p>也可以把一段模糊的想法丢进来，让它先变清楚。</p>
+          </div>
+        </div>
+        <div class="chat-files" id="chatFiles" hidden></div>
+        <div class="chat-bottom">
+          <form class="chat-composer" id="chatForm">
+            <textarea id="chatInput" rows="1" maxlength="4000" placeholder="写下一个问题，Enter 直接发送，Shift+Enter 换行"></textarea>
+            <button type="submit" class="chat-send" id="chatSendBtn" aria-label="发送">{{ icon_send(18) }}</button>
+          </form>
+          <div class="chat-tools">
+            {% if chat_upload_enabled %}
+            <label class="chat-upload">
+              <input type="file" id="chatFileInput" accept=".txt,.md,.pdf,.docx,.png,.jpg,.jpeg,.webp,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp" hidden>
+              <span>上传文件</span>
+            </label>
+            {% endif %}
+            <p class="chat-status" id="chatStatus"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block scripts %}
+{% if chat_enabled %}
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}?v={{ config.ASSET_VERSION }}"></script>
+{% endif %}
+{% endblock %}

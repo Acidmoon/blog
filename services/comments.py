@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime
 
 from models import get_db
@@ -12,6 +13,10 @@ MAX_COMMENT_LENGTH = 2000
 
 class CommentError(ValueError):
     pass
+
+
+class LikeUnavailableError(RuntimeError):
+    """Raised when SQLite cannot acquire the short-lived like writer lock."""
 
 
 def _now_text() -> str:
@@ -116,26 +121,62 @@ def has_liked(article_id: int, user_id: int | None, ip: str = '') -> bool:
     return row is not None
 
 
+def _like_identity_clause(user_id: int | None, ip: str) -> tuple[str, tuple[object, ...]]:
+    """Build the one actor predicate shared by like insert and delete paths."""
+    if user_id is not None:
+        return 'user_id = ?', (user_id,)
+    return 'user_id IS NULL AND ip = ?', (ip,)
+
+
+def _is_transient_sqlite_lock(error: sqlite3.OperationalError) -> bool:
+    """Recognize the retryable SQLite lock errors exposed after the busy wait."""
+    message = str(error).lower()
+    return 'database is locked' in message or 'database is busy' in message
+
+
 def toggle_like(article_id: int, user_id: int | None, ip: str = '') -> dict:
-    """Add a like if absent, remove it if present. Returns {liked, count}."""
+    """Atomically add or remove one actor's like and return the committed count."""
     conn = get_db()
-    liked_now = has_liked(article_id, user_id, ip)
-    if liked_now:
-        if user_id is not None:
-            conn.execute(
-                "DELETE FROM article_likes WHERE article_id = ? AND user_id = ?",
-                (article_id, user_id),
-            )
+    identity_clause, identity_params = _like_identity_clause(user_id, ip)
+    try:
+        # A fresh request connection obtains a writer lock so rapid clicks
+        # linearize as toggles. An existing caller transaction keeps its
+        # original boundary, matching the service's previous commit behavior.
+        if not conn.in_transaction:
+            conn.execute('BEGIN IMMEDIATE')
+        inserted = conn.execute(
+            """
+            INSERT OR IGNORE INTO article_likes (article_id, user_id, ip, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (article_id, user_id, ip, _now_text()),
+        ).rowcount == 1
+        if inserted:
+            liked = True
         else:
+            # The partial unique indexes identify this actor. A conflicting
+            # insert is the second half of a concurrent toggle, so delete only
+            # that actor's existing like while still holding the writer lock.
             conn.execute(
-                "DELETE FROM article_likes WHERE article_id = ? AND user_id IS NULL AND ip = ?",
-                (article_id, ip),
+                f'DELETE FROM article_likes WHERE article_id = ? AND {identity_clause}',
+                (article_id, *identity_params),
             )
+            liked = False
+        count = int(
+            conn.execute(
+                'SELECT COUNT(*) AS n FROM article_likes WHERE article_id = ?',
+                (article_id,),
+            ).fetchone()['n']
+        )
         conn.commit()
-        return {'liked': False, 'count': count_likes(article_id)}
-    conn.execute(
-        "INSERT INTO article_likes (article_id, user_id, ip, created_at) VALUES (?, ?, ?, ?)",
-        (article_id, user_id, ip, _now_text()),
-    )
-    conn.commit()
-    return {'liked': True, 'count': count_likes(article_id)}
+        return {'liked': liked, 'count': count}
+    except sqlite3.OperationalError as exc:
+        if conn.in_transaction:
+            conn.rollback()
+        if _is_transient_sqlite_lock(exc):
+            raise LikeUnavailableError('点赞操作繁忙，请稍后重试') from exc
+        raise
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+        raise

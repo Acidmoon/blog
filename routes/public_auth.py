@@ -14,6 +14,7 @@ from services.auth import (
     record_auth_success,
     safe_next_url,
 )
+from services.request_security import rotate_csrf_token
 from services.visitor_auth import (
     VisitorAuthError,
     clear_visitor_cookie,
@@ -95,6 +96,7 @@ def register_routes(bp):
                             admin_context=True,
                         ), 403
                 response = make_response(redirect(next_url))
+                rotate_csrf_token()
                 set_visitor_cookie(response, token, expires_at)
                 flash(f'欢迎，{visitor["username"]}', 'success')
                 return response
@@ -105,7 +107,7 @@ def register_routes(bp):
             auth_mode=mode,
         )
 
-    @bp.route('/logout')
+    @bp.route('/logout', methods=['POST'])
     def logout():
         revoke_current_visitor_token()
         clear_admin_session()
@@ -148,5 +150,6 @@ def register_routes(bp):
             'is_admin': is_admin,
             'redirect': next_url or None,
         }))
+        rotate_csrf_token()
         set_visitor_cookie(response, token, expires_at)
         return response

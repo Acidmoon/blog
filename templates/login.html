@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% from "macros/security.html" import csrf_input with context %}
 {% block title %}账号登录 · {{ config.SITE_TITLE }}{% endblock %}
 {% block description %}登录后访问博客内容、评论和后台管理{% endblock %}
 
 {% block content %}
 <main class="login-page visitor-login-page">
   <form method="post" action="{{ url_for('public.login') }}" class="login-card visitor-login-card">
+    {{ csrf_input() }}
     <h1 class="serif">账号登录</h1>
     <div class="auth-modal-tabs login-tabs" role="tablist" aria-label="账号登录">
       <a class="auth-tab {% if auth_mode != 'register' %}active{% endif %}" href="{{ url_for('public.login', mode='login', next=next_url) }}">登录</a>

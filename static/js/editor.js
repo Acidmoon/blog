@@ -216,7 +216,10 @@
       inflight = ctrl;
       fetch('/admin/api/preview', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': window.getCsrfToken(),
+        },
         body: JSON.stringify({content}),
         signal: ctrl.signal,
       })
@@ -351,7 +354,10 @@
     try {
       const resp = await fetch('/admin/api/ai/polish', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': window.getCsrfToken(),
+        },
         body: JSON.stringify({title, tags, content: original, provider, model, mode, organize_first: organizeFirst})
       });
       let data;
@@ -383,8 +389,16 @@
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    fetch('/admin/upload', { method: 'POST', body: fd })
-      .then(r => r.json())
+    fetch('/admin/upload', {
+      method: 'POST',
+      headers: {'X-CSRF-Token': window.getCsrfToken()},
+      body: fd,
+    })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || '上传失败');
+        return data;
+      })
       .then(data => {
         if (data.url) {
           const ta = document.getElementById('content');

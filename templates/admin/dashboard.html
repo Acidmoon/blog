@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/security.html" import csrf_input with context %}
 {% block title %}管理后台 · {{ config.SITE_TITLE }}{% endblock %}
 {% block content %}
 <main class="admin-page">
@@ -32,9 +33,11 @@
             <td class="action-cell">
               <a href="/admin/edit/{{ article.slug }}" class="btn-sm">编辑</a>
               <form action="/admin/publish/{{ article.slug }}" method="post" style="display:inline">
+                {{ csrf_input() }}
                 <button type="submit" class="btn-sm btn-publish">发布</button>
               </form>
               <form action="/admin/delete/{{ article.slug }}" method="post" style="display:inline" onsubmit="return confirm('确定删除草稿「{{ article.title }}」？')">
+                {{ csrf_input() }}
                 <button type="submit" class="btn-sm btn-danger">删除</button>
               </form>
             </td>
@@ -68,6 +71,7 @@
               <a href="/admin/edit/{{ article.slug }}" class="btn-sm">编辑</a>
               <a href="/admin/wechat-export/{{ article.slug }}" class="btn-sm">导出公众号</a>
               <form action="/admin/delete/{{ article.slug }}" method="post" style="display:inline" onsubmit="return confirm('确定删除「{{ article.title }}」？')">
+                {{ csrf_input() }}
                 <button type="submit" class="btn-sm btn-danger">删除</button>
               </form>
             </td>

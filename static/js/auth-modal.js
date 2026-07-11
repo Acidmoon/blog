@@ -84,7 +84,10 @@
     try {
       const resp = await fetch('/api/auth/' + mode, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': window.getCsrfToken(),
+        },
         body: JSON.stringify({ username, password }),
       });
       const data = await resp.json().catch(() => ({}));

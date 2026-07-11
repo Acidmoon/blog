@@ -2,6 +2,7 @@ from flask import Blueprint, abort, flash, jsonify, make_response, redirect, ren
 
 from services.admin_modules import build_admin_module_context, build_admin_nav, build_admin_nav_groups, get_admin_module
 from services.access_settings import get_access_settings, save_access_settings
+from services.ai_chat import get_public_chat_admin_settings, save_public_chat_settings
 from services.ai_polish import get_public_polish_modes, get_public_polish_profiles
 from services.articles import (
     create_article_draft,
@@ -18,12 +19,17 @@ from services.auth import (
     admin_required,
     clear_admin_session,
     current_identity,
+    mark_admin_authenticated,
     safe_next_url,
 )
+from services.request_security import rotate_csrf_token
 from services.media_uploads import MediaUploadError, save_admin_image
 from services.visitor_auth import (
+    VisitorAuthError,
+    authenticate_admin,
     clear_visitor_cookie,
     revoke_current_visitor_token,
+    set_visitor_cookie,
 )
 from services.home_layout_admin import handle_layout
 from services.wechat_export import build_digest, render_wechat_html
@@ -45,7 +51,15 @@ def login():
     if current_identity().is_admin:
         return redirect(next_url)
     if request.method == 'POST':
-        return redirect(url_for('public.login', next=next_url))
+        try:
+            visitor, token, expires_at = authenticate_admin(request.form.get('password', ''))
+        except VisitorAuthError:
+            return render_template('admin/login.html', error='密码错误', next_url=next_url), 400
+        mark_admin_authenticated()
+        rotate_csrf_token()
+        response = make_response(redirect(next_url))
+        set_visitor_cookie(response, token, expires_at)
+        return response
     return render_template(
         'login.html',
         error='',
@@ -76,6 +90,21 @@ def dashboard():
 @admin_required
 def module_index():
     return render_template('admin/modules.html')
+
+
+@bp.route('/chat-settings', methods=['GET', 'POST'])
+@admin_required
+def chat_settings():
+    """Keep the restored public-chat controls inside the current admin shell."""
+    if request.method == 'POST':
+        try:
+            save_public_chat_settings(request.form)
+        except ValueError as exc:
+            flash(str(exc), 'error')
+        else:
+            flash('聊天设置已保存', 'success')
+            return redirect(url_for('admin.chat_settings'))
+    return render_template('admin/chat_settings.html', settings=get_public_chat_admin_settings())
 
 
 @bp.route('/access-settings', methods=['GET', 'POST'])

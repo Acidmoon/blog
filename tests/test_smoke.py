@@ -10,7 +10,7 @@ from urllib.parse import unquote
 import pytest
 
 import config
-from module_loader import REGISTRY
+from module_loader import get_module_registry
 from models import get_db
 from services.access_settings import get_access_settings
 from services.admin_modules import build_admin_nav, build_admin_nav_groups
@@ -157,7 +157,7 @@ def test_new_visitor_can_register_and_login(client, reset_settings):
     r = _visitor_register(client, username='user1', password='abc123')
     assert r.status_code in (302, 303)
     assert 'visitor_token' in r.headers.get('Set-Cookie', '')
-    client.get('/logout')
+    client.post('/logout')
     r = _visitor_login(client, username='user1', password='abc123')
     assert r.status_code in (302, 303)
     assert 'visitor_token' in r.headers.get('Set-Cookie', '')
@@ -300,7 +300,7 @@ def test_acidmoon_user_is_admin(client, reset_settings):
 
 def test_config_admin_password_resets_existing_acidmoon(client, reset_settings):
     _visitor_register(client, username='Acidmoon', password='oldpass')
-    client.get('/logout')
+    client.post('/logout')
     _admin_login(client)
     r = client.get('/admin')
     assert r.status_code == 200
@@ -348,18 +348,21 @@ def test_admin_session_expires(client, reset_settings, monkeypatch):
     assert '/login' in r.location
 
 
-def test_all_core_modules_registered():
+def test_all_core_modules_registered(app):
     expected = {'activity_heatmap', 'article_list', 'daily_quote', 'pagination', 'tag_filter'}
-    actual = set(REGISTRY.home_sections.keys())
+    registry = get_module_registry(app)
+    actual = set(registry.home_sections.keys())
     assert expected == actual
-    assert REGISTRY.admin_modules['daily_quote'].handler is not None
+    assert registry.admin_modules['daily_quote'].handler is not None
 
 
-def test_admin_nav_groups_keep_flat_nav_compatible():
-    groups = build_admin_nav_groups()
+def test_admin_nav_groups_keep_flat_nav_compatible(app):
+    with app.app_context():
+        groups = build_admin_nav_groups()
+        flat_nav = build_admin_nav()
     assert [group['id'] for group in groups] == ['content', 'home', 'access', 'system']
     flat = [item for group in groups for item in group['items']]
-    assert build_admin_nav() == flat
+    assert flat_nav == flat
 
 
 def test_static_css_served(client, reset_settings):
@@ -378,10 +381,9 @@ def test_feature_scripts_are_served(client, reset_settings):
         assert r.status_code == 200
         assert 'function' in r.data.decode('utf-8')
 
-def test_public_chat_routes_are_removed(client, reset_settings):
-    assert client.get('/chat').status_code == 404
-    assert client.post('/api/chat', json={'content': 'hello'}).status_code == 404
-    assert client.get('/api/chat/sessions').status_code == 404
+def test_public_chat_routes_are_registered(client, reset_settings):
+    assert client.get('/chat').status_code in {200, 302}
+    assert client.get('/api/chat/sessions').status_code == 401
 
 
 def test_library_is_not_linked_or_mounted(client, reset_settings):
@@ -442,9 +444,9 @@ def test_nav_and_layout_pages_require_admin_login(client, reset_settings):
         assert '登录' in r.data.decode('utf-8')
 
 
-def test_chat_settings_page_removed_for_logged_in_admin(login, reset_settings):
+def test_chat_settings_page_available_for_logged_in_admin(login, reset_settings):
     r = login.get('/admin/chat-settings')
-    assert r.status_code == 404
+    assert r.status_code == 200
 
 
 def test_access_settings_page_for_logged_in_admin(login, reset_settings):
@@ -553,7 +555,7 @@ def test_comment_delete_forbidden_for_non_author(client, reset_settings):
         r = client.post(f'/api/article/{slug}/comments', json={'content': '只有作者可删'})
         assert r.status_code == 200
         comment_id = r.get_json()['comment']['id']
-        client.get('/logout')
+        client.post('/logout')
         _login_visitor(client, username='bobperm', password='abc123')
         r = client.delete(f'/api/comments/{comment_id}')
         assert r.status_code == 403
