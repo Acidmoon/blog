@@ -15,6 +15,11 @@
         📝 写新文章
       {% endif %}
     </h2>
+    <div class="editor-draft-banner" id="draftBanner" hidden>
+      <span id="draftBannerText">检测到本地自动保存的草稿。</span>
+      <button type="button" class="editor-draft-btn editor-draft-btn--primary" id="draftRestoreBtn">恢复草稿</button>
+      <button type="button" class="editor-draft-btn" id="draftDiscardBtn">丢弃</button>
+    </div>
     <form method="post" id="editorForm">
       <div class="editor-meta-row">
         <div class="form-group form-group--title">
@@ -109,6 +114,7 @@
         {% if article %}
         <a href="/admin/wechat-export/{{ article.slug }}" class="btn btn-secondary">导出公众号</a>
         {% endif %}
+        <span class="editor-autosave-status" id="autosaveStatus" aria-live="polite"></span>
       </div>
     </form>
   </div>
@@ -119,7 +125,8 @@
 <script type="application/json" id="editorConfig">{{ {
   "ai_polish_profiles": ai_polish_profiles,
   "ai_polish_modes": ai_polish_modes,
-  "all_tags": all_tags
+  "all_tags": all_tags,
+  "article_slug": article.slug if article else ""
 }|tojson }}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script>

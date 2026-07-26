@@ -470,6 +470,16 @@ def test_access_settings_page_for_logged_in_admin(login, reset_settings):
     assert '访问设置' in r.data.decode('utf-8')
 
 
+def test_editor_page_includes_autosave_wiring(login, reset_settings):
+    """编辑器页面必须带自动保存横幅、状态位和传给前端的 slug。"""
+    r = login.get('/admin/new')
+    assert r.status_code == 200
+    html = r.data.decode('utf-8')
+    assert 'id="draftBanner"' in html
+    assert 'id="autosaveStatus"' in html
+    assert '"article_slug"' in html
+
+
 def test_admin_article_commands_round_trip(client, reset_settings):
     _admin_login(client)
     title = f'测试草稿 {uuid.uuid4().hex[:8]}'

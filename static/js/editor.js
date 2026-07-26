@@ -69,6 +69,8 @@
 
     function syncHidden() {
       hidden.value = tags.join(',');
+      // 标签是程序化赋值，不会触发表单 input 事件，广播给自动保存监听
+      hidden.dispatchEvent(new Event('tags:changed', {bubbles: true}));
     }
 
     function renderChips() {
@@ -168,6 +170,12 @@
     });
     wrapper.addEventListener('click', e => {
       if (e.target === wrapper || e.target === chipsEl) input.focus();
+    });
+    // 恢复草稿时外部直接改写 hidden 值，通过该事件让 chips 重新同步
+    hidden.addEventListener('tags:sync', () => {
+      tags = (hidden.value || '').split(',').map(s => s.trim()).filter(Boolean);
+      renderChips();
+      renderSuggestions();
     });
     renderChips();
   }
@@ -291,6 +299,124 @@
     if (saved === '1') setActive(true);
   }
 
+  /* ── Draft autosave (localStorage) ─────────────────
+     输入停止约 1s 后把标题/标签/正文/封面写入 localStorage，
+     防止崩溃、误关标签页导致整篇内容丢失。成功提交后清除草稿。 */
+  function initAutosave() {
+    const form = document.getElementById('editorForm');
+    const ta = document.getElementById('content');
+    const titleEl = document.getElementById('title');
+    const tagsEl = document.getElementById('tagsHidden');
+    const coverEl = document.getElementById('coverImageHidden');
+    const coverAltEl = document.getElementById('coverAltHidden');
+    const status = document.getElementById('autosaveStatus');
+    const banner = document.getElementById('draftBanner');
+    const bannerText = document.getElementById('draftBannerText');
+    const restoreBtn = document.getElementById('draftRestoreBtn');
+    const discardBtn = document.getElementById('draftDiscardBtn');
+    if (!form || !ta || !titleEl || !tagsEl) return;
+
+    const key = 'editor-draft:' + (editorConfig.article_slug || 'new');
+    let timer = null;
+
+    function readState() {
+      return {
+        title: titleEl.value,
+        tags: tagsEl.value,
+        content: ta.value,
+        cover_image: coverEl ? coverEl.value : '',
+        cover_alt: coverAltEl ? coverAltEl.value : '',
+      };
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const pad = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+             ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    function save() {
+      const state = readState();
+      // 全空的内容没有保存价值，也不覆盖可能存在的旧草稿
+      if (!state.title.trim() && !state.content.trim() && !state.tags.trim()) return;
+      try {
+        localStorage.setItem(key, JSON.stringify(Object.assign({saved_at: Date.now()}, state)));
+        if (status) status.textContent = '草稿已自动保存 ' + fmtTime(Date.now());
+      } catch (_) {}
+    }
+
+    function scheduleSave() {
+      clearTimeout(timer);
+      timer = setTimeout(save, 800);
+    }
+
+    function loadDraft() {
+      try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; }
+    }
+
+    function differsFromCurrent(draft) {
+      const cur = readState();
+      return ['title', 'tags', 'content', 'cover_image', 'cover_alt']
+        .some(k => String(draft[k] || '') !== String(cur[k] || ''));
+    }
+
+    function applyCover(filename, alt) {
+      if (coverEl) coverEl.value = filename || '';
+      if (coverAltEl) coverAltEl.value = alt || '';
+      const preview = document.getElementById('coverPreview');
+      const removeBtn = document.getElementById('removeCoverBtn');
+      if (!preview) return;
+      if (filename) {
+        const url = '/static/' + String(filename).replace(/^\/+/, '');
+        preview.innerHTML = '<img src="' + url + '" alt="" class="editor-cover-img">';
+        preview.style.backgroundImage = 'url(' + url + ')';
+        if (removeBtn) removeBtn.style.display = '';
+      } else {
+        preview.innerHTML = '';
+        preview.style.backgroundImage = '';
+        if (removeBtn) removeBtn.style.display = 'none';
+      }
+    }
+
+    const draft = loadDraft();
+    if (draft && banner && (draft.content || draft.title) && differsFromCurrent(draft)) {
+      if (bannerText) {
+        bannerText.textContent = '检测到 ' + fmtTime(draft.saved_at) +
+          ' 自动保存的草稿，与当前内容不同。';
+      }
+      banner.hidden = false;
+    }
+
+    restoreBtn?.addEventListener('click', () => {
+      if (!draft) return;
+      titleEl.value = draft.title || '';
+      tagsEl.value = draft.tags || '';
+      tagsEl.dispatchEvent(new Event('tags:sync'));
+      ta.value = draft.content || '';
+      ta.dispatchEvent(new Event('input'));
+      applyCover(draft.cover_image, draft.cover_alt);
+      banner.hidden = true;
+      save();
+    });
+
+    discardBtn?.addEventListener('click', () => {
+      try { localStorage.removeItem(key); } catch (_) {}
+      banner.hidden = true;
+      if (status) status.textContent = '';
+    });
+
+    form.addEventListener('input', scheduleSave);
+    form.addEventListener('tags:changed', scheduleSave);
+    // 关闭/刷新页面前同步落盘一次，补上 debounce 窗口内的最后改动
+    window.addEventListener('beforeunload', save);
+    form.addEventListener('submit', () => {
+      window.removeEventListener('beforeunload', save);
+      try { localStorage.removeItem(key); } catch (_) {}
+    });
+  }
+
   function initZenMode() {
     const btn = document.getElementById('zenModeBtn');
     const exitBtn = document.getElementById('zenExitBtn');
@@ -321,7 +447,11 @@
     const selected = text.substring(start, end);
     ta.value = text.substring(0, start) + before + selected + after + text.substring(end);
     ta.focus();
-    const pos = start + before.length + selected.length + after.length;
+    // 无选中文本时，光标落在前后标记之间，否则用户接着输入的内容会落在标记外，
+    // 导致「加粗」等语法实际没有包住所写文字。
+    const pos = selected.length === 0
+      ? start + before.length
+      : start + before.length + selected.length + after.length;
     ta.selectionStart = ta.selectionEnd = pos;
     ta.dispatchEvent(new Event('input'));
   }
@@ -464,6 +594,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     initTagInput();
     initLivePreview();
+    initAutosave();
     initZenMode();
     syncPolishModels();
     document.getElementById('aiOrganizeFirst')?.addEventListener('change', syncPolishModeHint);
