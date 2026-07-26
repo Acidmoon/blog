@@ -106,19 +106,16 @@
 .search-results {
   display: flex;
   flex-direction: column;
-  gap: 16px;
 }
 .search-result-card {
-  background: var(--bg-card);
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-  padding: 20px 24px;
-  transition: all 0.25s;
+  padding: 20px 2px;
+  border-bottom: 1px solid var(--border-light);
 }
-.search-result-card:hover {
-  border-color: var(--accent-primary);
-  box-shadow: var(--glow-accent);
-  transform: translateY(-1px);
+.search-result-card:last-child {
+  border-bottom: none;
+}
+.search-result-card:hover .search-result-title a {
+  color: var(--accent-primary);
 }
 .search-result-title {
   font-size: 1.1rem;
@@ -171,5 +168,5 @@
   .article-list { gap: 12px; }
   .search-header { margin-bottom: 24px; }
   .search-title { font-size: 1.2rem; }
-  .search-result-card { padding: 16px 18px; }
+  .search-result-card { padding: 16px 2px; }
 }

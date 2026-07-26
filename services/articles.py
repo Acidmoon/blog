@@ -538,6 +538,7 @@ def list_published_articles(page=1, tag=''):
         article = dict(row)
         content = read_article_file(article['slug'], article.get('content_key', ''))
         article['current_word_count'] = count_words(content) if content else 0
+        article['summary'] = _plain_excerpt(content) if content else ''
         result.append(article)
     return result, total
 
