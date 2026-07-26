@@ -16,7 +16,7 @@
       {% endif %}
     </h2>
     <div class="editor-draft-banner" id="draftBanner" hidden>
-      <span id="draftBannerText">检测到本地自动保存的草稿。</span>
+      <span id="draftBannerText">检测到自动保存的备份。</span>
       <button type="button" class="editor-draft-btn editor-draft-btn--primary" id="draftRestoreBtn">恢复草稿</button>
       <button type="button" class="editor-draft-btn" id="draftDiscardBtn">丢弃</button>
     </div>
@@ -54,6 +54,7 @@
         <input type="hidden" name="cover_image" id="coverImageHidden" value="{{ article.cover_image if article and article.cover_image else '' }}">
         <input type="hidden" name="cover_alt" id="coverAltHidden" value="{{ article.cover_alt if article and article.cover_alt else '' }}">
       </div>
+      <input type="hidden" name="backup_key" id="backupKeyHidden" value="">
 
       <div class="editor-split" id="editorSplit">
         <div class="editor-split__preview" id="previewPanel" hidden>

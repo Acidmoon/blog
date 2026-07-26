@@ -23,6 +23,7 @@ from services.auth import (
     safe_next_url,
 )
 from services.request_security import rotate_csrf_token
+from services.article_backups import delete_backup, load_backup, save_backup
 from services.media_uploads import MediaUploadError, save_admin_image
 from services.visitor_auth import (
     VisitorAuthError,
@@ -161,6 +162,8 @@ def new_article():
         except ValueError as exc:
             flash(str(exc), 'error')
             return _edit_template(article=None)
+        # 新文章保存成功，清理编辑期间按临时标识写入的备份文件
+        delete_backup(request.form.get('backup_key', ''))
         flash('草稿已保存', 'success')
         return redirect(url_for('admin.edit_article', slug=article['slug']))
     return _edit_template(article=None)
@@ -186,6 +189,7 @@ def edit_article(slug):
             flash(str(exc), 'error')
             article['content'] = request.form.get('content', '')
             return _edit_template(article=article)
+        delete_backup(slug)
         flash('文章已更新', 'success')
         if article.get('published'):
             return redirect(url_for('public.article', slug=slug))
@@ -221,6 +225,7 @@ def wechat_export(slug):
 @admin_required
 def delete_article(slug):
     svc_delete_article(slug)
+    delete_backup(slug)
     flash('文章已删除', 'success')
     return redirect(url_for('admin.dashboard'))
 
@@ -258,8 +263,38 @@ def publish(slug):
         flash(str(exc), 'error')
         article['content'] = read_article_file(slug) or ''
         return _edit_template(article=article)
+    # 发布成功后清理对应的自动备份文件
+    delete_backup(slug)
     flash('文章已发布', 'success')
     return redirect(url_for('public.article', slug=slug))
+
+
+@bp.route('/api/backup', methods=['POST'])
+@admin_required
+def save_editor_backup():
+    """编辑器周期调用：把当前表单全部内容覆盖到该文章唯一的备份文件。"""
+    data = request.get_json(silent=True) or {}
+    try:
+        saved = save_backup(data.get('key'), data)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    return jsonify({'ok': True, 'saved_at': saved['saved_at']})
+
+
+@bp.route('/api/backup/<key>', methods=['GET'])
+@admin_required
+def get_editor_backup(key):
+    backup = load_backup(key)
+    if backup is None:
+        return jsonify({'error': '备份不存在'}), 404
+    return jsonify({'backup': backup})
+
+
+@bp.route('/api/backup/<key>', methods=['DELETE'])
+@admin_required
+def discard_editor_backup(key):
+    delete_backup(key)
+    return jsonify({'ok': True})
 
 
 @bp.route('/upload', methods=['POST'])

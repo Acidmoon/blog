@@ -21,6 +21,7 @@ from services.articles import (
     publish_article,
     read_article_file,
 )
+from services.article_backups import load_backup
 from services.auth import reset_auth_rate_limits
 from services.site_settings import delete_settings, get_setting, set_settings
 
@@ -477,7 +478,77 @@ def test_editor_page_includes_autosave_wiring(login, reset_settings):
     html = r.data.decode('utf-8')
     assert 'id="draftBanner"' in html
     assert 'id="autosaveStatus"' in html
+    assert 'id="backupKeyHidden"' in html
     assert '"article_slug"' in html
+
+
+def test_editor_backup_api_round_trip(login, reset_settings):
+    """备份可写入、覆盖、读取、删除；同一标识始终只有一个备份文件。"""
+    key = f'备份测试-{uuid.uuid4().hex[:8]}'
+    r = login.post('/admin/api/backup', json={
+        'key': key, 'title': '标题', 'tags': '甲,乙', 'content': '第一版内容',
+    })
+    assert r.status_code == 200
+    assert r.get_json()['ok'] is True
+
+    r = login.get(f'/admin/api/backup/{key}')
+    assert r.status_code == 200
+    backup = r.get_json()['backup']
+    assert backup['title'] == '标题'
+    assert backup['content'] == '第一版内容'
+    assert backup['saved_at']
+
+    r = login.post('/admin/api/backup', json={'key': key, 'title': '标题改', 'content': '第二版内容'})
+    assert r.status_code == 200
+    assert load_backup(key)['content'] == '第二版内容'
+
+    r = login.delete(f'/admin/api/backup/{key}')
+    assert r.status_code == 200
+    assert load_backup(key) is None
+    assert login.get(f'/admin/api/backup/{key}').status_code == 404
+
+
+def test_editor_backup_rejects_unsafe_key(login, reset_settings):
+    for bad in ('../evil', 'a/b', 'a\\b', '..', ''):
+        r = login.post('/admin/api/backup', json={'key': bad, 'content': 'x'})
+        assert r.status_code == 400
+
+
+def test_editor_backup_requires_admin(client, reset_settings):
+    r = client.post('/admin/api/backup', json={'key': 'k', 'content': 'x'})
+    assert r.status_code in (302, 401, 403)
+
+
+def test_editor_backup_cleaned_on_save_publish_and_delete(login, reset_settings):
+    """保存草稿清临时标识备份，发布清 slug 备份。"""
+    new_key = 'new-' + uuid.uuid4().hex
+    assert login.post('/admin/api/backup', json={'key': new_key, 'content': '没保存的长文'}).status_code == 200
+    assert load_backup(new_key) is not None
+
+    title = f'备份清理 {uuid.uuid4().hex[:8]}'
+    r = login.post(
+        '/admin/new',
+        data={'title': title, 'tags': '', 'content': '正文', 'backup_key': new_key},
+        follow_redirects=False,
+    )
+    assert r.status_code in (302, 303)
+    slug = unquote(r.location.rstrip('/').rsplit('/', 1)[-1])
+    assert load_backup(new_key) is None
+
+    try:
+        # 编辑期间产生的 slug 备份，在发布后被清理
+        assert login.post('/admin/api/backup', json={'key': slug, 'content': '未保存修改'}).status_code == 200
+        assert load_backup(slug) is not None
+        r = login.post(
+            f'/admin/publish/{slug}',
+            data={'title': title, 'tags': '', 'content': '正文'},
+            follow_redirects=False,
+        )
+        assert r.status_code in (302, 303)
+        assert load_backup(slug) is None
+    finally:
+        login.post(f'/admin/delete/{slug}', follow_redirects=False)
+        assert load_backup(slug) is None
 
 
 def test_admin_article_commands_round_trip(client, reset_settings):

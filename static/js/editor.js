@@ -69,8 +69,6 @@
 
     function syncHidden() {
       hidden.value = tags.join(',');
-      // 标签是程序化赋值，不会触发表单 input 事件，广播给自动保存监听
-      hidden.dispatchEvent(new Event('tags:changed', {bubbles: true}));
     }
 
     function renderChips() {
@@ -299,9 +297,10 @@
     if (saved === '1') setActive(true);
   }
 
-  /* ── Draft autosave (localStorage) ─────────────────
-     输入停止约 1s 后把标题/标签/正文/封面写入 localStorage，
-     防止崩溃、误关标签页导致整篇内容丢失。成功提交后清除草稿。 */
+  /* ── Editor backup autosave (server-side file) ──────
+     每隔 INTERVAL_MS 把当前表单全部内容覆盖写入服务端备份文件
+     （每篇文章一个，与草稿分离），防止断连/崩溃丢失未保存内容。
+     文章保存、发布或删除后由服务端清理对应备份文件。 */
   function initAutosave() {
     const form = document.getElementById('editorForm');
     const ta = document.getElementById('content');
@@ -316,8 +315,29 @@
     const discardBtn = document.getElementById('draftDiscardBtn');
     if (!form || !ta || !titleEl || !tagsEl) return;
 
-    const key = 'editor-draft:' + (editorConfig.article_slug || 'new');
-    let timer = null;
+    const INTERVAL_MS = 10000;
+    const NEW_KEY_STORAGE = 'editor-backup-key:new';
+    // 已存在的文章（含草稿）用 slug 作备份标识；从未保存的新文章生成一个
+    // 稳定 UUID 并存入 localStorage，刷新后仍对应同一个备份文件，
+    // 首次保存成功后服务端按表单里的 backup_key 清理该备份。
+    let key = editorConfig.article_slug || '';
+    const isNewArticle = !key;
+    if (isNewArticle) {
+      try {
+        key = localStorage.getItem(NEW_KEY_STORAGE) || '';
+        if (!key) {
+          key = 'new-' + (crypto.randomUUID ? crypto.randomUUID()
+                        : Date.now() + '-' + Math.random().toString(16).slice(2));
+          localStorage.setItem(NEW_KEY_STORAGE, key);
+        }
+      } catch (_) {
+        key = 'new-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+      }
+    }
+    const backupKeyInput = document.getElementById('backupKeyHidden');
+    if (backupKeyInput) backupKeyInput.value = key;
+
+    let lastSavedState = null;
 
     function readState() {
       return {
@@ -329,32 +349,40 @@
       };
     }
 
-    function fmtTime(ts) {
-      if (!ts) return '';
-      const d = new Date(ts);
-      const pad = n => String(n).padStart(2, '0');
-      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
-             ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    function fmtTime(iso) {
+      return String(iso || '').replace('T', ' ').slice(0, 16);
     }
 
-    function save() {
+    function csrfHeaders(extra) {
+      return Object.assign({'X-CSRF-Token': window.getCsrfToken()}, extra || {});
+    }
+
+    async function save(useKeepalive) {
       const state = readState();
-      // 全空的内容没有保存价值，也不覆盖可能存在的旧草稿
+      // 全空的内容没有备份价值，也不覆盖可能存在的旧备份
       if (!state.title.trim() && !state.content.trim() && !state.tags.trim()) return;
+      const snapshot = JSON.stringify(state);
+      if (snapshot === lastSavedState) return;
       try {
-        localStorage.setItem(key, JSON.stringify(Object.assign({saved_at: Date.now()}, state)));
-        if (status) status.textContent = '草稿已自动保存 ' + fmtTime(Date.now());
-      } catch (_) {}
+        const resp = await fetch('/admin/api/backup', {
+          method: 'POST',
+          headers: csrfHeaders({'Content-Type': 'application/json'}),
+          body: JSON.stringify(Object.assign({key}, state)),
+          keepalive: Boolean(useKeepalive),
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        lastSavedState = snapshot;
+        if (status) status.textContent = '备份已自动保存 ' + fmtTime(data.saved_at);
+      } catch (_) {
+        if (status) status.textContent = '备份保存失败，稍后将自动重试';
+      }
     }
 
-    function scheduleSave() {
-      clearTimeout(timer);
-      timer = setTimeout(save, 800);
-    }
-
-    function loadDraft() {
-      try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; }
-    }
+    // 周期覆盖备份文件；关闭/刷新页面时用 keepalive 补上最后的改动
+    const timer = setInterval(() => { save(false); }, INTERVAL_MS);
+    function saveOnUnload() { save(true); }
+    window.addEventListener('beforeunload', saveOnUnload);
 
     function differsFromCurrent(draft) {
       const cur = readState();
@@ -380,40 +408,52 @@
       }
     }
 
-    const draft = loadDraft();
-    if (draft && banner && (draft.content || draft.title) && differsFromCurrent(draft)) {
-      if (bannerText) {
-        bannerText.textContent = '检测到 ' + fmtTime(draft.saved_at) +
-          ' 自动保存的草稿，与当前内容不同。';
-      }
-      banner.hidden = false;
-    }
+    // 载入已有备份，与当前内容不同时提示恢复
+    let loadedBackup = null;
+    fetch('/admin/api/backup/' + encodeURIComponent(key), {headers: csrfHeaders()})
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        const draft = data && data.backup;
+        if (!draft || !banner || (!draft.content && !draft.title)) return;
+        if (!differsFromCurrent(draft)) return;
+        loadedBackup = draft;
+        if (bannerText) {
+          bannerText.textContent = '检测到 ' + fmtTime(draft.saved_at) +
+            ' 的自动备份，与当前内容不同。';
+        }
+        banner.hidden = false;
+      })
+      .catch(() => {});
 
     restoreBtn?.addEventListener('click', () => {
-      if (!draft) return;
-      titleEl.value = draft.title || '';
-      tagsEl.value = draft.tags || '';
+      if (!loadedBackup) return;
+      titleEl.value = loadedBackup.title || '';
+      tagsEl.value = loadedBackup.tags || '';
       tagsEl.dispatchEvent(new Event('tags:sync'));
-      ta.value = draft.content || '';
+      ta.value = loadedBackup.content || '';
       ta.dispatchEvent(new Event('input'));
-      applyCover(draft.cover_image, draft.cover_alt);
+      applyCover(loadedBackup.cover_image, loadedBackup.cover_alt);
       banner.hidden = true;
-      save();
+      save(false);
     });
 
     discardBtn?.addEventListener('click', () => {
-      try { localStorage.removeItem(key); } catch (_) {}
+      fetch('/admin/api/backup/' + encodeURIComponent(key), {
+        method: 'DELETE',
+        headers: csrfHeaders(),
+      }).catch(() => {});
+      loadedBackup = null;
       banner.hidden = true;
       if (status) status.textContent = '';
     });
 
-    form.addEventListener('input', scheduleSave);
-    form.addEventListener('tags:changed', scheduleSave);
-    // 关闭/刷新页面前同步落盘一次，补上 debounce 窗口内的最后改动
-    window.addEventListener('beforeunload', save);
     form.addEventListener('submit', () => {
-      window.removeEventListener('beforeunload', save);
-      try { localStorage.removeItem(key); } catch (_) {}
+      clearInterval(timer);
+      window.removeEventListener('beforeunload', saveOnUnload);
+      // 备份文件由服务端在保存成功后清理；本地的新文章标识一并清除
+      if (isNewArticle) {
+        try { localStorage.removeItem(NEW_KEY_STORAGE); } catch (_) {}
+      }
     });
   }
 
