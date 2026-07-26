@@ -60,10 +60,6 @@
 /* ── Editor Cover Upload ─────────────────────────── */
 .editor-cover {
   margin-bottom: 20px;
-  padding: 16px;
-  background: var(--bg-surface);
-  border-radius: 12px;
-  border: 1px solid var(--border-light);
 }
 .editor-cover-label {
   display: block;
@@ -74,20 +70,24 @@
 }
 .editor-cover-preview {
   width: 100%;
-  max-height: 200px;
+  max-height: 160px;
   border-radius: 8px;
   overflow: hidden;
   background: var(--bg-card) center/cover no-repeat;
   border: 1px dashed var(--border-medium);
   margin-bottom: 10px;
-  min-height: 100px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+/* 没有封面时不渲染占位框，配合模板输出真正的空元素 */
+.editor-cover-preview:empty {
+  display: none;
+}
 .editor-cover-img {
   max-width: 100%;
-  max-height: 200px;
+  max-height: 160px;
   display: block;
 }
 .editor-cover-actions {
@@ -129,7 +129,6 @@
   border: 1px solid var(--border-light);
   border-radius: 8px;
   background: var(--bg-card);
-  box-shadow: var(--shadow-soft);
 }
 .settings-panel--primary {
   border-color: rgba(58, 107, 79, 0.24);
@@ -384,6 +383,8 @@
 }
 
 /* ── Draft autosave banner & status ─────────────────── */
+/* display:flex 会覆盖 UA 的 [hidden] 规则，必须显式恢复隐藏 */
+.editor-draft-banner[hidden] { display: none; }
 .editor-draft-banner {
   display: flex;
   align-items: center;
@@ -547,13 +548,12 @@
   color: var(--text-primary);
 }
 
-/* Admin Table */
+/* Admin Table — 行式表格，不用卡片容器 */
 .admin-table {
   margin: 20px 0;
   overflow-x: auto;
-  border-radius: 12px;
-  border: 1px solid var(--border-light);
-  background: var(--bg-card);
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
 }
 .admin-table table {
   width: 100%;
@@ -1189,7 +1189,6 @@ body.zen-mode .zen-exit-btn {
   padding: 12px;
   border: 1px solid var(--border-light);
   border-radius: 10px;
-  background: var(--bg-surface);
   cursor: pointer;
 }
 .layout-switch input {

@@ -40,11 +40,7 @@
       <!-- Cover image -->
       <div class="editor-cover">
         <label class="editor-cover-label">封面图片</label>
-        <div class="editor-cover-preview" id="coverPreview" style="{% if article and article.cover_image %}background-image: url({{ url_for('static', filename=article.cover_image) }}){% endif %}">
-          {% if article and article.cover_image %}
-          <img src="{{ url_for('static', filename=article.cover_image) }}" alt="" class="editor-cover-img">
-          {% endif %}
-        </div>
+        <div class="editor-cover-preview" id="coverPreview" style="{% if article and article.cover_image %}background-image: url({{ url_for('static', filename=article.cover_image) }}){% endif %}">{% if article and article.cover_image %}<img src="{{ url_for('static', filename=article.cover_image) }}" alt="" class="editor-cover-img">{% endif %}</div>
         <div class="editor-cover-actions">
           <input type="file" id="coverInput" accept="image/*" style="display:none" onchange="uploadCover(this)">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('coverInput').click()">选择图片</button>
