@@ -591,7 +591,7 @@
   padding: 40px !important;
 }
 
-/* Editor Toolbar */
+/* Editor Toolbar（位于编辑区域下方，与 textarea 无缝衔接） */
 .editor-toolbar {
   display: flex;
   gap: 4px;
@@ -600,7 +600,8 @@
   padding: 8px;
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
-  border-radius: 10px 10px 0 0;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
 }
 .editor-toolbar button {
   padding: 5px 12px;
@@ -621,8 +622,8 @@
   max-width: 860px;
 }
 .editor-page textarea {
-  border-radius: 0 0 10px 10px;
-  border-top: none;
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
   min-height: 60vh;
   font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
   font-size: 0.95rem;

@@ -1,13 +1,17 @@
 """Public HTML page routes."""
 
-from flask import abort, redirect, render_template, request, send_from_directory, url_for
+from io import BytesIO
+
+from flask import abort, redirect, render_template, request, send_file, send_from_directory, url_for
 
 import config
 from features.articles.application import load_public_article_page
 from features.home.application import build_public_home_context
 from routes.public_utils import client_ip
 from services.articles import (
+    get_article_meta,
     list_all_tags,
+    read_article_file,
 )
 from services.comments import count_likes, has_liked, list_comments
 from services.query_params import QueryParameterError, parse_positive_page
@@ -79,6 +83,24 @@ def register_routes(bp):
             visitor=visitor,
             prev_article=page.previous_article,
             next_article=page.next_article,
+        )
+
+    @bp.route('/article/<slug>/download.md')
+    def article_download(slug):
+        # 仅公开已发布文章；未发布草稿只能通过后台编辑页访问
+        article = get_article_meta(slug)
+        if not article:
+            abort(404)
+        content = read_article_file(slug, article.get('content_key', ''))
+        if content is None:
+            abort(404)
+        title = (article.get('title') or slug).strip()
+        document = f'# {title}\n\n{content.rstrip()}\n'
+        return send_file(
+            BytesIO(document.encode('utf-8')),
+            mimetype='text/markdown; charset=utf-8',
+            as_attachment=True,
+            download_name=f'{title}.md',
         )
 
     @bp.route('/static/<path:filename>')

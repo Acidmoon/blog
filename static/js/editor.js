@@ -599,7 +599,11 @@
     if (!file) return;
     var fd = new FormData();
     fd.append('file', file);
-    fetch('/admin/upload', { method: 'POST', body: fd })
+    fetch('/admin/upload', {
+      method: 'POST',
+      headers: {'X-CSRF-Token': window.getCsrfToken()},
+      body: fd,
+    })
       .then(function(r) {
         if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || '上传失败'); });
         return r.json();

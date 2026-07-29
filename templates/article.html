@@ -101,6 +101,11 @@
           {% endif %}
         </div>
 
+        <!-- Markdown download -->
+        <div class="article-download">
+          <a href="{{ url_for('public.article_download', slug=article.slug) }}" class="md-download-link" download>⬇ 下载本文 Markdown（.md）</a>
+        </div>
+
         <!-- Prev / Next navigation -->
         <nav class="article-nav">
           {% if prev_article %}

@@ -21,6 +21,7 @@
       <button type="button" class="editor-draft-btn" id="draftDiscardBtn">丢弃</button>
     </div>
     <form method="post" id="editorForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="editor-meta-row">
         <div class="form-group form-group--title">
           <label for="title" class="sr-label">标题</label>
@@ -64,6 +65,7 @@
         </div>
         <div class="editor-split__divider" id="editorSplitDivider" role="separator" aria-orientation="vertical" title="拖动调整左右比例（双击重置）"></div>
         <div class="editor-split__editor" id="editorSplitEditor">
+          <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
           <div class="editor-toolbar">
             <button type="button" onclick="insertMd('**', '**')" title="粗体"><b>B</b></button>
             <button type="button" onclick="insertMd('*', '*')" title="斜体"><i>I</i></button>
@@ -95,7 +97,6 @@
             <button type="button" id="aiPolishBtn" class="editor-toolbar-ai" onclick="polishContent()" title="按所选风格处理正文">AI润色</button>
             <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleUpload(this)">
           </div>
-          <textarea id="content" name="content" rows="20" placeholder="用 Markdown 写文章…" required>{{ article.content if article else '' }}</textarea>
         </div>
       </div>
       <p id="aiPolishStatus" class="editor-hint">AI润色只会轻修语病、重复和口语表达，不会自动发布。</p>
