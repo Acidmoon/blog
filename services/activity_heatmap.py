@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import calendar
-import re
-from collections import defaultdict
 from datetime import date, datetime, timedelta
-from pathlib import Path
 
 import config
 from models import get_db
@@ -48,58 +45,21 @@ def _range_condition(column: str, start: date, end_exclusive: date | None) -> tu
     )
 
 
-def _count_words(text: str) -> int:
-    """Count Chinese characters + English words in a markdown text.
-    Chinese chars: CJK Unified Ideographs (U+4E00–U+9FFF) + extensions.
-    English words: sequences of [a-zA-Z0-9]."""
-    cjk = len(re.findall(r'[\u4e00-\u9fff\u3400-\u4dbf]', text))
-    en_words = len(re.findall(r'[a-zA-Z0-9]+', text))
-    return cjk + en_words
 
-
-def _activity_counts(start: date, end: date, end_exclusive: date | None) -> dict[date, int]:
-    """Count immutable, publicly visible article events per day."""
-    counts: dict[date, int] = defaultdict(int)
+def _typing_counts(start: date, end_exclusive: date | None) -> dict[date, int]:
+    """Aggregate newly typed effective characters per day from the diff store."""
+    chars_per_day: dict[date, int] = {}
     conn = get_db()
-    occurred_condition, occurred_params = _range_condition('occurred_at', start, end_exclusive)
+    condition, params = _range_condition('day', start, end_exclusive)
     rows = conn.execute(
-        f"""
-        SELECT occurred_at, COUNT(*) AS total
-        FROM article_activity_events
-        WHERE visible=1 AND ({occurred_condition})
-        GROUP BY substr(occurred_at, 1, 10)
-        """,
-        occurred_params,
+        f"SELECT day, chars FROM typing_daily WHERE {condition}",
+        params,
     ).fetchall()
-
     for row in rows:
-        day = _parse_date(row['occurred_at'])
-        if day and start <= day <= end:
-            counts[day] += int(row['total'] or 0)
-    return dict(counts)
-
-
-def _word_counts(start: date, end: date, end_exclusive: date | None) -> dict[date, int]:
-    """Aggregate net word changes recorded with immutable activity events."""
-    words_per_day: dict[date, int] = defaultdict(int)
-    conn = get_db()
-    occurred_condition, occurred_params = _range_condition('occurred_at', start, end_exclusive)
-    rows = conn.execute(
-        f"""
-        SELECT occurred_at, COALESCE(SUM(word_delta), 0) AS word_delta
-        FROM article_activity_events
-        WHERE visible=1 AND ({occurred_condition})
-        GROUP BY substr(occurred_at, 1, 10)
-        """,
-        occurred_params,
-    ).fetchall()
-
-    for row in rows:
-        word_delta = int(row["word_delta"] or 0)
-        day = _parse_date(row["occurred_at"])
-        if day and start <= day <= end:
-            words_per_day[day] += word_delta
-    return dict(words_per_day)
+        day = _parse_date(row['day'])
+        if day and start <= day:
+            chars_per_day[day] = int(row['chars'] or 0)
+    return chars_per_day
 
 
 def build_month_activity_heatmap(year: int | None = None, month: int | None = None, today: date | None = None) -> dict:
@@ -139,9 +99,8 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
     has_prev = prev_year is not None
     has_next = next_year is not None and (next_year, next_month) <= current_month
 
-    counts = _activity_counts(start, end, end_exclusive)
+    counts = _typing_counts(start, end_exclusive)
     max_count = max(counts.values(), default=0)
-    words = _word_counts(start, end, end_exclusive)
 
     # Calendar grid starts on Monday and ends on Sunday so the squares align vertically.
     grid_start = start - timedelta(days=start.weekday())
@@ -163,7 +122,6 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
                 level = 4
             else:
                 level = max(1, min(4, int((count / max_count) * 4 + 0.999)))
-            word_count = words.get(cursor, 0)
             week.append(
                 {
                     "date": cursor.isoformat(),
@@ -172,8 +130,8 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
                     "level": level,
                     "in_month": cursor.month == month,
                     "is_today": cursor == today,
-                    "label": f"{cursor.isoformat()}：{count} 次活动，{word_count} 字",
-                    "words": word_count,
+                    "label": f"{cursor.isoformat()}：新键入 {count} 字",
+                    "words": count,
                 }
             )
             if cursor == max_date:
@@ -183,8 +141,9 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
         if cursor == max_date:
             break
 
-    total_words = sum(words.values())
-    today_words = words.get(today, 0)
+    total_words = sum(counts.values())
+    today_words = counts.get(today, 0)
+    active_days = sum(1 for value in counts.values() if value > 0)
     days_remaining = (date(today.year, 12, 31) - today).days
 
     # Month names for display
@@ -193,9 +152,10 @@ def build_month_activity_heatmap(year: int | None = None, month: int | None = No
 
     return {
         "title": f"{year}年{month}月活动",
-        "subtitle": "文章活动记录",
+        "subtitle": "每日新键入字数",
         "weeks": weeks,
-        "total": sum(counts.values()),
+        "total": total_words,
+        "active_days": active_days,
         "max_count": max_count,
         "month": month,
         "year": year,

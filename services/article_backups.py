@@ -45,15 +45,44 @@ def _backup_path(key: str) -> Path:
     return _backup_dir() / f'{_validate_key(key)}.json'
 
 
-def save_backup(key: str, payload: dict) -> dict:
-    """覆盖写入某篇文章唯一的备份文件，先写临时文件再原子替换。"""
+def save_backup(key: str, payload: dict, *, record_typing: bool = True) -> dict:
+    """覆盖写入某篇文章唯一的备份文件，先写临时文件再原子替换。
+
+    写入前读取旧备份作为 diff 基线，把新键入的有效字符计入当天热力图指标。
+    """
     path = _backup_path(key)
+    previous = load_backup(key)
     data = {field: str(payload.get(field) or '') for field in _BACKUP_FIELDS}
     data['saved_at'] = datetime.now().isoformat(timespec='seconds')
     tmp_path = path.with_suffix('.json.tmp')
     tmp_path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
     os.replace(tmp_path, path)
+    if record_typing:
+        from services.typing_activity import record_backup_typing
+
+        record_backup_typing(
+            key,
+            previous.get('content') if previous else None,
+            data['content'],
+        )
     return data
+
+
+def checkpoint_backup_content(key: str, content: str) -> None:
+    """把已有备份的正文推进到指定内容且不计打字量。
+
+    用于 AI 润色成功后重置 diff 基线，避免整篇替换被计成当天键入字数。
+    备份尚不存在时不创建，保持「无备份」状态。
+    """
+    existing = load_backup(key)
+    if existing is None:
+        return
+    existing['content'] = str(content or '')
+    existing['saved_at'] = datetime.now().isoformat(timespec='seconds')
+    path = _backup_path(key)
+    tmp_path = path.with_suffix('.json.tmp')
+    tmp_path.write_text(json.dumps(existing, ensure_ascii=False), encoding='utf-8')
+    os.replace(tmp_path, path)
 
 
 def load_backup(key: str) -> dict | None:

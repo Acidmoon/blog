@@ -890,9 +890,25 @@
 .admin-page--split-active .editor-preview-body {
   max-height: calc(100vh - 220px);
 }
-.editor-preview-body.article-body {
+/* 真实文章预览：标题/封面/目录/正文与发布页同结构同样式 */
+.preview-article {
+  max-width: 100%;
   font-size: 1rem;
   line-height: 1.85;
+}
+.preview-article .article-cover-hero {
+  min-height: 240px;
+  margin: 0 0 28px;
+}
+.preview-toc {
+  margin: 0 0 26px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+.preview-toc .toc-title {
+  margin-bottom: 8px;
 }
 .editor-preview-body .preview-empty {
   color: var(--text-tertiary);

@@ -209,6 +209,27 @@
       else resetRatio();
     }
 
+    function wirePreviewToc(root) {
+      root.querySelectorAll('.preview-toc a.toc-item').forEach(link => {
+        link.addEventListener('click', e => {
+          e.preventDefault();
+          const id = link.getAttribute('data-heading') || (link.getAttribute('href') || '').slice(1);
+          const target = id ? root.querySelector('#' + CSS.escape(id)) : null;
+          if (target) target.scrollIntoView({behavior: 'smooth', block: 'start'});
+        });
+      });
+    }
+
+    function previewPayload(content) {
+      return {
+        content,
+        title: document.getElementById('title')?.value || '',
+        tags: document.getElementById('tagsHidden')?.value || '',
+        cover_image: document.getElementById('coverImageHidden')?.value || '',
+        cover_alt: document.getElementById('coverAltHidden')?.value || '',
+      };
+    }
+
     function update() {
       const content = ta.value;
       if (!content.trim()) {
@@ -226,7 +247,7 @@
           'Content-Type': 'application/json',
           'X-CSRF-Token': window.getCsrfToken(),
         },
-        body: JSON.stringify({content}),
+        body: JSON.stringify(previewPayload(content)),
         signal: ctrl.signal,
       })
         .then(r => r.json())
@@ -236,6 +257,7 @@
           if (window.MathJax && /(\$|\\\(|\\\[)/.test(content)) {
             window.MathJax.typesetPromise([body]).catch(() => {});
           }
+          wirePreviewToc(body);
           if (status) status.textContent = '';
         })
         .catch(err => {
@@ -291,6 +313,15 @@
       clearTimeout(timer);
       timer = setTimeout(update, 400);
     });
+    // 标题、标签、封面的变化也触发整页预览刷新（封面由程序改写，走自定义事件）
+    function scheduleUpdate() {
+      if (!active) return;
+      clearTimeout(timer);
+      timer = setTimeout(update, 400);
+    }
+    document.getElementById('title')?.addEventListener('input', scheduleUpdate);
+    document.getElementById('tagsHidden')?.addEventListener('tags:sync', scheduleUpdate);
+    document.addEventListener('editor:preview-refresh', scheduleUpdate);
 
     let saved = '0';
     try { saved = localStorage.getItem('editor-preview-on') || '0'; } catch (_) {}
@@ -406,6 +437,7 @@
         preview.style.backgroundImage = '';
         if (removeBtn) removeBtn.style.display = 'none';
       }
+      document.dispatchEvent(new CustomEvent('editor:preview-refresh'));
     }
 
     // 载入已有备份，与当前内容不同时提示恢复
@@ -507,6 +539,7 @@
     const model = document.getElementById('aiPolishModel')?.value || '';
     const mode = document.getElementById('aiPolishMode')?.value || '';
     const organizeFirst = document.getElementById('aiOrganizeFirst')?.checked || false;
+    const backupKey = document.getElementById('backupKeyHidden')?.value || '';
     const modeInfo = getSelectedPolishMode();
     const title = document.getElementById('title')?.value || '';
     const tags = document.getElementById('tagsHidden')?.value || '';
@@ -528,7 +561,7 @@
           'Content-Type': 'application/json',
           'X-CSRF-Token': window.getCsrfToken(),
         },
-        body: JSON.stringify({title, tags, content: original, provider, model, mode, organize_first: organizeFirst})
+        body: JSON.stringify({title, tags, content: original, provider, model, mode, organize_first: organizeFirst, backup_key: backupKey})
       });
       let data;
       const bodyText = await resp.text();
@@ -615,6 +648,7 @@
         preview.innerHTML = '<img src="' + data.url + '" alt="" class="editor-cover-img">';
         preview.style.backgroundImage = 'url(' + data.url + ')';
         document.getElementById('removeCoverBtn').style.display = '';
+        document.dispatchEvent(new CustomEvent('editor:preview-refresh'));
       })
       .catch(function(e) { alert('封面上传失败: ' + e.message); });
     input.value = '';
@@ -626,6 +660,7 @@
     document.getElementById('coverPreview').innerHTML = '';
     document.getElementById('coverPreview').style.backgroundImage = '';
     document.getElementById('removeCoverBtn').style.display = 'none';
+    document.dispatchEvent(new CustomEvent('editor:preview-refresh'));
   };
 
   window.syncPolishModels = syncPolishModels;

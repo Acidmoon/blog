@@ -182,6 +182,7 @@ def new_article():
                 request.form.get('content', ''),
                 request.form.get('cover_image', ''),
                 request.form.get('cover_alt', ''),
+                backup_key=request.form.get('backup_key', ''),
             )
         except ValueError as exc:
             flash(str(exc), 'error')

@@ -13,7 +13,7 @@
     {% endif %}
     <div class="aw__title-block">
       <span class="aw__title serif">{{ activity_heatmap.year }}年{{ activity_heatmap.month_display }}</span>
-      <span class="aw__eyebrow">文章活动热力图</span>
+      <span class="aw__eyebrow">每日码字热力图</span>
     </div>
     {% if activity_heatmap.has_next %}
     <button class="aw__nav aw__nav--next" aria-label="下个月"
@@ -27,7 +27,7 @@
     <div class="aw__main">
       <div class="aw__stats">
         <span class="aw__stat">📝 本月 <strong>{{ activity_heatmap.total_words }}</strong> 字</span>
-        <span class="aw__stat">🔥 <strong>{{ activity_heatmap.total }}</strong> 次活动</span>
+        <span class="aw__stat">✍️ 今日 <strong>{{ activity_heatmap.today_words }}</strong> 字</span>
         <span class="aw__stat">📅 今年还剩 <strong>{{ activity_heatmap.days_remaining }}</strong> 天</span>
       </div>
 
@@ -35,14 +35,14 @@
         <div class="aw__days" aria-hidden="true">
           {% for label in activity_heatmap.weekday_labels %}<span>{{ label }}</span>{% endfor %}
         </div>
-        <div class="aw__weeks" role="img" aria-label="本月每日文章活动热力图">
+        <div class="aw__weeks" role="img" aria-label="本月每日新键入字数热力图">
           {% for week in activity_heatmap.weeks %}
             <div class="aw__wk">
               {% for day in week %}
                 <span class="aw__d lv{{ day.level }}{% if not day.in_month %} aw__d--off{% endif %}{% if day.is_today %} aw__d--now{% endif %}"
-                      title="{{ day.date }}：{{ day.count }} 次活动{% if day.words %}，{{ day.words }} 字{% endif %}"
+                      title="{{ day.date }}：新键入 {{ day.words }} 字"
                       aria-label="{{ day.label }}"
-                      data-tip="{% if day.words %}{{ day.words }} 字{% else %}{{ day.count }} 次{% endif %}">{{ day.day }}</span>
+                      data-tip="{% if day.words %}{{ day.words }} 字{% else %}未码字{% endif %}">{{ day.day }}</span>
               {% endfor %}
             </div>
           {% endfor %}

@@ -35,9 +35,9 @@ def test_migrations_upgrade_legacy_schema_once_and_record_versions(tmp_path, mon
         versions = [row[0] for row in connection.execute("SELECT version FROM schema_migrations ORDER BY version")]
 
     assert {"word_count", "content_key", "cover_image", "cover_alt"} <= columns
-    assert [migration.version for migration in first_run] == [1, 2, 3, 4, 5, 6]
-    assert versions == [1, 2, 3, 4, 5, 6]
-    assert current_version() == 6
+    assert [migration.version for migration in first_run] == [1, 2, 3, 4, 5, 6, 7]
+    assert versions == [1, 2, 3, 4, 5, 6, 7]
+    assert current_version() == 7
     assert migrate_database() == []
 
 

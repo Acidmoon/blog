@@ -18,6 +18,7 @@ from models import get_db
 from services.article_events import record_article_activity
 from services.article_index import delete_article_search, sync_article_search
 from services.tagging import normalize_tag_filter, normalize_tags, serialize_tags
+from services.typing_activity import record_commit_typing
 
 
 _ARTICLE_LOCK = threading.RLock()
@@ -313,6 +314,7 @@ def create_article_draft(
     content: str,
     cover_image: str = '',
     cover_alt: str = '',
+    backup_key: str = '',
 ) -> dict:
     """Create metadata and a new immutable Markdown version in one operation."""
     title = str(title or '').strip()
@@ -376,6 +378,7 @@ def create_article_draft(
                 raise
             else:
                 break
+    record_commit_typing(slug, '', content, backup_key=backup_key)
     return get_article_meta(slug, published_only=False)
 
 
@@ -399,6 +402,8 @@ def update_article(
 
     now = datetime.now().isoformat()
     conn = get_db()
+    # 提交前的旧正文是打字量 diff 的兜底基线（无编辑器备份时使用）
+    previous_content = read_article_file(slug) or ''
     with _ARTICLE_LOCK:
         _begin_article_transaction(conn)
         article = conn.execute(
@@ -436,6 +441,7 @@ def update_article(
             conn.rollback()
             _discard_unreferenced_content(conn, content_key)
             raise
+    record_commit_typing(slug, previous_content, content)
     return get_article_meta(slug, published_only=False)
 
 

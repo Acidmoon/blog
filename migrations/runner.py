@@ -301,6 +301,30 @@ def _migration_006_article_search_index(connection: sqlite3.Connection) -> None:
         sync_article_search(connection, row["id"], row["title"], row["tags"], content)
 
 
+def _migration_007_typing_daily(connection: sqlite3.Connection) -> None:
+    """Create the daily newly-typed-character store and backfill from past events."""
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS typing_daily (
+            day TEXT PRIMARY KEY,
+            chars INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    # 历史没有逐次 diff，用已有活动事件里的正向字数变化近似回填，
+    # 让过去月份的热力图不至于全空。
+    connection.execute(
+        """
+        INSERT INTO typing_daily (day, chars)
+        SELECT substr(occurred_at, 1, 10) AS day, SUM(word_delta) AS chars
+        FROM article_activity_events
+        WHERE word_delta > 0
+        GROUP BY substr(occurred_at, 1, 10)
+        ON CONFLICT(day) DO NOTHING
+        """
+    )
+
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(1, "initial_schema", _migration_001_initial_schema),
     Migration(2, "article_metadata", _migration_002_article_metadata),
@@ -308,6 +332,7 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(4, "article_activity_events", _migration_004_article_activity_events),
     Migration(5, "visitor_admin_identity", _migration_005_visitor_admin_identity),
     Migration(6, "article_search_index", _migration_006_article_search_index),
+    Migration(7, "typing_daily", _migration_007_typing_daily),
 )
 
 

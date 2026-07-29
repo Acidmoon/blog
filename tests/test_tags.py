@@ -180,7 +180,7 @@ def test_init_db_rebuilds_legacy_tag_relations_deterministically(tmp_path, monke
             row[0]
             for row in connection.execute('SELECT version FROM schema_migrations ORDER BY version')
         ]
-    assert migration_versions == [1, 2, 3, 4, 5, 6]
+    assert migration_versions == [1, 2, 3, 4, 5, 6, 7]
 
 
 def test_search_prioritizes_title_matches_then_newest_articles(app):
