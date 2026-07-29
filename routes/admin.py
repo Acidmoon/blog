@@ -1,5 +1,7 @@
 from flask import Blueprint, abort, flash, jsonify, make_response, redirect, render_template, request, url_for
 
+import config
+from routes.public_utils import client_ip
 from services.admin_modules import build_admin_module_context, build_admin_nav, build_admin_nav_groups, get_admin_module
 from services.access_settings import get_access_settings, save_access_settings
 from services.ai_chat import get_public_chat_admin_settings, save_public_chat_settings
@@ -16,10 +18,14 @@ from services.articles import (
     update_article as svc_update_article,
 )
 from services.auth import (
+    AuthRateLimitError,
     admin_required,
+    check_auth_rate_limit,
     clear_admin_session,
     current_identity,
     mark_admin_authenticated,
+    record_auth_failure,
+    record_auth_success,
     safe_next_url,
 )
 from services.request_security import rotate_csrf_token
@@ -52,10 +58,28 @@ def login():
     if current_identity().is_admin:
         return redirect(next_url)
     if request.method == 'POST':
+        ip = client_ip()
+        try:
+            check_auth_rate_limit(
+                'admin_login',
+                ip,
+                config.ADMIN_LOGIN_MAX_ATTEMPTS,
+                config.ADMIN_LOGIN_WINDOW_SECONDS,
+            )
+        except AuthRateLimitError as exc:
+            return render_template(
+                'login.html',
+                error=str(exc),
+                next_url=next_url,
+                auth_mode='login',
+                admin_context=True,
+            ), 429
         try:
             visitor, token, expires_at = authenticate_admin(request.form.get('password', ''))
         except VisitorAuthError:
+            record_auth_failure('admin_login', ip, config.ADMIN_LOGIN_WINDOW_SECONDS)
             return render_template('admin/login.html', error='密码错误', next_url=next_url), 400
+        record_auth_success('admin_login', ip)
         mark_admin_authenticated()
         rotate_csrf_token()
         response = make_response(redirect(next_url))

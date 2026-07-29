@@ -354,14 +354,45 @@ def test_unified_login_rate_limited_by_ip(client, reset_settings, monkeypatch):
     assert '操作过于频繁' in r.data.decode('utf-8')
 
 
-def test_admin_session_expires(client, reset_settings, monkeypatch):
+def test_admin_session_expires_only_with_visitor_session(client, reset_settings, monkeypatch):
+    """配置的管理员账号在访客会话有效期间始终是管理员。
+
+    12 小时 admin session 上限不再把 acidmoon 降级为普通访客；
+    只有访客会话整体失效（如登出）后才需要重新登录。
+    """
     monkeypatch.setattr(config, 'ADMIN_SESSION_MAX_AGE_SECONDS', 1)
     _admin_login(client)
     with client.session_transaction() as sess:
         sess['admin_login_at'] = time.time() - 10
     r = client.get('/admin', follow_redirects=False)
+    assert r.status_code == 200
+    client.post('/logout')
+    r = client.get('/admin', follow_redirects=False)
     assert r.status_code in (302, 303)
     assert '/login' in r.location
+
+
+def test_admin_login_rate_limited_by_ip(client, reset_settings, monkeypatch):
+    """/admin/login 复用 ADMIN_LOGIN_* 配置做爆破限流。"""
+    monkeypatch.setattr(config, 'ADMIN_LOGIN_MAX_ATTEMPTS', 2)
+    monkeypatch.setattr(config, 'ADMIN_LOGIN_WINDOW_SECONDS', 900)
+    for _ in range(2):
+        r = client.post('/admin/login', data={'password': 'wrong'})
+        assert r.status_code == 400
+    r = client.post('/admin/login', data={'password': 'wrong'})
+    assert r.status_code == 429
+    assert '操作过于频繁' in r.data.decode('utf-8')
+
+
+def test_admin_password_change_takes_effect_immediately(client, reset_settings, monkeypatch):
+    """改密后旧的访客行密码哈希不再能登录 acidmoon。"""
+    _admin_login(client)
+    client.post('/logout')
+    monkeypatch.setattr(config, 'ADMIN_PASSWORD', 'new-admin-pass')
+    r = _visitor_login(client, username='Acidmoon', password='admin123', next_url='/admin')
+    assert r.status_code == 200
+    r = _visitor_login(client, username='Acidmoon', password='new-admin-pass', next_url='/admin')
+    assert r.status_code in (302, 303)
 
 
 def test_all_core_modules_registered(app):

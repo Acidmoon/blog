@@ -130,9 +130,16 @@ def current_identity() -> AuthIdentity:
     visitor = current_visitor()
     admin_session_active = is_admin_authenticated()
     is_admin_user = bool(visitor and visitor.get('is_admin'))
+    # 配置的管理员账号只能凭管理密码登录，因此其访客会话本身就是管理员身份的
+    # 充分证明：登录期间始终是管理员，不受 12 小时 admin session 上限影响；
+    # 访客会话整体过期后才需要重新登录。
+    is_configured_admin = bool(
+        visitor
+        and str(visitor.get('username') or '').strip().lower() == config.ADMIN_USERNAME
+    )
     identity = AuthIdentity(
         visitor=visitor,
-        is_admin=admin_session_active and is_admin_user,
+        is_admin=is_admin_user and (admin_session_active or is_configured_admin),
         admin_session_active=admin_session_active,
     )
     g.auth_identity = identity

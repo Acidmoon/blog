@@ -320,16 +320,12 @@ def register_visitor(username: str, password: str) -> tuple[dict, str, float]:
 def login_existing_visitor(username: str, password: str) -> tuple[dict, str, float]:
     """Explicit sign-in: fail if the username does not exist."""
     username, password = validate_visitor_credentials(username, password)
+    # 管理员账号只认当前配置的 ADMIN_PASSWORD，不走访客行的密码哈希，
+    # 避免改密后旧哈希在同步前仍可登录的窗口。
+    if is_admin_username(username):
+        return authenticate_admin(username, password)
     client_ip = _client_ip()
-    try:
-        visitor = _authenticate_existing_visitor(username, password, client_ip)
-    except VisitorAuthError as exc:
-        if is_admin_username(username):
-            try:
-                return authenticate_admin(username, password)
-            except VisitorAuthError:
-                pass
-        raise exc
+    visitor = _authenticate_existing_visitor(username, password, client_ip)
     token, expires_at = issue_visitor_token(visitor['id'], client_ip)
     return visitor, token, expires_at
 
