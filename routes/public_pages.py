@@ -98,7 +98,7 @@ def register_routes(bp):
         document = f'# {title}\n\n{content.rstrip()}\n'
         return send_file(
             BytesIO(document.encode('utf-8')),
-            mimetype='text/markdown; charset=utf-8',
+            mimetype='text/markdown',
             as_attachment=True,
             download_name=f'{title}.md',
         )
