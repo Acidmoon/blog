@@ -591,7 +591,7 @@
   padding: 40px !important;
 }
 
-/* Editor Toolbar（位于编辑区域下方，与 textarea 无缝衔接） */
+/* Editor Toolbar（位于编辑区域下方，吸附视口底部，长文滚动时不被划走） */
 .editor-toolbar {
   display: flex;
   gap: 4px;
@@ -602,6 +602,10 @@
   border: 1px solid var(--border-light);
   border-top: none;
   border-radius: 0 0 10px 10px;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  box-shadow: 0 -6px 16px -10px rgba(85, 70, 45, 0.35);
 }
 .editor-toolbar button {
   padding: 5px 12px;
