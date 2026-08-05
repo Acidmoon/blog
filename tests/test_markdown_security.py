@@ -97,3 +97,18 @@ def test_wechat_export_rejects_unsafe_markup_and_urls():
     assert 'javascript:' not in lowered
     assert 'src="https://blog.example/static/images/example.png"' in export['html']
     assert 'target="_blank" rel="noopener noreferrer"' in export['html']
+
+
+def test_render_md_supports_editor_toolbar_inline_syntax():
+    """编辑页工具栏（删除线/上下标/行内代码/表格）插入的语法必须能渲染，不能字面输出。"""
+    rendered = render_md(
+        '<del>已删除</del> 与 H<sub>2</sub>O 和 x<sup>2</sup>，'
+        '以及 <code>code</code> 与普通 **bold**。'
+    )
+    assert '<del>已删除</del>' in rendered
+    assert '<sub>2</sub>' in rendered
+    assert '<sup>2</sup>' in rendered
+    assert '<code>code</code>' in rendered
+    assert '<strong>bold</strong>' in rendered
+    # bleach 白名单外的标签会被剥离而不是原样输出
+    assert '<u>' not in rendered

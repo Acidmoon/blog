@@ -1246,3 +1246,167 @@ body.zen-mode .zen-exit-btn {
   .layout-actions { justify-content: stretch; }
   .layout-actions .btn { flex: 1; justify-content: center; }
 }
+
+/* ══ Lengyi 移植：表格选择器 ══════════════════════════ */
+.editor-toolbar-btn-wrap {
+  position: relative;
+}
+.table-picker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  padding: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: var(--shadow-soft);
+}
+.table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 16px);
+  gap: 3px;
+}
+.table-picker-cell {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  background: var(--bg-base);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.table-picker-cell.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.table-picker-label {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* ══ Lengyi 移植：查找替换弹层 ═══════════════════════ */
+.find-replace-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, 0.35);
+}
+.find-replace-modal[hidden] { display: none; }
+.find-replace-box {
+  position: relative;
+  width: min(440px, 92vw);
+  padding: 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+}
+.find-replace-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.find-replace-row:last-of-type { margin-bottom: 0; }
+.find-replace-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+.find-replace-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(58, 107, 79, 0.12);
+}
+.find-replace-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.find-replace-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.find-replace-status {
+  margin-top: 10px;
+  min-height: 1.1em;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+.find-replace-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+}
+.find-replace-close:hover { color: var(--text-primary); }
+
+/* ══ Lengyi 移植：导出下拉 ═══════════════════════════ */
+.export-dropdown {
+  position: relative;
+}
+.export-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: var(--shadow-soft);
+}
+.export-menu[hidden] { display: none; }
+.export-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.export-menu button:hover {
+  background: var(--bg-base);
+  color: var(--accent-primary);
+}
+
+/* ══ Lengyi 移植：字数统计 ═══════════════════════════ */
+.editor-word-count {
+  margin-left: auto;
+  align-self: center;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .editor-word-count { display: none; }
+}

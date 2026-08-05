@@ -75,6 +75,21 @@
             <button type="button" onclick="insertMd('# ', '')" title="标题">H</button>
             <button type="button" onclick="insertMd('> ', '')" title="引用">引用</button>
             <button type="button" onclick="insertMd('- ', '')" title="列表">列表</button>
+            <button type="button" onclick="insertMd('<del>', '</del>')" title="删除线">S̶</button>
+            <button type="button" onclick="insertMd('`', '`')" title="行内代码">&lt;code&gt;</button>
+            <button type="button" onclick="insertMd('1. ', '')" title="有序列表">1.</button>
+            <button type="button" onclick="insertMd('<sub>', '</sub>')" title="下标">x₂</button>
+            <button type="button" onclick="insertMd('<sup>', '</sup>')" title="上标">x²</button>
+            <span class="editor-toolbar-btn-wrap">
+              <button type="button" id="tablePickerBtn" title="插入表格" aria-haspopup="true">表格</button>
+              <div class="table-picker" id="tablePicker" hidden>
+                <div class="table-picker-grid" id="tablePickerGrid"></div>
+                <div class="table-picker-label" id="tablePickerLabel">0 行 × 0 列</div>
+              </div>
+            </span>
+            <button type="button" id="undoBtn" title="撤销 (Ctrl+Z)" disabled>↩</button>
+            <button type="button" id="redoBtn" title="重做 (Ctrl+Y)" disabled>↪</button>
+            <button type="button" id="findReplaceBtn" title="查找替换 (Ctrl+F)">查找</button>
             <button type="button" onclick="uploadImage()" title="上传图片">上传</button>
             <span class="editor-toolbar-spacer"></span>
             <select id="aiPolishProvider" class="editor-toolbar-select" onchange="syncPolishModels()" title="选择 AI 供应商">
@@ -108,13 +123,41 @@
         {% endif %}
         <button type="button" id="togglePreview" class="btn btn-secondary" title="切换右侧实时预览">预览</button>
         <button type="button" id="zenModeBtn" class="btn btn-secondary" title="进入专注写作模式 (Esc 退出)">专注</button>
+        <div class="export-dropdown" id="exportDropdown">
+          <button type="button" id="exportBtn" class="btn btn-secondary" title="导出当前内容（渲染结果与服务端预览一致）">导出 ▾</button>
+          <div class="export-menu" id="exportMenu" hidden>
+            <button type="button" onclick="exportAs('md')">Markdown (.md)</button>
+            <button type="button" onclick="exportAs('html')">HTML 独立文件</button>
+            <button type="button" onclick="exportAs('doc')">Word (.doc)</button>
+            <button type="button" onclick="exportAs('pdf')">PDF（打印）</button>
+            <button type="button" onclick="exportAs('png')">长图 PNG</button>
+          </div>
+        </div>
         <a href="/admin" class="btn btn-secondary">取消</a>
         {% if article %}
         <a href="/admin/wechat-export/{{ article.slug }}" class="btn btn-secondary">导出公众号</a>
         {% endif %}
+        <span class="editor-word-count" id="wordCount" title="正文字数与预计阅读时间">0 字</span>
         <span class="editor-autosave-status" id="autosaveStatus" aria-live="polite"></span>
       </div>
     </form>
+  </div>
+
+  <!-- 查找替换弹层（置于 form 外，避免回车误触发提交） -->
+  <div class="find-replace-modal" id="findReplaceModal" hidden>
+    <div class="find-replace-box" role="dialog" aria-label="查找替换">
+      <button type="button" class="find-replace-close" onclick="closeFindReplace()" title="关闭 (Esc)">×</button>
+      <div class="find-replace-row">
+        <input type="text" id="findInput" class="find-replace-input" placeholder="查找…" autocomplete="off">
+        <button type="button" class="find-replace-btn" onclick="findNext()" title="查找下一个 (回车)">下一个</button>
+      </div>
+      <div class="find-replace-row">
+        <input type="text" id="replaceInput" class="find-replace-input" placeholder="替换为…" autocomplete="off">
+        <button type="button" class="find-replace-btn" onclick="replaceOne()">替换</button>
+        <button type="button" class="find-replace-btn" onclick="replaceAll()">全部替换</button>
+      </div>
+      <div class="find-replace-status" id="findStatus"></div>
+    </div>
   </div>
   <button type="button" class="zen-exit-btn" id="zenExitBtn" title="退出专注模式 (Esc)">退出专注</button>
 </main>
@@ -124,7 +167,8 @@
   "ai_polish_profiles": ai_polish_profiles,
   "ai_polish_modes": ai_polish_modes,
   "all_tags": all_tags,
-  "article_slug": article.slug if article else ""
+  "article_slug": article.slug if article else "",
+  "asset_version": config.ASSET_VERSION
 }|tojson }}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 <script>
